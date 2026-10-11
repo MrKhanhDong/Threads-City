@@ -1,0 +1,10 @@
+{
+    "name": "khangs-journal-ui-tests",
+    "private": true,
+    "scripts": {
+        "test:ui": "node --test tests/frontend/blog.test.cjs"
+    },
+    "devDependencies": {
+        "jsdom": "22.1.0"
+    }
+}

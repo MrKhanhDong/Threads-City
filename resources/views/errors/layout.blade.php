@@ -1,0 +1,4 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>@yield('title') · Blog cá nhân</title><link rel="icon" href="/favicon.svg"><style>
+*{box-sizing:border-box}body{margin:0;background:#fff;color:#171717;font-family:system-ui,sans-serif;min-height:100vh;display:grid;place-items:center;padding:32px}main{width:min(100%,520px)}small{letter-spacing:.2em;color:#999}h1{font-size:34px;line-height:1.3;margin:20px 0}p{color:#666;line-height:1.8}a{display:inline-block;margin-top:20px;padding:12px 20px;border-radius:8px;background:#171717;color:#fff;text-decoration:none;font-size:14px}a:focus-visible{outline:3px solid #999;outline-offset:4px}
+</style></head><body><main><small>JOURNAL · @yield('code')</small><h1>@yield('title')</h1><p>@yield('message')</p><a href="/">Về trang chủ →</a></main></body></html>
