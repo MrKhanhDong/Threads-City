@@ -8,7 +8,8 @@
     @hasSection('robots')<meta name="robots" content="@yield('robots')">@endif
     <title>@yield('title', 'Trang chủ') · {{ $blogTitle }}</title>
     <link rel="icon" href="{{ asset('favicon.svg') }}" type="image/svg+xml">
-    <link rel="stylesheet" href="{{ asset('css/blog.css') }}">
+    <script src="{{ asset('js/theme.js') . '?v=' . filemtime(public_path('js/theme.js')) }}"></script>
+    <link rel="stylesheet" href="{{ asset('css/blog.css') . '?v=' . filemtime(public_path('css/blog.css')) }}">
     <script src="{{ asset('js/blog.js') }}" defer></script>
 </head>
 <body>
@@ -21,6 +22,10 @@
                 <a href="{{ route('posts.index') }}" @class(['is-active' => request()->routeIs('posts.*')])>Bài viết</a>
                 <a href="{{ route('about') }}" @class(['is-active' => request()->routeIs('about')])>Về mình</a>
             </nav>
+            <button class="theme-toggle" type="button" data-theme-toggle aria-label="Chuyển sang giao diện tối" aria-pressed="false" hidden>
+                <span class="theme-toggle__track" aria-hidden="true"><span class="theme-toggle__orb"></span></span>
+                <span class="sr-only theme-toggle__label" data-theme-label>Chế độ tối</span>
+            </button>
             @auth
                 <a class="account-link" href="{{ route('account.edit') }}"><x-icon name="user" size="18" />{{ auth()->user()->name }}</a>
             @else
