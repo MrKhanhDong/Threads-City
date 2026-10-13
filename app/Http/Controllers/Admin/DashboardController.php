@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Comment;
 use App\Models\CommentReport;
 use App\Models\Post;
 use App\Models\PostDailyView;
@@ -25,7 +26,16 @@ class DashboardController extends Controller
         foreach (CarbonPeriod::create($start, $end) as $date) {
             $chart[] = ['date' => $date->format('d/m'), 'views' => (int) ($daily[$date->toDateString()] ?? 0)];
         }
-        $counts = ['total' => Post::count(), 'published' => Post::published()->count(), 'drafts' => Post::where('status', 'draft')->count(), 'readers' => User::where('role', 'reader')->count(), 'reports' => CommentReport::where('resolved', false)->whereHas('comment.post')->count(), 'trash' => Post::onlyTrashed()->count()];
+        $counts = [
+            'total' => Post::count(),
+            'published' => Post::published()->count(),
+            'drafts' => Post::where('status', 'draft')->count(),
+            'readers' => User::where('role', 'reader')->count(),
+            'comments' => Comment::whereHas('post')->count(),
+            'pending_comments' => Comment::whereHas('post')->where('status', 'pending')->count(),
+            'reports' => CommentReport::where('resolved', false)->whereHas('comment.post')->count(),
+            'trash' => Post::onlyTrashed()->count(),
+        ];
         $topPosts = Post::withSum(['dailyViews as period_views' => fn (Builder $query): Builder => $query->whereBetween('view_date', [$start->toDateString(), $end->toDateString()])], 'views')->having('period_views', '>', 0)->orderByDesc('period_views')->limit(5)->get();
 
         return view('admin.dashboard', ['counts' => $counts, 'chart' => $chart, 'days' => $days, 'topPosts' => $topPosts, 'latestPosts' => Post::latest('updated_at')->limit(5)->get()]);

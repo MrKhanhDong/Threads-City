@@ -24,6 +24,8 @@
     font-family: "Moc Lora", "Times New Roman", serif;
 }
 
+@media (min-width: 1101px) { .stats-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+
 .reply-context { margin: 0 0 .5rem; font-size: .85rem; color: #686c64; }
 .comment-replies { border-left: 2px solid #e3e5dc; padding-left: 1rem; }
 .comment-actions details[open] { flex: 1 1 100%; }
@@ -41,3 +43,19 @@
 .social-preview h4 { font-family: inherit; font-size: 1.05rem; margin: .5rem 0; }
 .social-preview p { font-size: .85rem; margin: 0; color: #686c64; }
 @media (max-width: 600px) { .comment-replies { padding-left: .65rem; } }
+.comment-thread { margin-bottom: 1.5rem; }
+.reply-controls { margin: -.5rem 0 1rem; }
+.comment-replies[hidden], .notification-count[hidden], [data-replies-more][hidden], [data-replies-earlier][hidden] { display: none; }
+.comment-replies > [data-replies-list] > .comment { margin-left: 0; }
+.comment:target { background: #eaf0e4; scroll-margin-top: 100px; }
+.notification-button { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 38px; height: 38px; border: 1px solid var(--line); border-radius: 50%; background: transparent; color: var(--forest); }
+.notification-count { position: absolute; top: -5px; right: -7px; min-width: 18px; padding: 1px 4px; border-radius: 10px; background: #873e32; color: white; font-size: 10px; line-height: 16px; }
+.notification-menu { width: min(380px, calc(100vw - 40px)); padding: 16px; max-height: 65vh; overflow-y: auto; }
+.notification-menu-heading { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 12px; }
+.notification-item { border-bottom: 1px solid var(--line); }
+.notification-item.is-unread { background: #edf1e7; }
+.notification-item button { display: flex; align-items: flex-start; gap: 12px; width: 100%; padding: 14px 8px; border: 0; background: transparent; text-align: left; color: var(--forest); font-size: 12px; line-height: 1.6; }
+.notification-item button > span { min-width: 0; overflow-wrap: anywhere; }
+.notification-item small { display: block; color: var(--muted); margin-top: 5px; font-size: 10px; }
+.notification-page { max-width: 850px; }
+.notification-page .notification-item button { font-size: 14px; }

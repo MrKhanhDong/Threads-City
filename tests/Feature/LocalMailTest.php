@@ -67,6 +67,31 @@ class LocalMailTest extends TestCase
         $this->post(route('password.update'), $data)->assertSessionHasErrors('email');
     }
 
+    public function test_google_reader_sets_password_from_real_local_smtp_without_logging_out_first(): void
+    {
+        $email = 'mail-test-'.Str::uuid().'@example.test';
+        $reader = User::factory()->create([
+            'email' => $email, 'google_id' => 'google-local-mail-'.Str::uuid(),
+            'password' => Str::random(64),
+        ]);
+        $googleId = $reader->google_id;
+        $this->actingAs($reader)->from(route('account.edit'))->post(route('password.email'))
+            ->assertRedirect(route('account.edit'))->assertSessionHasNoErrors();
+        $this->assertAuthenticatedAs($reader);
+        $url = $this->capturedLink($email, '/dat-lai-mat-khau/');
+        $this->get($url)->assertOk();
+        $token = basename(parse_url($url, PHP_URL_PATH));
+        $data = ['email' => $email, 'token' => $token,
+            'password' => 'LocalGooglePassword123', 'password_confirmation' => 'LocalGooglePassword123'];
+        $this->post(route('password.update'), $data)->assertRedirect(route('login'))->assertSessionHasNoErrors();
+        $this->assertGuest();
+        $this->assertTrue(Hash::check('LocalGooglePassword123', $reader->fresh()->password));
+        $this->assertSame($googleId, $reader->fresh()->google_id);
+        $this->post(route('login.store'), ['email' => $email, 'password' => 'LocalGooglePassword123'])
+            ->assertRedirect(route('home'))->assertSessionHasNoErrors();
+        $this->assertAuthenticatedAs($reader);
+    }
+
     private function capturedLink(string $email, string $path): string
     {
         $search = Http::timeout(3)->get('http://127.0.0.1:18025/api/v1/search', ['query' => 'to:'.$email])->throw()->json();

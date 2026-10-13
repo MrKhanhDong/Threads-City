@@ -37,7 +37,7 @@ class ReaderTest extends TestCase
         $this->assertDatabaseCount('comments', 0);
     }
 
-    public function test_reply_requires_approved_parent_on_same_post_and_has_depth_limit(): void
+    public function test_reply_requires_approved_parent_on_same_post_and_allows_deep_replies(): void
     {
         $post = Post::factory()->published()->create();
         $root = Comment::factory()->approved()->create(['post_id' => $post->id]);
@@ -47,11 +47,11 @@ class ReaderTest extends TestCase
         $foreign = Comment::factory()->approved()->create();
         $this->actingAs(User::factory()->create());
         $this->post(route('comments.store', $post->id), ['body' => 'Trả lời hợp lệ', 'parent_id' => $root->id])->assertSessionHasNoErrors();
-        $this->post(route('comments.store', $post->id), ['body' => 'Trả lời quá sâu', 'parent_id' => $second->id])->assertSessionHasErrors('parent_id');
+        $this->post(route('comments.store', $post->id), ['body' => 'Trả lời cấp tiếp theo', 'parent_id' => $second->id])->assertSessionHasNoErrors();
         $this->post(route('comments.store', $post->id), ['body' => 'Sai bài viết', 'parent_id' => $foreign->id])->assertNotFound();
         $this->post(route('comments.store', $post->id), ['body' => 'Chưa được duyệt', 'parent_id' => $pending->id])->assertNotFound();
         $this->assertDatabaseHas('comments', ['parent_id' => $root->id, 'body' => 'Trả lời hợp lệ', 'status' => 'approved']);
-        $this->assertDatabaseMissing('comments', ['body' => 'Trả lời quá sâu']);
+        $this->assertDatabaseHas('comments', ['body' => 'Trả lời cấp tiếp theo', 'parent_id' => $second->id]);
     }
 
     public function test_reader_can_edit_own_comment_but_not_another_readers(): void

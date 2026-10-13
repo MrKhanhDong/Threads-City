@@ -6,12 +6,13 @@ use App\Http\Requests\CommentRequest;
 use App\Models\Comment;
 use App\Models\CommentReport;
 use App\Models\Post;
+use App\Notifications\CommentReplied;
+use App\Services\CommentThreads;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
-use Illuminate\Validation\ValidationException;
 
 class ReaderController extends Controller
 {
@@ -59,34 +60,38 @@ class ReaderController extends Controller
         return back()->with('success', 'Đã bỏ thích bài viết.');
     }
 
-    public function comment(CommentRequest $request, string $id): RedirectResponse
+    public function comment(CommentRequest $request, string $id, CommentThreads $threads): RedirectResponse
     {
         $post = Post::published()->findOrFail($id);
         $data = $request->validated();
-        if (! empty($data['parent_id'])) {
-            $parent = Comment::where('post_id', $post->id)->where('status', 'approved')->findOrFail($data['parent_id']);
-            $depth = 1;
-            while ($parent->parent_id) {
-                $parent = $parent->parent;
-                abort_unless($parent && $parent->status === 'approved', 404);
-                $depth++;
+        $comment = DB::transaction(function () use ($request, $data, $post, $threads): Comment {
+            $parent = null;
+            if (! empty($data['parent_id'])) {
+                $parent = Comment::where('post_id', $post->id)->where('status', 'approved')->lockForUpdate()->findOrFail($data['parent_id']);
+                abort_unless($threads->root($parent) !== null, 404);
             }
-            if ($depth > config('blog.reply_depth')) {
-                throw ValidationException::withMessages(['parent_id' => 'Chuỗi trả lời đã đủ sâu. Hãy bắt đầu một bình luận mới.']);
+            $comment = $post->comments()->create([...$data, 'user_id' => $request->user()->id, 'status' => 'approved']);
+            if ($parent && $parent->user_id !== $request->user()->id) {
+                $parent->user->notify(new CommentReplied($comment->id));
             }
-        }
-        $comment = $post->comments()->create([...$data, 'user_id' => $request->user()->id, 'status' => 'approved']);
 
-        return back()->withFragment('comment-'.$comment->id)->with('success', $comment->parent_id ? 'Đã gửi trả lời.' : 'Đã gửi bình luận.');
+            return $comment;
+        });
+
+        return redirect($threads->url($comment, $request->user()->id))->with('success', $comment->parent_id ? 'Đã gửi trả lời.' : 'Đã gửi bình luận.');
     }
 
-    public function updateComment(CommentRequest $request, Comment $comment): RedirectResponse
+    public function updateComment(CommentRequest $request, Comment $comment, CommentThreads $threads): RedirectResponse
     {
         Gate::authorize('update', $comment);
         abort_unless($comment->post && Post::published()->whereKey($comment->post_id)->exists(), 404);
         $comment->update(['body' => $request->validated('body')]);
 
-        return back()->withFragment('comment-'.$comment->id)->with('success', 'Đã sửa bình luận. Nội dung đã bị quản trị viên ẩn sẽ không tự công khai lại.');
+        $response = $threads->root($comment, $request->user()->id) !== null
+            ? redirect($threads->url($comment, $request->user()->id))
+            : back()->withFragment('comment-'.$comment->id);
+
+        return $response->with('success', 'Đã sửa bình luận. Nội dung đã bị quản trị viên ẩn sẽ không tự công khai lại.');
     }
 
     public function deleteComment(Comment $comment): RedirectResponse

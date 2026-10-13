@@ -18,7 +18,7 @@
     @auth
         @if(auth()->user()->hasVerifiedEmail())
             <div class="comment-actions">
-                @if($comment->status === 'approved' && $depth < config('blog.reply_depth'))
+                @if($comment->status === 'approved')
                     <details @if($isReplyRetry && $errors->any()) open @endif>
                         <summary>Trả lời</summary>
                         <form action="{{ route('comments.store', $post->id) }}" method="post">
@@ -61,15 +61,8 @@
             </div>
         @endif
     @else
-        @if($depth < config('blog.reply_depth'))
+        @if($comment->status === 'approved')
             <a class="text-link small" href="{{ route('login') }}">Đăng nhập để trả lời</a>
         @endif
     @endauth
-    @if($depth < config('blog.reply_depth'))
-        <div class="comment-replies">
-            @foreach($comment->replies as $reply)
-                @include('blog.comment', ['comment' => $reply, 'depth' => $depth + 1, 'replyTo' => $comment])
-            @endforeach
-        </div>
-    @endif
 </div>

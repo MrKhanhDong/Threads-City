@@ -63,6 +63,51 @@ class AdminWorkflowTest extends TestCase
         $this->postJson(route('admin.media.store'), [])->assertForbidden();
     }
 
+    public function test_dashboard_counts_comments_and_replies_without_restoring_trash(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $post = Post::factory()->published()->create(['user_id' => $admin->id]);
+        $parent = Comment::factory()->create(['post_id' => $post->id]);
+        Comment::factory()->create(['post_id' => $post->id, 'parent_id' => $parent->id]);
+        foreach (['pending', 'hidden', 'spam'] as $status) {
+            Comment::factory()->create(['post_id' => $post->id, 'status' => $status]);
+        }
+        $trashedPost = Post::factory()->published()->create(['user_id' => $admin->id]);
+        $trashedComment = Comment::factory()->create(['post_id' => $trashedPost->id, 'status' => 'pending']);
+        CommentReport::factory()->create(['comment_id' => $trashedComment->id]);
+        $trashedPost->delete();
+
+        $response = $this->actingAs($admin)->get(route('admin.index'))
+            ->assertOk()->assertSee('Bình luận')->assertSee('1 bình luận cũ đang chờ duyệt')
+            ->assertSee(route('admin.comments.index', ['status' => 'pending']), false)
+            ->assertSee('không cần duyệt trước');
+        $counts = $response->viewData('counts');
+        $this->assertSame(5, $counts['comments']);
+        $this->assertSame(1, $counts['pending_comments']);
+        $this->assertSame(0, $counts['reports']);
+        $this->assertSame(1, $counts['trash']);
+        $this->get(route('admin.comments.index'))->assertOk()->assertViewHas('comments', fn ($comments): bool => $comments->total() === 5);
+        $this->get(route('admin.comments.index', ['status' => 'pending']))->assertOk()->assertViewHas('comments', fn ($comments): bool => $comments->total() === 1);
+        $this->post(route('admin.posts.restore', $trashedPost->id))->assertRedirect()->assertSessionHasNoErrors();
+        $this->get(route('admin.index'))->assertOk()->assertViewHas('counts', fn (array $counts): bool => $counts['comments'] === 6 && $counts['pending_comments'] === 2 && $counts['reports'] === 1);
+        $this->assertSame('pending', $trashedComment->fresh()->status);
+    }
+
+    public function test_dashboard_handles_no_comments_and_counts_database_changes(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $post = Post::factory()->published()->create(['user_id' => $admin->id]);
+        $this->actingAs($admin)->get(route('admin.index'))->assertOk()
+            ->assertViewHas('counts', fn (array $counts): bool => $counts['comments'] === 0 && $counts['pending_comments'] === 0)
+            ->assertDontSee('bình luận cũ đang chờ duyệt');
+        $comment = Comment::factory()->create(['post_id' => $post->id]);
+        $this->get(route('admin.index', ['comments' => 999]))->assertOk()
+            ->assertViewHas('counts', fn (array $counts): bool => $counts['comments'] === 1 && $counts['pending_comments'] === 0);
+        $this->delete(route('admin.comments.destroy', $comment))->assertRedirect()->assertSessionHasNoErrors();
+        $this->get(route('admin.index'))->assertOk()
+            ->assertViewHas('counts', fn (array $counts): bool => $counts['comments'] === 0);
+    }
+
     public function test_admin_pages_render_with_real_database_records(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);
@@ -196,6 +241,61 @@ class AdminWorkflowTest extends TestCase
         $this->delete(route('admin.media.destroy', $media))->assertRedirect();
         Storage::disk('local')->assertMissing($media->path);
         $this->assertDatabaseMissing('media', ['id' => $media->id]);
+    }
+
+    public function test_media_and_avatar_backup_restore_preserves_bytes_metadata_and_access(): void
+    {
+        Storage::fake('local');
+        Storage::fake('recovery-test');
+        $disk = Storage::disk('local');
+        $backup = Storage::disk('recovery-test');
+        $files = $this->app['files'];
+        $admin = User::factory()->create(['role' => 'admin']);
+        $upload = $this->actingAs($admin)->postJson(route('admin.media.store'), [
+            'file' => UploadedFile::fake()->image('cover.jpg', 80, 60),
+            'alt' => 'Ảnh kiểm thử khôi phục',
+        ])->assertCreated();
+        $media = Media::findOrFail($upload->json('id'));
+        $post = Post::factory()->published()->create(['user_id' => $admin->id, 'cover_media_id' => $media->id]);
+        $post->media()->attach($media);
+        $reader = User::factory()->create();
+        $this->actingAs($reader)->patch(route('account.update'), [
+            'name' => $reader->name,
+            'avatar' => UploadedFile::fake()->image('avatar.png', 40, 40),
+        ])->assertRedirect()->assertSessionHasNoErrors();
+        $avatarPath = $reader->fresh()->avatar_path;
+        $mediaHash = hash_file('sha256', $disk->path($media->path));
+        $avatarHash = hash_file('sha256', $disk->path($avatarPath));
+        $disk->put('unrelated-private.txt', 'Dữ liệu riêng không được ghi đè');
+
+        foreach (['media', 'avatars'] as $folder) {
+            $this->assertTrue($files->copyDirectory($disk->path($folder), $backup->path($folder)));
+        }
+        $this->assertSame($mediaHash, hash_file('sha256', $backup->path($media->path)));
+        $this->assertSame($avatarHash, hash_file('sha256', $backup->path($avatarPath)));
+        $backup->assertMissing('unrelated-private.txt');
+
+        $this->assertTrue($disk->delete([$media->path, $avatarPath]));
+        $this->get(route('media.show', $media))->assertNotFound();
+        $this->get(route('avatar.show', $reader))->assertNotFound();
+        foreach (['media', 'avatars'] as $folder) {
+            $this->assertTrue($files->copyDirectory($backup->path($folder), $disk->path($folder)));
+        }
+
+        $this->assertSame($mediaHash, hash_file('sha256', $disk->path($media->path)));
+        $this->assertSame($avatarHash, hash_file('sha256', $disk->path($avatarPath)));
+        $this->assertSame('Dữ liệu riêng không được ghi đè', $disk->get('unrelated-private.txt'));
+        $this->assertSame([80, 60], array_slice(getimagesize($disk->path($media->path)), 0, 2));
+        $this->assertSame([40, 40], array_slice(getimagesize($disk->path($avatarPath)), 0, 2));
+        $this->assertDatabaseHas('media', ['id' => $media->id, 'path' => $media->path, 'alt' => 'Ảnh kiểm thử khôi phục']);
+        $this->assertDatabaseHas('users', ['id' => $reader->id, 'avatar_path' => $avatarPath]);
+        $this->get(route('media.show', $media))->assertOk()->assertHeader('Content-Type', 'image/jpeg');
+        $this->get(route('avatar.show', $reader))->assertOk()->assertHeader('Content-Type', 'image/png');
+        $this->get(route('posts.show', $post->slug))->assertOk()->assertSee($media->url(), false);
+
+        $post->update(['status' => 'draft']);
+        $this->get(route('media.show', $media))->assertNotFound();
+        $this->actingAs($admin)->get(route('media.show', $media))->assertOk();
     }
 
     public function test_taxonomies_create_update_and_delete_safely(): void

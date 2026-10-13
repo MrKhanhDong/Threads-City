@@ -25,7 +25,7 @@ class InstantCommentsTest extends TestCase
         $this->get(route('posts.show', $post->slug))->assertOk()->assertSee('Bình luận hiển thị ngay')->assertDontSee('được duyệt trước');
     }
 
-    public function test_reply_and_second_level_reply_render_immediately_under_their_parent(): void
+    public function test_replies_are_public_and_loaded_on_demand_in_one_flat_thread(): void
     {
         $post = Post::factory()->published()->create();
         $author = User::factory()->create(['name' => 'Người được trả lời']);
@@ -38,11 +38,17 @@ class InstantCommentsTest extends TestCase
         $this->assertSame('approved', $first->status);
         $this->assertSame('approved', $second->status);
         $this->get(route('posts.show', $post->slug))->assertOk()->assertSee('name="parent_id" value="'.$root->id.'"', false)
-            ->assertSee('Trả lời Người được trả lời')->assertSee('reply-context', false);
+            ->assertSee('Xem trả lời')->assertDontSee('Trả lời cấp một');
+        $data = $this->getJson(route('comments.replies', $root))->assertOk()->json();
+        $this->assertStringContainsString('Trả lời Người được trả lời', strip_tags($data['html']));
+        $this->assertStringContainsString('reply-context', $data['html']);
         auth()->logout();
-        $this->get(route('posts.show', $post->slug))->assertOk()
-            ->assertSeeInOrder(['Lời nhắn gốc', 'Trả lời cấp một', 'Trả lời cấp hai'])
-            ->assertSee('href="#comment-'.$root->id.'"', false)->assertSee('Đăng nhập để trả lời');
+        $this->get(route('posts.show', $post->slug))->assertOk()->assertSee('Lời nhắn gốc')->assertDontSee('Trả lời cấp hai');
+        $html = $this->getJson(route('comments.replies', $root))->assertOk()->json('html');
+        $this->assertStringContainsString('Trả lời cấp một', $html);
+        $this->assertStringContainsString('Trả lời cấp hai', $html);
+        $this->assertStringContainsString('href="#comment-'.$root->id.'"', $html);
+        $this->assertStringContainsString('Đăng nhập để trả lời', $html);
     }
 
     public function test_reader_edit_keeps_public_comment_public(): void

@@ -5,7 +5,7 @@
 <meta name="csrf-token" content="{{ csrf_token() }}">
 <title>{{ $pageTitle ?? $site['site_name'] }}{{ isset($pageTitle) ? ' — '.$site['site_name'] : '' }}</title>
 <meta name="description" content="{{ $seo['description'] ?? $site['site_description'] }}">
-<meta name="robots" content="{{ ($preview ?? false) || request()->routeIs('auth.*','login','register','saved','account.*','password.*','verification.*') || request()->has('q') ? 'noindex,nofollow' : 'index,follow' }}">
+<meta name="robots" content="{{ ($preview ?? false) || request()->routeIs('auth.*','login','register','saved','account.*','password.*','verification.*','notifications.*') || request()->has('q') ? 'noindex,nofollow' : 'index,follow' }}">
 <link rel="canonical" href="{{ $seo['canonical'] ?? url()->current() }}">
 <meta property="og:type" content="{{ isset($post) ? 'article' : 'website' }}">
 <meta property="og:title" content="{{ $seo['og_title'] ?? $pageTitle ?? $site['site_name'] }}">
@@ -27,6 +27,7 @@
 <nav aria-label="Điều hướng chính"><a @class(['active'=>request()->routeIs('home')]) href="{{ route('home') }}">Trang chủ</a><a @class(['active'=>request()->routeIs('posts.*')]) href="{{ route('posts.index') }}">Bài viết</a><a href="{{ route('about') }}">Về Mộc</a><a href="{{ route('contact') }}">Liên hệ</a></nav>
 <div class="header-actions"><a href="{{ route('posts.index') }}" aria-label="Tìm bài viết" class="search-link">⌕</a>
 @auth
+<x-notification-bell />
 <div class="dropdown"><button class="account-button" data-bs-toggle="dropdown" aria-expanded="false"><x-avatar :user="auth()->user()" /><span>{{ auth()->user()->name }}</span></button><ul class="dropdown-menu dropdown-menu-end"><li><a class="dropdown-item" href="{{ route('account.edit') }}">Hồ sơ của tôi</a></li><li><a class="dropdown-item" href="{{ route('saved') }}">Bài viết đã lưu</a></li>@if(auth()->user()->isAdmin())<li><a class="dropdown-item" href="{{ route('admin.index') }}">Quản trị blog</a></li>@endif<li><form action="{{ route('logout') }}" method="post">@csrf<button class="dropdown-item" type="submit">Đăng xuất</button></form></li></ul></div>
 @else<a class="btn btn-outline-forest btn-sm" href="{{ route('login') }}">Đăng nhập ↗</a>@endauth
 </div></div></header>

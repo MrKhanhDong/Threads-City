@@ -4,7 +4,9 @@ use App\Http\Controllers\AccountController;
 use App\Http\Controllers\Admin;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BlogController;
+use App\Http\Controllers\CommentThreadController;
 use App\Http\Controllers\GoogleAuthController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ReaderController;
 use Illuminate\Contracts\View\View;
 use Illuminate\Foundation\Auth\EmailVerificationRequest;
@@ -26,6 +28,7 @@ Route::get('/sitemap.xml', [BlogController::class, 'sitemap'])->name('sitemap');
 Route::get('/robots.txt', [BlogController::class, 'robots'])->name('robots');
 Route::get('/media/{media}', [Admin\MediaController::class, 'show'])->whereNumber('media')->name('media.show');
 Route::get('/avatar/{user}', [AccountController::class, 'avatar'])->whereNumber('user')->name('avatar.show');
+Route::get('/binh-luan/{comment}/tra-loi', [CommentThreadController::class, 'index'])->whereNumber('comment')->middleware('throttle:120,1')->name('comments.replies');
 
 Route::middleware('guest')->group(function (): void {
     Route::get('/dang-nhap', [AuthController::class, 'login'])->name('login');
@@ -33,12 +36,13 @@ Route::middleware('guest')->group(function (): void {
     Route::get('/dang-ky', [AuthController::class, 'register'])->name('register');
     Route::post('/dang-ky', [AuthController::class, 'store'])->middleware('throttle:register')->name('register.store');
     Route::get('/quen-mat-khau', [AuthController::class, 'forgot'])->name('password.request');
-    Route::post('/quen-mat-khau', [AuthController::class, 'sendReset'])->middleware('throttle:password-reset')->name('password.email');
-    Route::get('/dat-lai-mat-khau/{token}', [AuthController::class, 'reset'])->name('password.reset');
-    Route::post('/dat-lai-mat-khau', [AuthController::class, 'updatePassword'])->middleware('throttle:password-reset')->name('password.update');
     Route::get('/auth/google', [GoogleAuthController::class, 'redirect'])->middleware('throttle:login')->name('google.redirect');
     Route::get('/auth/google/callback', [GoogleAuthController::class, 'callback'])->middleware('throttle:login')->name('google.callback');
 });
+
+Route::post('/quen-mat-khau', [AuthController::class, 'sendReset'])->middleware('throttle:password-reset')->name('password.email');
+Route::get('/dat-lai-mat-khau/{token}', [AuthController::class, 'reset'])->name('password.reset');
+Route::post('/dat-lai-mat-khau', [AuthController::class, 'updatePassword'])->middleware('throttle:password-reset')->name('password.update');
 
 Route::middleware('auth')->group(function (): void {
     Route::post('/dang-xuat', [AuthController::class, 'logout'])->name('logout');
@@ -64,6 +68,9 @@ Route::middleware('auth')->group(function (): void {
         return back()->with('success', 'Đã gửi email xác minh.');
     })->middleware('throttle:password-reset')->name('verification.send');
     Route::get('/tai-khoan', [AccountController::class, 'edit'])->name('account.edit');
+    Route::get('/thong-bao', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::post('/thong-bao/doc-tat-ca', [NotificationController::class, 'readAll'])->middleware('throttle:60,1')->name('notifications.read-all');
+    Route::post('/thong-bao/{id}/mo', [NotificationController::class, 'open'])->whereUuid('id')->middleware('throttle:60,1')->name('notifications.open');
     Route::patch('/tai-khoan', [AccountController::class, 'update'])->name('account.update');
     Route::put('/tai-khoan/mat-khau', [AccountController::class, 'password'])->name('account.password');
     Route::get('/bai-viet-da-luu', [ReaderController::class, 'saved'])->name('saved');

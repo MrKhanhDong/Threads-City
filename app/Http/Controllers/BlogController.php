@@ -3,15 +3,16 @@
 namespace App\Http\Controllers;
 
 use App\Models\Category;
+use App\Models\Comment;
 use App\Models\Post;
 use App\Models\PostRedirect;
 use App\Models\Tag;
 use App\Models\User;
+use App\Services\CommentThreads;
 use App\Services\HtmlSanitizer;
 use App\Services\ViewRecorder;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -86,11 +87,25 @@ class BlogController extends Controller
             });
         };
         $comments = $post->comments()->whereNull('parent_id')->where($visible)
-            ->with(['user', 'replies' => fn (HasMany $query): HasMany => $query->where($visible)->with(['user', 'replies' => fn (HasMany $query): HasMany => $query->where($visible)->with('user')->oldest()])->oldest()])
-            ->latest()->paginate(10, ['*'], 'comments_page');
+            ->with('user')->withCount(['replies' => $visible])
+            ->orderByDesc('id')->paginate(10, ['*'], 'comments_page');
+        $focusedRoot = null;
+        $focusedBatch = null;
+        $focusId = old('parent_id') ?: $request->query('comment');
+        if (! $preview && is_scalar($focusId) && ctype_digit((string) $focusId)) {
+            $focusComment = Comment::where('post_id', $post->id)->find($focusId);
+            if ($focusComment) {
+                $threads = app(CommentThreads::class);
+                $focusedRoot = $threads->root($focusComment, $userId);
+                $root = $comments->firstWhere('id', $focusedRoot);
+                if ($root && $root->id !== $focusComment->id) {
+                    $focusedBatch = $threads->batch($root, $userId, focus: $focusComment->id);
+                }
+            }
+        }
         $related = Post::published()->whereKeyNot($post->id)->whereHas('categories', fn (Builder $query): Builder => $query->whereIn('categories.id', $post->categories->modelKeys()))->with(['author', 'cover', 'categories'])->latest('published_at')->limit(3)->get();
 
-        return view('blog.show', compact('post', 'body', 'comments', 'related', 'preview', 'likesCount', 'liked'));
+        return view('blog.show', compact('post', 'body', 'comments', 'related', 'preview', 'likesCount', 'liked', 'focusedRoot', 'focusedBatch'));
     }
 
     public function page(string $page): View

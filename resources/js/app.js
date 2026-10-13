@@ -1,5 +1,7 @@
 import 'bootstrap';
+import { setupCommentThreads, setupReplyNotifications } from './comment-threads';
 import { setupSeoPreview } from './seo-preview';
+import { setupVietnameseValidation, requestErrorMessage } from './validation-messages';
 
 const showState = (element, text, error = false) => {
     if (!element) return;
@@ -129,7 +131,7 @@ function setupEditor() {
             dirty = revision !== savedRevision;
             showState(state, dirty ? data.message + ' · còn thay đổi mới chưa lưu.' : data.message);
         } catch (error) {
-            showState(state, 'Chưa tự lưu: ' + (error.message || 'kiểm tra kết nối/phiên đăng nhập.') + ' Nội dung vẫn giữ trong editor.', true);
+            showState(state, 'Chưa tự lưu: ' + requestErrorMessage(error, 'Hãy kiểm tra kết nối hoặc phiên đăng nhập rồi thử lại.') + ' Nội dung vẫn giữ trong editor.', true);
         }
     }
 
@@ -155,15 +157,19 @@ function setupEditor() {
             submitting = false;
             dirty = true;
             buttons.forEach(button => { button.disabled = false; });
-            showState(state, 'Chưa lưu: ' + error.message + ' Nội dung vẫn còn trong editor.', true);
+            showState(state, 'Chưa lưu: ' + requestErrorMessage(error, 'Thao tác chưa hoàn tất. Hãy tải lại trang sau khi sao chép nội dung đang viết.') + ' Nội dung vẫn còn trong editor.', true);
         }
     });
 }
 
 function init() {
-    document.querySelectorAll('form[data-confirm]').forEach(form => form.addEventListener('submit', event => {
-        if (!window.confirm(form.dataset.confirm)) event.preventDefault();
-    }));
+    setupVietnameseValidation();
+    setupCommentThreads();
+    setupReplyNotifications();
+    document.addEventListener('submit', event => {
+        const form = event.target.closest('form[data-confirm]');
+        if (form && !window.confirm(form.dataset.confirm)) event.preventDefault();
+    });
     document.querySelectorAll('[data-auto-submit]').forEach(select => select.addEventListener('change', () => select.form.requestSubmit()));
     document.querySelectorAll('[data-copy]').forEach(button => button.addEventListener('click', () => copyText(button.dataset.copy, button)));
     document.querySelectorAll('[data-share]').forEach(button => button.addEventListener('click', async () => {

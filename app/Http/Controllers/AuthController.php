@@ -79,14 +79,31 @@ class AuthController extends Controller
 
     public function sendReset(Request $request): RedirectResponse
     {
-        $data = $request->validate(['email' => 'required|email|max:255']);
+        $user = $request->user();
+        if ($user) {
+            $email = $user->email;
+        } else {
+            $data = $request->validate(['email' => 'required|email|max:255']);
+            $email = Str::lower(trim($data['email']));
+        }
         if (in_array(config('mail.default'), ['array', 'log'], true)) {
             return back()->withErrors(['email' => 'Chưa cấu hình dịch vụ SMTP; chưa thể gửi liên kết đặt lại mật khẩu.']);
         }
         try {
-            Password::sendResetLink(['email' => Str::lower(trim($data['email']))]);
+            $status = Password::sendResetLink(['email' => $email]);
         } catch (\Throwable) {
             return back()->withErrors(['email' => 'Dịch vụ gửi thư đang không khả dụng. Vui lòng thử lại sau.']);
+        }
+
+        if ($user) {
+            if ($status === Password::ResetThrottled) {
+                return back()->withErrors(['email' => 'Bạn vừa yêu cầu liên kết. Vui lòng chờ một phút trước khi gửi lại.']);
+            }
+            if ($status !== Password::ResetLinkSent) {
+                return back()->withErrors(['email' => 'Chưa gửi được liên kết thiết lập mật khẩu. Vui lòng thử lại sau.']);
+            }
+
+            return back()->with('success', 'Đã gửi liên kết thiết lập hoặc đặt lại mật khẩu tới email của bạn. Mở thư để đặt mật khẩu riêng cho website; bạn vẫn có thể đăng nhập bằng Google.');
         }
 
         return back()->with('success', 'Nếu email đã được đăng ký, yêu cầu đặt lại mật khẩu đã được tiếp nhận. Email thực tế cần dịch vụ gửi thư được cấu hình.');
@@ -107,6 +124,10 @@ class AuthController extends Controller
         if ($status !== Password::PasswordReset) {
             throw ValidationException::withMessages(['email' => 'Liên kết không hợp lệ hoặc đã hết hạn. Hãy yêu cầu liên kết mới.']);
         }
+
+        Auth::logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
 
         return redirect()->route('login')->with('success', 'Đã đổi mật khẩu. Hãy đăng nhập lại.');
     }
