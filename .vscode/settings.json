@@ -1,0 +1,10 @@
+{
+    "files.associations": {
+        "*.blade.php": "blade"
+    },
+    "php.validate.executablePath": "D:/linh_tinh/laragon/bin/php/php-8.3.30-Win32-vs16-x64/php.exe",
+    "Laravel.phpEnvironment": "local",
+    "Laravel.phpCommand": [
+        "D:/linh_tinh/laragon/bin/php/php-8.3.30-Win32-vs16-x64/php.exe"
+    ]
+}
