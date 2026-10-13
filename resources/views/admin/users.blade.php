@@ -1,11 +1,3 @@
-@extends('layouts.blog')
-@section('title', 'Quản lý độc giả')
-@section('robots', 'noindex,nofollow')
-@section('content')
-<header class="page-heading"><h1>Độc giả<span class="heading-dot">.</span></h1><p>Tài khoản độc giả chỉ được đọc, lưu bài và bình luận; không có quyền đăng bài.</p></header><x-admin-nav />
-<div class="table-wrap"><table class="admin-table"><thead><tr><th>Tài khoản</th><th>Vai trò</th><th>Bình luận</th><th>Thao tác</th></tr></thead><tbody>
-@foreach($users as $item)<tr><td><strong>{{ $item->name }}</strong><small>{{ $item->email }}</small></td><td><span class="status-chip">{{ $item->role === 'admin' ? 'Chủ blog' : ($item->is_locked ? 'Độc giả bị khóa' : 'Độc giả') }}</span></td><td>{{ $item->comments_count }}</td><td>
-@if($item->role !== 'admin')<form method="post" action="{{ route('admin.users.update', $item) }}" data-confirm="{{ $item->is_locked ? 'Mở khóa tài khoản này?' : 'Khóa tài khoản và chặn các phiên đăng nhập của độc giả này?' }}">@csrf @method('PATCH')<input type="hidden" name="is_locked" value="{{ $item->is_locked ? 0 : 1 }}"><button class="text-button" type="submit">{{ $item->is_locked ? 'Mở khóa' : 'Khóa tài khoản' }}</button></form>@else<span class="muted">Không thể khóa</span>@endif
-</td></tr>@endforeach
-</tbody></table></div><x-pagination :items="$users" />
-@endsection
+@extends('layouts.admin')
+@php $pageTitle='Quản lý độc giả'; @endphp
+@section('content')<div class="admin-page-heading"><div><p class="eyebrow">CỘNG ĐỒNG ĐỌC NHỎ</p><h1>Độc giả</h1><p class="muted">Chỉ khóa/mở khóa độc giả. Không cấp quyền admin từ form công khai.</p></div></div><section class="panel"><form method="get" class="media-search"><x-field name="q" label="Tìm tên hoặc email" :value="request('q')" maxlength="150"/><button class="btn btn-outline-forest">Tìm độc giả</button></form><div class="table-responsive"><table class="table editorial-table"><thead><tr><th>ĐỘC GIẢ</th><th>EMAIL</th><th>BÌNH LUẬN</th><th>TRẠNG THÁI</th><th>THAO TÁC</th></tr></thead><tbody>@forelse($users as $user)<tr><td><div class="author-line"><x-avatar :user="$user" /><strong>{{ $user->name }}</strong></div></td><td>{{ $user->email }}<small>{{ $user->hasVerifiedEmail() ? 'Đã xác minh' : 'Chưa xác minh' }}</small></td><td>{{ $user->comments_count }}</td><td><span class="status">{{ $user->is_locked ? 'Đang khóa' : 'Hoạt động' }}</span></td><td><form method="post" action="{{ route('admin.users.update',$user) }}" data-confirm="{{ $user->is_locked ? 'Mở khóa tài khoản này?' : 'Khóa tài khoản này? Phiên đăng nhập sẽ bị từ chối.' }}">@csrf @method('patch')<input name="is_locked" value="{{ $user->is_locked ? 0 : 1 }}" type="hidden"><button class="btn btn-outline-forest btn-sm">{{ $user->is_locked ? 'Mở khóa' : 'Khóa tài khoản' }}</button></form></td></tr>@empty<tr><td colspan="5">Không có độc giả phù hợp.</td></tr>@endforelse</tbody></table></div>{{ $users->links() }}</section>@endsection

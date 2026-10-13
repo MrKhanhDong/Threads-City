@@ -1,9 +1,3 @@
-@extends('layouts.blog')
-@section('title', 'Quên mật khẩu')
-@section('content')
-<header class="page-heading"><h1>Quên mật khẩu<span class="heading-dot">?</span></h1><p>Nhập email để nhận liên kết đặt lại mật khẩu.</p></header>
-<form class="form-stack auth-form" method="post" action="{{ route('password.email') }}">@csrf
-<label for="email">Email tài khoản</label><input id="email" name="email" type="email" value="{{ old('email') }}" maxlength="255" autocomplete="email" required>
-<button class="button button--black" type="submit">Gửi liên kết đặt lại</button><a href="{{ route('login') }}" class="text-link">Quay lại đăng nhập</a>
-</form>
-@endsection
+@extends('layouts.public')
+@php $pageTitle='Quên mật khẩu'; @endphp
+@section('content')<section class="container page-section auth-narrow"><p class="eyebrow">TÀI KHOẢN / KHÔI PHỤC</p><h1>Trở về góc đọc.</h1><p class="lead-muted">Nhập email đã đăng ký để yêu cầu liên kết đặt lại mật khẩu.</p><x-local-mail-preview />@if(in_array(config('mail.default'),['array','log']))<p class="alert alert-warning">SMTP chưa được cấu hình. Hiện tại website chưa gửi được thư đặt lại mật khẩu.</p>@endif<form method="post" action="{{ route('password.email') }}">@csrf<x-field name="email" type="email" label="Email đã đăng ký" required autocomplete="email"/><button class="btn btn-forest">Yêu cầu liên kết ↗</button></form><a class="text-link d-inline-block mt-4" href="{{ route('login') }}">← Quay lại đăng nhập</a></section>@endsection

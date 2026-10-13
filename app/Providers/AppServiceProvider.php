@@ -2,35 +2,40 @@
 
 namespace App\Providers;
 
+use App\Models\Category;
+use App\Models\Setting;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\Request;
+use Illuminate\Pagination\Paginator;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
 {
-    /**
-     * Register any application services.
-     */
     public function register(): void
     {
-        //
+        $this->app->scoped('blog.context', fn (): array => [
+            'site' => array_merge(['site_name' => config('blog.name'), 'site_tagline' => config('blog.tagline'), 'site_description' => config('blog.description'), 'about' => '', 'contact_email' => ''], Setting::pluck('value', 'key')->all()),
+            'navigationCategories' => Category::withCount(['posts' => fn (Builder $query): Builder => $query->published()])->orderBy('name')->get(),
+        ]);
+        $this->app->scoped('blog.saved', fn (): array => request()->user()?->bookmarks()->pluck('posts.id')->all() ?? []);
     }
 
-    /**
-     * Bootstrap any application services.
-     */
     public function boot(): void
     {
-        \Illuminate\Support\Facades\View::composer(['blog.*', 'admin.*', 'auth.*', 'account.*'], function ($view) {
-            // Invalid array-shaped form inputs should produce validation errors,
-            // not a second rendering error when Blade echoes old input.
-            $old = request()->session()->getOldInput();
-            $safe = array_filter($old, fn ($value) => is_scalar($value) || $value === null);
-            if (isset($old['tags']) && is_array($old['tags'])) {
-                $safe['tags'] = array_values(array_filter($old['tags'], 'is_scalar'));
-            } else {
-                unset($safe['tags']);
-            }
-            request()->session()->put('_old_input', $safe);
-            $view->with(app(\App\Repositories\BlogRepository::class)->shared());
+        Paginator::useBootstrapFive();
+        View::composer(['layouts.*', 'blog.*', 'auth.*', 'account.*', 'admin.*', 'components.*'], function (\Illuminate\View\View $view): void {
+            $view->with(app('blog.context'))->with('savedIds', app('blog.saved'));
         });
+        RateLimiter::for('login', function (Request $request): Limit {
+            $email = $request->input('email');
+
+            return Limit::perMinute(5)->by($request->ip().':'.(is_string($email) ? mb_strtolower($email) : 'invalid'));
+        });
+        foreach (['register' => 5, 'password-reset' => 3, 'comments' => 5, 'uploads' => 30] as $name => $attempts) {
+            RateLimiter::for($name, fn (Request $request): Limit => Limit::perMinute($attempts)->by(($request->user()?->id ?? $request->ip()).':'.$name));
+        }
     }
 }

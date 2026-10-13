@@ -2,25 +2,63 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\AccountRequest;
+use App\Models\User;
+use Illuminate\Contracts\View\View;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class AccountController extends Controller
 {
-    public function edit(Request $request) { return view('account.edit', ['user' => $request->user()]); }
-    public function update(Request $request)
+    public function edit(): View
     {
-        if (is_string($request->input('email'))) $request->merge(['email' => mb_strtolower($request->input('email'))]);
-        $data = $request->validate([
-            'name' => 'required|string|max:80', 'email' => ['required', 'email', 'max:255', Rule::unique('users')->ignore($request->user()->id)],
-            'current_password' => 'nullable|required_with:password|current_password:web',
-            'password' => ['nullable', 'string', 'max:255', 'confirmed', Password::min(10)->letters()->numbers()],
-        ]);
-        $request->user()->fill(['name' => $data['name'], 'email' => mb_strtolower($data['email'])]);
-        if (!empty($data['password'])) $request->user()->password = $data['password'];
-        $request->user()->save();
+        return view('account.edit');
+    }
+
+    public function update(AccountRequest $request): RedirectResponse
+    {
+        $user = $request->user();
+        $data = $request->validated();
+        $oldAvatar = $user->avatar_path;
+        $newAvatar = $request->hasFile('avatar') ? $request->file('avatar')->store('avatars', 'local') : null;
+        try {
+            $user->fill(collect($data)->only(['name', 'bio'])->all());
+            if ($newAvatar) {
+                $user->avatar_path = $newAvatar;
+            }
+            $user->save();
+        } catch (\Throwable $error) {
+            if ($newAvatar) {
+                Storage::disk('local')->delete($newAvatar);
+            }
+            throw $error;
+        }
+        if ($newAvatar && $oldAvatar && str_starts_with($oldAvatar, 'avatars/')) {
+            Storage::disk('local')->delete($oldAvatar);
+        }
+
+        return back()->with('success', 'Đã cập nhật hồ sơ.');
+    }
+
+    public function password(Request $request): RedirectResponse
+    {
+        $data = $request->validate(['current_password' => 'required|current_password', 'password' => ['required', 'confirmed', Password::min(8)->letters()->numbers()]]);
+        $request->user()->forceFill(['password' => $data['password'], 'remember_token' => Str::random(60)])->save();
+        $request->session()->put('password_hash_web', $request->user()->password);
         $request->session()->regenerate();
-        return back()->with('success', 'Đã cập nhật tài khoản.');
+
+        return back()->with('success', 'Đã đổi mật khẩu. Các phiên cũ sẽ bị thu hồi.');
+    }
+
+    public function avatar(User $user): BinaryFileResponse
+    {
+        abort_unless($user->avatar_path && preg_match('~^avatars/[A-Za-z0-9]+\.(jpg|jpeg|png|webp)$~', $user->avatar_path), 404);
+        abort_unless(Storage::disk('local')->exists($user->avatar_path), 404);
+
+        return response()->file(Storage::disk('local')->path($user->avatar_path), ['X-Content-Type-Options' => 'nosniff']);
     }
 }

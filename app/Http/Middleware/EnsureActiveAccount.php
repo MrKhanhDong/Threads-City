@@ -15,8 +15,13 @@ class EnsureActiveAccount
             Auth::logout();
             $request->session()->invalidate();
             $request->session()->regenerateToken();
-            return redirect()->route('login')->withErrors(['email' => 'Tài khoản đã bị khóa.']);
+            if ($request->expectsJson()) {
+                abort(403, 'Tài khoản đang bị khóa.');
+            }
+
+            return redirect()->route('login')->withErrors(['email' => 'Tài khoản đang bị khóa.']);
         }
+
         return $next($request);
     }
 }

@@ -1,12 +1,3 @@
-@extends('layouts.blog')
-@section('title', 'Đăng ký độc giả')
-@section('content')
-<header class="page-heading"><span class="overline">MỘT GÓC ĐỌC NHỎ</span><h1>Tham gia cùng mình<span class="heading-dot">.</span></h1><p>Tài khoản dành cho độc giả, không phải tài khoản đăng bài.</p></header>
-<form class="form-stack auth-form" method="post" action="{{ route('register.store') }}">@csrf
-<label for="name">Tên hiển thị</label><input id="name" name="name" value="{{ old('name') }}" maxlength="80" autocomplete="name" required>
-<label for="email">Email</label><input id="email" name="email" type="email" value="{{ old('email') }}" maxlength="255" autocomplete="email" required>
-<label for="password">Mật khẩu</label><input id="password" name="password" type="password" minlength="10" maxlength="255" autocomplete="new-password" required><span class="field-hint">Ít nhất 10 ký tự, có chữ và số.</span>
-<label for="password_confirmation">Nhập lại mật khẩu</label><input id="password_confirmation" name="password_confirmation" type="password" autocomplete="new-password" required>
-<button class="button button--black" type="submit">Tạo tài khoản</button><a class="text-link" href="{{ route('login') }}">Đã có tài khoản? Đăng nhập</a>
-</form>
-@endsection
+@extends('layouts.public')
+@php $pageTitle='Đăng ký độc giả'; @endphp
+@section('content')<section class="auth-shell"><div class="auth-intro"><p class="eyebrow">MỘT GÓC ĐỌC RIÊNG</p><h1>Cùng đọc.<br><em>Cùng trò chuyện.</em></h1><p>Tạo tài khoản độc giả để lưu bài và gửi bình luận. Tài khoản này không có quyền đăng bài hoặc quản trị blog.</p></div><div class="auth-card"><h2>Đăng ký độc giả</h2><a class="btn btn-google" href="{{ route('google.redirect') }}">G &nbsp; Tiếp tục với Google</a><div class="form-divider">hoặc bằng email</div><form method="post" action="{{ route('register.store') }}">@csrf<x-field name="name" label="Tên hiển thị" maxlength="100" autocomplete="name" required/><x-field name="email" type="email" label="Email" autocomplete="email" required/><x-field name="password" type="password" label="Mật khẩu" autocomplete="new-password" minlength="8" required/><small class="muted">Ít nhất 8 ký tự, có chữ và số.</small><x-field name="password_confirmation" type="password" label="Nhập lại mật khẩu" autocomplete="new-password" required/><p class="muted small">Khi tạo tài khoản, bạn đồng ý với <a href="{{ route('terms') }}">điều khoản</a> và <a href="{{ route('privacy') }}">chính sách quyền riêng tư</a>.</p><button class="btn btn-forest w-100">Tạo tài khoản ↗</button></form><p class="auth-bottom">Đã có tài khoản? <a href="{{ route('login') }}">Đăng nhập</a></p></div></section>@endsection

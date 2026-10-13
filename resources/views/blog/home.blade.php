@@ -1,29 +1,7 @@
-@extends('layouts.blog')
-@section('title', 'Trang chủ')
+@extends('layouts.public')
 @section('content')
-    <section class="welcome">
-        <span class="overline"><span class="tiny-dot"></span>BLOG CÁ NHÂN CỦA {{ mb_strtoupper($author['name']) }}</span>
-        <h1>Những dòng viết.<br>Những điều mình học.</h1>
-        <p>Về code, cuộc sống và những điều đáng lưu lại.<br>Chào bạn, rất vui vì bạn ở đây.</p>
-    </section>
-    @if($featured)
-        <div class="section-heading"><h2>Bài viết nổi bật</h2><span>01 / JOURNAL</span></div>
-        <article class="featured-post">
-            <a class="featured-image" href="{{ route('posts.show', $featured['slug']) }}">
-                @if($featured['image'])<img src="{{ $featured['image'] }}" alt="{{ $featured['image_alt'] }}">@else<div class="featured-placeholder"><x-icon name="book" size="50" /></div>@endif
-                <span class="image-caption">GHI CHÉP TỪ GÓC LÀM VIỆC</span>
-            </a>
-            <div class="featured-content">
-                <div class="post-meta"><a href="{{ route('posts.index', ['category' => $featured['category_slug']]) }}">{{ $featured['category'] }}</a><span>·</span><time datetime="{{ $featured['date'] }}">{{ $featured['date_label'] }}</time></div>
-                <h2><a href="{{ route('posts.show', $featured['slug']) }}">{{ $featured['title'] }}</a></h2>
-                <p>{{ $featured['excerpt'] }}</p>
-                <div class="featured-bottom"><a class="button button--black" href="{{ route('posts.show', $featured['slug']) }}">Đọc tiếp <x-icon name="arrow" size="17" /></a><span>{{ $featured['read_time'] }} phút đọc</span><x-bookmark :post="$featured" /></div>
-            </div>
-        </article>
-        <div class="section-heading section-heading--latest"><h2>Ghi chép mới nhất</h2><a class="text-link" href="{{ route('posts.index') }}">Xem tất cả <x-icon name="arrow" size="16" /></a></div>
-        <div class="post-list">@foreach($posts as $post)<x-post-card :post="$post" />@endforeach</div>
-    @else
-        <div class="empty-state"><x-icon name="book" size="36" /><h2>Một trang mới đang bắt đầu</h2><p>Chưa có bài viết được xuất bản. Hẹn bạn quay lại sớm.</p></div>
-    @endif
-    <div class="end-note"><span></span><p>Cảm ơn bạn đã ghé qua góc nhỏ này.</p><span></span></div>
+<section class="container editorial-intro"><p class="eyebrow"><span></span> MỘT GÓC NHÌN, NHỮNG CÂU CHUYỆN</p><h1>Ghi lại những điều nhỏ.<br><em>Giữ lại những điều đẹp.</em></h1><div class="intro-bottom"><p>{{ $site['site_description'] }}</p><a class="text-link" href="{{ route('about') }}">Một chút về tác giả ↗</a></div></section>
+@if($featured)<section class="container featured"><a class="featured-cover" href="{{ route('posts.show',$featured->slug) }}"><x-cover :post="$featured" /></a><div class="featured-content"><p class="eyebrow">LỰA CHỌN CỦA TÁC GIẢ · {{ $featured->categories->first()?->name }}</p><h2><a href="{{ route('posts.show',$featured->slug) }}">{{ $featured->title }}</a></h2><p>{{ $featured->excerpt }}</p><div class="author-line"><x-avatar :user="$featured->author" /><span>{{ $featured->author->name }}<small>{{ $featured->published_at->format('d.m.Y') }} · {{ $featured->readingMinutes() }} phút đọc</small></span></div><a class="btn btn-forest" href="{{ route('posts.show',$featured->slug) }}">Đọc câu chuyện ↗</a></div></section>@endif
+<section class="container latest-section"><div class="section-heading"><div><p class="eyebrow">TỪ CUỐN SỔ CỦA TÔI</p><h2>Những bài viết mới</h2></div><a class="text-link" href="{{ route('posts.index') }}">Xem tất cả ↗</a></div><div class="category-pills"><a class="active" href="{{ route('posts.index') }}">Tất cả</a>@foreach($navigationCategories as $category)<a href="{{ route('categories.show',$category->slug) }}">{{ $category->name }} <small>{{ $category->posts_count }}</small></a>@endforeach</div><div class="post-grid">@forelse($posts as $post)<x-post-card :post="$post" />@empty<div class="empty-state"><h3>Chưa có câu chuyện mới</h3><p>Ghé lại khi tác giả đăng bài tiếp theo nhé.</p></div>@endforelse</div>{{ $posts->links() }}</section>
+<section class="container slow-note"><span class="note-number">01 / MỘC</span><div><h2>Mỗi câu chuyện cần một khoảng lặng.</h2><p>Không phải một dòng tin để lướt qua. Đây là góc viết, để bạn đọc theo nhịp của mình.</p></div><a href="{{ route('posts.index') }}">Chọn một bài để đọc ↗</a></section>
 @endsection
