@@ -3,46 +3,70 @@
 namespace App\Services;
 
 use App\Http\Requests\PostRequest;
+use App\Models\Media;
 use App\Models\Post;
+use App\Models\PostRedirect;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class PostWriter
 {
-    public function save(PostRequest $request, ?Post $post = null): Post
+    public function __construct(private HtmlSanitizer $sanitizer) {}
+
+    public function save(PostRequest $request, ?Post $article = null): Post
     {
-        $post ??= new Post;
         $data = $request->validated();
-        $oldCover = $post->cover_path;
-        $newCover = $request->hasFile('cover') ? $request->file('cover')->store('covers', 'public') : null;
-        if ($request->hasFile('cover') && !$newCover) throw new \RuntimeException('Không lưu được ảnh bìa.');
         try {
-            DB::transaction(function () use ($request, $post, $data, $oldCover, $newCover) {
+            return DB::transaction(function () use ($request, $article, $data): Post {
+                $post = $article ? Post::lockForUpdate()->findOrFail($article->id) : new Post;
+                if ($post->exists && (int) $data['lock_version'] !== $post->lock_version) {
+                    throw ValidationException::withMessages(['lock_version' => 'Bài đã thay đổi ở cửa sổ khác. Sao chép nội dung đang viết, tải lại rồi lưu để tránh ghi đè.']);
+                }
                 $slug = $data['slug'] ?? '';
-                if ($slug === '') {
-                    $base = rtrim(Str::substr(Str::slug($data['title']) ?: 'bai-viet', 0, 210), '-');
+                if (! $slug) {
+                    $base = Str::limit(Str::slug($data['title']) ?: 'bai-viet', 200, '');
                     $slug = $base;
                     $suffix = 2;
-                    while (Post::withTrashed()->where('slug', $slug)->when($post->exists, fn ($q) => $q->whereKeyNot($post->id))->exists()) $slug = $base.'-'.$suffix++;
+                    while (Post::withTrashed()->where('slug', $slug)->when($post->exists, fn (Builder $query): Builder => $query->whereKeyNot($post->id))->exists() || PostRedirect::where('slug', $slug)->when($post->exists, fn (Builder $query): Builder => $query->where('post_id', '!=', $post->id))->exists()) {
+                        $slug = $base.'-'.$suffix++;
+                    }
                 }
-                $post->fill(collect($data)->only(['title', 'excerpt', 'content', 'category_id', 'status', 'cover_alt'])->all());
+                $previousSlug = $post->slug;
+                $wasPublic = $post->published_at && $post->published_at->lte(now());
+                $post->fill(collect($data)->except(['categories', 'tags', 'lock_version'])->all());
                 $post->slug = $slug;
+                $post->content = $this->sanitizer->clean($data['content']);
+                if (trim(strip_tags($post->content)) === '' && ! str_contains($post->content, '<img')) {
+                    throw ValidationException::withMessages(['content' => 'Nội dung bài cần có chữ hoặc ảnh hợp lệ.']);
+                }
                 $post->user_id = $post->exists ? $post->user_id : $request->user()->id;
                 $post->is_featured = $request->boolean('is_featured');
-                $post->published_at = $data['status'] === 'published' ? ($post->published_at ?? now()) : null;
-                $post->cover_path = $newCover ?: ($request->boolean('remove_cover') ? null : $oldCover);
+                $post->published_at = match ($data['status']) {
+                    'draft' => null,
+                    'scheduled' => $data['published_at'],
+                    default => $post->published_at?->lte(now()) ? $post->published_at : now(),
+                };
+                $post->lock_version = $post->exists ? $post->lock_version + 1 : 1;
                 $post->save();
+                $post->categories()->sync($data['categories']);
                 $post->tags()->sync($data['tags'] ?? []);
+                $mediaIds = $this->sanitizer->mediaIds($post->content);
+                if (Media::whereKey($mediaIds)->count() !== count($mediaIds)) {
+                    throw ValidationException::withMessages(['content' => 'Có ảnh đã bị xóa khỏi thư viện. Hãy tải lại hoặc thay ảnh trước khi lưu.']);
+                }
+                $post->media()->sync($mediaIds);
+                PostRedirect::where('slug', $slug)->where('post_id', $post->id)->delete();
+                if ($previousSlug && $previousSlug !== $slug && $wasPublic) {
+                    PostRedirect::firstOrCreate(['slug' => $previousSlug], ['post_id' => $post->id]);
+                }
+
+                return $post;
             });
-        } catch (\Throwable $error) {
-            if ($newCover) Storage::disk('public')->delete($newCover);
-            if ($error instanceof \Illuminate\Database\UniqueConstraintViolationException) {
-                throw \Illuminate\Validation\ValidationException::withMessages(['slug' => 'Đường dẫn vừa được sử dụng. Hãy chọn đường dẫn khác hoặc thử lưu lại.']);
-            }
-            throw $error;
+        } catch (UniqueConstraintViolationException) {
+            throw ValidationException::withMessages(['slug' => 'Đường dẫn vừa được sử dụng. Chọn đường dẫn khác và lưu lại.']);
         }
-        if ($oldCover && $oldCover !== $post->cover_path && str_starts_with($oldCover, 'covers/')) Storage::disk('public')->delete($oldCover);
-        return $post;
     }
 }

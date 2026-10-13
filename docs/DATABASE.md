@@ -1,171 +1,78 @@
-# Thiết kế database MySQL
+# Database của blog cá nhân
 
-## Nguồn chuẩn và phạm vi
+Database chạy trên MySQL 8.4.3 của Laragon, cổng 3307, charset utf8mb4. Database website: moc_blog; database test: moc_blog_test.
 
-Các migration trong `database/migrations/` là nguồn chuẩn: `000001` tạo blog, `000002` thêm thùng rác và lượt xem theo ngày. Database ứng dụng: **threads_city_blog**, MySQL 8, InnoDB, utf8mb4. Bản SQL portable nằm trong `database/sql/threads_city_blog.sql`.
+Nguồn schema chính xác: database/migrations, gồm schema blog ban đầu, ba migration Laravel mặc định và hai migration cập nhật 13/10/2026 cho post_likes / mặc định bình luận hiển thị ngay, cùng migration notifications ngày 14/10/2026. Không có bảng đăng bài của độc giả, follow, tin nhắn hay nhóm mạng xã hội.
 
-Database kiểm thử: **threads_city_blog_test**. Không trỏ test vào database ứng dụng; RefreshDatabase sẽ dựng lại schema test. Không chạy migration hoặc import SQL mới vào database cũ khi chưa backup/đối chiếu.
+## Quan hệ chính
 
-Có **9 bảng ứng dụng/xác thực** và bảng **migrations** của Laravel, tổng 10 bảng. Session/cache dùng file nên không có bảng sessions/cache.
+| Bảng | Vai trò | Quan hệ |
+| --- | --- | --- |
+| users | Tác giả/admin và độc giả | 1–n posts, comments, media; n–n posts qua bookmarks/post_likes |
+| posts | Bài viết HTML, trạng thái, SEO, xóa mềm | Thuộc tác giả; n–n categories/tags/media; 1–n comments/views/redirects |
+| categories | Danh mục | n–n posts qua post_category |
+| tags | Thẻ | n–n posts qua post_tag |
+| media | Metadata ảnh, đường dẫn file, ALT | Thuộc người upload; dùng làm cover, OG hoặc ảnh trong nội dung |
+| comments | Bình luận và phản hồi | Thuộc bài và độc giả; parent_id liên kết lại comments |
+| notifications | Thông báo trả lời trong website | Laravel database notifications; notifiable_type/id trỏ tới user, data chỉ giữ comment_id, read_at ghi thời điểm đọc |
+| comment_reports | Báo cáo bình luận | Thuộc comment và user; một user báo cáo một comment tối đa một bản ghi |
+| bookmarks | Bài độc giả đã lưu | Khóa chính kép post_id / user_id |
+| post_likes | Lượt thích bài của độc giả | Khóa chính kép post_id / user_id; created_at; FK cascade khi xóa post/user |
+| post_redirects | Slug cũ | Thuộc post; slug cũ unique |
+| post_daily_views | Lượt đọc theo ngày | Thuộc post; unique post_id / view_date |
+| settings | Cài đặt blog | Khóa chính key, giá trị text |
 
-## ERD
+## ERD rút gọn
 
 ```mermaid
 erDiagram
     users ||--o{ posts : writes
-    categories ||--o{ posts : groups
-    posts ||--o{ comments : receives
-    posts ||--o{ post_daily_views : counted
-    users ||--o{ comments : writes
-    posts ||--o{ post_tag : tagged
-    tags ||--o{ post_tag : belongs
+    users ||--o{ comments : comments
+    users ||--o{ notifications : receives
+    users ||--o{ media : uploads
     users ||--o{ bookmarks : saves
-    posts ||--o{ bookmarks : saved
-    users ||--o| password_reset_tokens : resets
-
-    users {
-        bigint id PK
-        varchar name
-        varchar email UK
-        varchar password
-        enum role
-        boolean is_locked
-        varchar blog_title
-        varchar headline
-        varchar bio
-        text about
-        varchar website
-        varchar avatar_path
-        varchar remember_token
-        timestamp created_at
-        timestamp updated_at
-    }
-    categories {
-        bigint id PK
-        varchar name UK
-        varchar slug UK
-        varchar description
-        varchar icon
-        boolean is_active
-    }
-    posts {
-        bigint id PK
-        bigint user_id FK
-        bigint category_id FK
-        varchar title
-        varchar slug UK
-        varchar excerpt
-        longtext content
-        varchar cover_path
-        varchar cover_alt
-        enum status
-        boolean is_featured
-        int views_count
-        timestamp published_at
-        timestamp deleted_at
-    }
-    post_daily_views {
-        bigint id PK
-        bigint post_id FK
-        date view_date
-        bigint views
-    }
-    tags {
-        bigint id PK
-        varchar name UK
-        varchar slug UK
-    }
-    post_tag {
-        bigint post_id PK,FK
-        bigint tag_id PK,FK
-    }
-    comments {
-        bigint id PK
-        bigint post_id FK
-        bigint user_id FK
-        text body
-        enum status
-    }
-    bookmarks {
-        bigint user_id PK,FK
-        bigint post_id PK,FK
-        timestamp created_at
-    }
-    password_reset_tokens {
-        varchar email PK
-        varchar token
-        timestamp created_at
-    }
+    users ||--o{ post_likes : likes
+    users ||--o{ comment_reports : reports
+    posts ||--o{ post_category : has
+    categories ||--o{ post_category : groups
+    posts ||--o{ post_tag : has
+    tags ||--o{ post_tag : labels
+    posts ||--o{ post_media : embeds
+    media ||--o{ post_media : used_by
+    media o|--o{ posts : cover_or_og
+    posts ||--o{ comments : receives
+    comments o|--o{ comments : parent
+    comments ||--o{ comment_reports : receives
+    posts ||--o{ bookmarks : saved_by
+    posts ||--o{ post_likes : liked_by
+    posts ||--o{ post_redirects : old_slugs
+    posts ||--o{ post_daily_views : daily_reads
 ```
 
-Liên kết email với password_reset_tokens là **logic xác thực**, không có FK vật lý (đúng password broker Laravel). Các model chính có created_at/updated_at; sơ đồ rút gọn không lặp hai cột ở mọi bảng.
+## Trạng thái và toàn vẹn dữ liệu
 
-## Ràng buộc và nghiệp vụ
+- Post: draft / published / scheduled. Chỉ public khi published hoặc scheduled và published_at đã tới; bài trong thùng rác không public.
+- Xóa mềm bằng deleted_at; vẫn giữ danh mục, bình luận và slug để khôi phục. Trang quản trị phải kiểm tra thao tác xóa vĩnh viễn riêng.
+- Xóa vĩnh viễn post sẽ cascade pivot, bookmark, like, comment/report, redirect và lượt đọc. Xóa mềm giữ like để khôi phục. Không tự xóa file media dùng lại hoặc tài khoản.
+- Danh mục/thẻ/media đang được pivot tham chiếu và tác giả đang có bài được bảo vệ bằng khóa ngoại restrict.
+- Cover/OG bị xóa trực tiếp ở DB sẽ null liên kết; luồng quản trị phải chặn xóa ảnh còn được sử dụng trước khi thao tác file.
+- Comment: mặc định **approved (đang hiển thị)**. Bình luận/reply mới hiển thị ngay theo yêu cầu cập nhật; giữ pending cho dữ liệu cũ, hidden/spam để quản trị xử lý vi phạm. Migration không tự công khai pending cũ; độc giả sửa không đổi trạng thái đã bị ẩn. Reply phải cùng bài, cha và tổ tiên đang công khai; không giới hạn 2 cấp ở ứng dụng, giao diện gom mọi reply về một mức thụt lề; khóa ngoại không tự kiểm tra các quy tắc này.
+- Like: một user một lượt/post; chỉ tài khoản đã xác minh và bài đang public. POST lặp không tạo trùng, DELETE chỉ bỏ lượt của chính user; transaction khóa post khi ghi.
+- Reply vẫn giữ parent_id trực tiếp; MySQL recursive CTE tìm thread và lọc toàn bộ tổ tiên. Endpoint chỉ tải nội dung 5 reply mỗi lượt, không tải toàn bộ body rồi ẩn bằng CSS. Khi xóa cha, FK nullOnDelete giữ reply và đưa các con trực tiếp thành bình luận gốc.
+- Thông báo và reply được ghi cùng transaction; chỉ người viết bình luận được trả lời trực tiếp nhận thông báo, trừ tự trả lời. Danh sách/số chưa đọc lọc theo comment còn hiển thị và bài công khai; nội dung đã bị ẩn/xóa hoặc bài trong thùng rác không hiện. Không lưu body/email trong data thông báo, không gửi mail. Bảng notifications dùng quan hệ polymorphic của Laravel, không có FK tới comments; bản ghi cũ được lọc khi comment không còn tồn tại.
+- Reader là role mặc định. Role, google_id và trạng thái xác minh email không được mass assign từ form đăng ký.
+- lock_version ngăn tab editor cũ ghi đè nội dung mới; các bước lưu post / pivot / redirect nằm trong một transaction.
+- HTML được sanitize trước khi lưu; MySQL giữ rich text và Unicode/emoji đầy đủ.
+- Lượt xem được ghi một lần mỗi session/bài/ngày; tác giả/admin không tính vào thống kê. Đây không phải phép đếm người dùng duy nhất hay hệ thống chống bot hoàn chỉnh.
 
-| Dữ liệu                    | Quy tắc                                                                                            |
-| -------------------------- | -------------------------------------------------------------------------------------------------- |
-| users.role                 | admin hoặc reader; đăng ký luôn tạo reader                                                         |
-| users.email                | Duy nhất, chuẩn hóa chữ thường                                                                     |
-| posts.status               | draft / published / archived                                                                       |
-| Bài công khai              | deleted_at=null, status=published, published_at không null và <= hiện tại, category đang hoạt động |
-| posts.slug                 | Duy nhất; tự chuyển tiêu đề sang không dấu, thêm hậu tố khi trùng                                  |
-| categories.slug, tags.slug | Duy nhất; chữ thường/số/gạch nối                                                                   |
-| comments.status            | pending / approved / rejected; độc giả không tự duyệt                                              |
-| bookmarks PK               | (user_id, post_id), không lưu trùng                                                                |
-| post_tag PK                | (post_id, tag_id), quan hệ N–N                                                                     |
-| Xóa mềm post               | Điền deleted_at; giữ các quan hệ và file ảnh, không phục vụ công khai                              |
-| Khôi phục post             | deleted_at=null, status=draft, published_at=null; giữ slug và lịch sử                              |
-| Xóa vĩnh viễn post         | Chỉ cho bài đã xóa mềm; cascade comments, bookmarks, post_tag, post_daily_views; dọn ảnh upload    |
-| Xóa category               | Restrict khi còn post, kể cả bài trong thùng rác; cần chuyển/khôi phục bài trước                   |
-| post_daily_views           | Unique (post_id, view_date), views unsigned; tăng nguyên tử trong transaction                      |
-| Xóa tag                    | Cascade post_tag; giữ nguyên bài viết                                                              |
-| Xóa user                   | Không có chức năng xóa user; FK post restrict bảo vệ tác giả, quản trị chỉ khóa độc giả            |
-| Password                   | Hash qua Laravel cast; không lưu mật khẩu rõ                                                       |
-| Reset token                | Broker lưu hash token; TTL 60 phút; xóa sau khi dùng                                               |
+## An toàn khi kiểm thử
 
-Index status/published_at/deleted_at cho post, post_id/status cho comment, view_date cho thống kê; FK và unique bổ sung index tra cứu. posts.slug unique gồm cả bài trong thùng rác. Không lưu số lượt like/follow giả.
+tests/TestCase.php kiểm tra kết nối MySQL và database moc_blog_test trước khi RefreshDatabase chạy. Không cho phép dùng moc_blog.
 
-## Thống kê theo ngày
+Bộ kiểm thử có thể tạo/xóa schema trong moc_blog_test. Database này không được dùng để lưu dữ liệu thật. Không chạy migrate:fresh/migrate:reset trên database website.
 
-PostViewRecorder ghi một lượt/bài/phiên/ngày theo Asia/Ho_Chi_Minh, không tính admin và preview. Unique (post_id, view_date) và SQL increment tránh mất cập nhật giữa các phiên đọc. Cả số ngày và posts.views_count tăng trong cùng transaction; bảng không lưu IP/user_id.
+## Sao lưu khi triển khai
 
-BlogAnalytics cộng theo 7/30/90 ngày gồm hôm nay, bù ngày trống bằng 0 và xếp top bài theo lượt **trong kỳ**, không dùng lượt cũ để xếp. SoftDeletes loại bài thùng rác khỏi báo cáo/hàng chờ bình luận; khôi phục làm lịch sử xuất hiện lại. Không phân bổ ngược views_count cũ vào ngày giả.
+Sao lưu cả database MySQL và thư mục storage/app/private chứa media/avatar. Database không chứa dữ liệu nhị phân của ảnh. Dùng Database/HeidiSQL trong Laragon để xuất SQL; không commit bản sao lưu có dữ liệu người dùng hoặc credentials lên Git.
 
-Migration bổ sung không sửa dữ liệu cũ. Rollback bị chặn nếu còn bài trong thùng rác để tránh vô tình công khai lại; rollback bảng daily views vẫn làm mất lịch sử ngày nên cần backup trước.
-
-## Ảnh và dữ liệu
-
-**Ảnh không lưu binary trong MySQL.** Database chỉ chứa đường dẫn. File nằm ở storage/app/public/covers hoặc avatars, được phục vụ qua MediaController với whitelist filename và MIME upload.
-
-Ảnh bìa upload của nháp/lưu trữ/thùng rác/chuyên mục ẩn chỉ admin xem được, đáp ứng kiểm tra truy cập; response no-store để việc bỏ xuất bản không bị vượt qua bằng cache. Ảnh demo có sẵn trong public/images là tài nguyên công khai và không bị xóa khi xóa vĩnh viễn bài mẫu.
-
-Không tạo public/storage symlink. Backup phải gồm cả MySQL và storage/app/public. SQL dump không bao gồm file upload.
-
-## Đối chiếu SQL cũ
-
-File gốc `../sql/database_test.sql` được giữ nguyên, SHA-256:
-`B06906F881BA2529B38EBEF4EA5432D4F3514AC520B4D6450423F818BE21EB62`.
-
-| SQL cũ                                          | Bản Laravel blog cá nhân                                        |
-| ----------------------------------------------- | --------------------------------------------------------------- |
-| roles / role_id                                 | users.role enum hai quyền, ít tầng phù hợp một chủ blog         |
-| user_id/post_id/... là khóa chính tùy biến      | Khóa chính id theo Eloquent, FK user_id/post_id/...             |
-| users, categories, tags, posts                  | Giữ ý nghĩa, thay tên/cột theo migration mới                    |
-| post_tags                                       | post_tag theo quy ước Eloquent                                  |
-| post_media                                      | cover_path/cover_alt ở posts; scope một ảnh bìa                 |
-| comments                                        | Không nested thread; bình luận dưới bài với trạng thái duyệt    |
-| bookmarks                                       | Giữ chức năng đọc sau, PK ghép                                  |
-| user_sessions                                   | Laravel file session                                            |
-| password_reset_tokens                           | Schema password broker Laravel                                  |
-| follows, post_likes, post_shares, comment_likes | Không triển khai vì trái hướng blog cá nhân                     |
-| notifications                                   | Không cần cho scope; flash sau thao tác, email reset            |
-| admin_audit_logs                                | Chưa có màn hình/audit trail nghiệp vụ, không giả vờ có dữ liệu |
-| DROP DATABASE personal_blog                     | Không dùng; tạo database mới threads_city_blog riêng            |
-
-**Đây không phải migration dữ liệu tự động từ SQL cũ.** Chưa chuyển nội dung/tài khoản thật cũ vì chưa có bản schema lớp/DB chốt từ nhóm. Khi có, cần map từng cột và thiết kế script chuyển dữ liệu có backup, không sửa database đang dùng trực tiếp.
-
-## Import / export / backup
-
-Ưu tiên `php artisan migrate --seed` trên database mới. SQL export là lựa chọn thay thế vào database trống, không chứa DROP DATABASE hay DROP TABLE, có bảng migrations nên Laravel biết migration nào đã áp dụng.
-
-Backup dùng mysqldump hoặc phpMyAdmin; lưu bản backup ở nơi riêng, không commit dữ liệu người dùng/mật khẩu production lên Git. Khôi phục thử ở database phụ trước khi dùng cho production.
+Đã dump/restore DB vào moc_blog_restore_20261013_2246 và kiểm tra 23 bảng khớp số dòng/CHECKSUM EXTENDED. Main DB không bị ghi đè. Ngày 14/10/2026, kiểm thử bổ sung đã backup/restore file JPEG media và PNG avatar trên filesystem test riêng, giữ metadata DB và đối chiếu SHA-256/HTTP/phân quyền; không khôi phục đè ảnh website. Chi tiết và hướng dẫn copy/restore ảnh vào thư mục mới tại README.md.

@@ -1,5 +1,0 @@
-User-agent: *
-Disallow: /admin
-Disallow: /tai-khoan
-Disallow: /da-luu
-Disallow: /dat-lai-mat-khau

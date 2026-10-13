@@ -1,12 +1,3 @@
-@extends('layouts.blog')
-@section('title', 'Đăng nhập')
-@section('content')
-<header class="page-heading"><span class="overline">CHÀO MỪNG TRỞ LẠI</span><h1>Đăng nhập<span class="heading-dot">.</span></h1><p>Lưu bài muốn đọc và để lại lời nhắn cho tác giả.</p></header>
-<form class="form-stack auth-form" method="post" action="{{ route('login.store') }}">@csrf
-<label for="email">Email</label><input id="email" name="email" type="email" value="{{ old('email') }}" maxlength="255" autocomplete="email" required autofocus>
-<label for="password">Mật khẩu</label><input id="password" name="password" type="password" autocomplete="current-password" required>
-<label class="check-label"><input type="checkbox" name="remember" value="1" @checked(old('remember'))> Ghi nhớ đăng nhập</label>
-<button class="button button--black" type="submit">Đăng nhập <x-icon name="arrow" size="16" /></button>
-<div class="form-links"><a href="{{ route('password.request') }}">Quên mật khẩu?</a><a href="{{ route('register') }}">Tạo tài khoản độc giả</a></div>
-</form>
-@endsection
+@extends('layouts.public')
+@php $pageTitle='Đăng nhập'; @endphp
+@section('content')<section class="auth-shell"><div class="auth-intro"><p class="eyebrow">GÓC ĐỌC CỦA BẠN</p><h1>Chào bạn,<br><em>mừng bạn trở lại.</em></h1><p>Lưu những bài viết bạn thích và để lại một lời nhắn trong câu chuyện.</p><span class="auth-quote">“Đọc một chút.<br>Chậm lại một chút.”</span></div><div class="auth-card"><h2>Đăng nhập</h2><p class="muted">Một tài khoản, một góc đọc riêng.</p><a class="btn btn-google" href="{{ route('google.redirect') }}">G &nbsp; Tiếp tục với Google</a><div class="form-divider">hoặc bằng email</div><form action="{{ route('login.store') }}" method="post">@csrf<x-field name="email" type="email" label="Email" autocomplete="email" required/><x-field name="password" type="password" label="Mật khẩu" autocomplete="current-password" required/><div class="form-footer"><label class="check-label"><input type="checkbox" name="remember" value="1"> Ghi nhớ đăng nhập</label><a href="{{ route('password.request') }}">Quên mật khẩu?</a></div><button class="btn btn-forest w-100 mt-3">Đăng nhập ↗</button></form><p class="auth-bottom">Chưa có tài khoản? <a href="{{ route('register') }}">Đăng ký độc giả</a></p></div></section>@endsection

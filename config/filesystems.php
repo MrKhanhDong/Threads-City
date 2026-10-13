@@ -74,8 +74,7 @@ return [
     */
 
     'links' => [
-        // Uploaded covers are served by MediaController, which checks whether
-        // the post is public. A storage symlink would bypass that check.
+        public_path('storage') => storage_path('app/public'),
     ],
 
 ];
