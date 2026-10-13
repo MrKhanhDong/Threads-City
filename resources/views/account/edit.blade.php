@@ -1,14 +1,3 @@
-@extends('layouts.blog')
-@section('title', 'Tài khoản của tôi')
-@section('content')
-<header class="page-heading"><span class="overline">{{ $user->isAdmin() ? 'CHỦ BLOG' : 'ĐỘC GIẢ' }}</span><h1>Tài khoản của tôi<span class="heading-dot">.</span></h1><p>Cập nhật tên, email và mật khẩu đăng nhập.</p></header>
-<form class="form-stack auth-form" method="post" action="{{ route('account.update') }}">@csrf @method('PATCH')
-<label for="name">Tên hiển thị</label><input id="name" name="name" value="{{ old('name', $user->name) }}" maxlength="80" required autocomplete="name">
-<label for="email">Email</label><input id="email" name="email" type="email" value="{{ old('email', $user->email) }}" maxlength="255" required autocomplete="email">
-<hr><h2>Đổi mật khẩu</h2><span class="field-hint">Để trống ba ô bên dưới nếu chỉ đổi tên hoặc email.</span>
-<label for="current_password">Mật khẩu hiện tại</label><input id="current_password" name="current_password" type="password" autocomplete="current-password">
-<label for="password">Mật khẩu mới</label><input id="password" name="password" type="password" minlength="10" maxlength="255" autocomplete="new-password">
-<label for="password_confirmation">Nhập lại mật khẩu mới</label><input id="password_confirmation" name="password_confirmation" type="password" autocomplete="new-password">
-<button class="button button--black" type="submit">Lưu thay đổi</button>
-</form>
-@endsection
+@extends('layouts.public')
+@php $pageTitle='Hồ sơ của tôi'; $user=auth()->user(); @endphp
+@section('content')<section class="container page-section"><p class="eyebrow">GÓC ĐỌC CỦA BẠN</p><h1>Hồ sơ của tôi</h1><div class="profile-grid"><div class="profile-card"><x-avatar :user="$user" /><h2>{{ $user->name }}</h2><p>{{ $user->email }}</p><p class="status">{{ $user->hasVerifiedEmail() ? 'Email đã xác minh' : 'Chưa xác minh email' }}</p><a class="text-link" href="{{ route('saved') }}">Bài viết đã lưu ↗</a>@if(!$user->hasVerifiedEmail())<a class="text-link d-block mt-3" href="{{ route('verification.notice') }}">Xác minh email ↗</a>@endif</div><div><div class="panel"><h2>Thông tin cá nhân</h2><form action="{{ route('account.update') }}" method="post" enctype="multipart/form-data">@csrf @method('patch')<x-field name="name" label="Tên hiển thị" :value="$user->name" required maxlength="100"/><x-field name="bio" label="Một chút về bạn" type="textarea" :value="$user->bio" maxlength="1000"/><x-field name="avatar" type="file" label="Ảnh đại diện" accept="image/jpeg,image/png,image/webp"/><p class="muted small">JPEG, PNG, WebP; tối đa 2 MB.</p><button class="btn btn-forest">Lưu hồ sơ</button></form></div><div class="panel mt-4"><h2>Đổi mật khẩu</h2><form action="{{ route('account.password') }}" method="post">@csrf @method('put')<x-field name="current_password" label="Mật khẩu hiện tại" type="password" required autocomplete="current-password"/><x-field name="password" label="Mật khẩu mới" type="password" required minlength="8" autocomplete="new-password"/><x-field name="password_confirmation" label="Nhập lại mật khẩu" type="password" required autocomplete="new-password"/><button class="btn btn-outline-forest">Đổi mật khẩu</button></form></div></div></div></section>@endsection

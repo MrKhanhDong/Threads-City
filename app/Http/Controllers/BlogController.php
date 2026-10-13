@@ -2,72 +2,120 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Category;
 use App\Models\Post;
-use App\Repositories\BlogRepository;
+use App\Models\PostRedirect;
+use App\Models\Tag;
+use App\Models\User;
+use App\Services\HtmlSanitizer;
+use App\Services\ViewRecorder;
+use Illuminate\Contracts\View\View;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 
 class BlogController extends Controller
 {
-    public function __construct(private readonly BlogRepository $blog) {}
-
-    public function home()
+    public function home(): View
     {
-        $query = Post::published()->with(['category', 'tags', 'user'])->latest('published_at');
-        $featured = (clone $query)->where('is_featured', true)->first() ?? (clone $query)->first();
-        $saved = $this->blog->savedIds();
-        return view('blog.home', [
-            'featured' => $featured?->toCard($saved),
-            'posts' => $query->when($featured, fn ($q) => $q->whereKeyNot($featured->id))->take(3)->get()->map(fn (Post $post) => $post->toCard($saved)),
-        ]);
+        $featured = Post::published()->with(['author', 'cover', 'categories'])->orderByDesc('is_featured')->latest('published_at')->first();
+        $posts = Post::published()->with(['author', 'cover', 'categories'])->when($featured, fn (Builder $query): Builder => $query->whereKeyNot($featured->id))->latest('published_at')->paginate(6);
+
+        return view('blog.home', compact('featured', 'posts'));
     }
 
-    public function archive(Request $request)
+    public function archive(Request $request): View
     {
-        $filters = $request->validate(['q' => 'nullable|string|max:200', 'category' => 'nullable|string|max:120', 'tag' => 'nullable|string|max:80']);
-        $query = trim($filters['q'] ?? '');
-        $category = $filters['category'] ?? '';
-        $tag = $filters['tag'] ?? '';
-        $posts = Post::published()->with(['category', 'tags', 'user'])->latest('published_at');
-        if ($query !== '') $posts->where(fn ($q) => $q->where('title', 'like', '%'.$query.'%')->orWhere('excerpt', 'like', '%'.$query.'%')->orWhere('content', 'like', '%'.$query.'%')->orWhereHas('tags', fn ($tags) => $tags->where('name', 'like', '%'.$query.'%')));
-        if ($category !== '') $posts->whereHas('category', fn ($q) => $q->where('slug', $category));
-        if ($tag !== '') $posts->whereHas('tags', fn ($q) => $q->where('name', $tag));
-        $saved = $this->blog->savedIds();
-        return view('blog.archive', [
-            'posts' => $posts->paginate(6)->withQueryString()->through(fn (Post $post) => $post->toCard($saved)),
-            'query' => $query, 'category' => $category, 'tag' => $tag,
-        ]);
+        $filters = $request->validate(['q' => 'nullable|string|max:150', 'category' => 'nullable|string|max:150', 'tag' => 'nullable|string|max:100']);
+        $posts = Post::published()->with(['author', 'cover', 'categories', 'tags'])
+            ->when($filters['q'] ?? null, function (Builder $query, string $search): void {
+                $query->where(function (Builder $query) use ($search): void {
+                    $query->where('title', 'like', '%'.$search.'%')->orWhere('excerpt', 'like', '%'.$search.'%');
+                });
+            })
+            ->when($filters['category'] ?? null, fn (Builder $query, string $slug): Builder => $query->whereHas('categories', fn (Builder $category): Builder => $category->where('slug', $slug)))
+            ->when($filters['tag'] ?? null, fn (Builder $query, string $slug): Builder => $query->whereHas('tags', fn (Builder $tag): Builder => $tag->where('slug', $slug)))
+            ->latest('published_at')->paginate(9)->withQueryString();
+
+        return view('blog.archive', ['posts' => $posts, 'filters' => $filters, 'heading' => 'Tất cả bài viết', 'subtitle' => 'Tìm một câu chuyện dành cho bạn.', 'tags' => Tag::orderBy('name')->get()]);
     }
 
-    public function show(Request $request, string $slug, \App\Services\PostViewRecorder $recorder)
+    public function category(Category $category): RedirectResponse
     {
-        $article = Post::published()->with(['category', 'tags', 'user'])->where('slug', $slug)->firstOrFail();
-        $recorder->record($request, $article);
-        return $this->articleView($article, false);
+        return redirect()->route('posts.index', ['category' => $category->slug]);
     }
 
-    public function preview(Post $post) { return $this->articleView($post, true); }
-
-    private function articleView(Post $article, bool $preview)
+    public function tag(Tag $tag): RedirectResponse
     {
-        $article->loadMissing(['category', 'tags', 'user']);
-        $saved = $this->blog->savedIds();
-        $comments = $article->comments()->with('user')->where(function ($q) {
-            $q->where('status', 'approved');
-            if (auth()->check()) $q->orWhere('user_id', auth()->id());
-        })->latest()->paginate(10);
-        return view('blog.post', [
-            'post' => $article->toCard($saved), 'preview' => $preview, 'comments' => $comments,
-            'related' => Post::published()->with(['category', 'tags', 'user'])->whereKeyNot($article->id)->latest('published_at')->take(2)->get()->map(fn (Post $post) => $post->toCard($saved)),
-        ]);
+        return redirect()->route('posts.index', ['tag' => $tag->slug]);
     }
 
-    public function categories() { return view('blog.categories'); }
-    public function about() { return view('blog.about'); }
-    public function saved()
+    public function show(Request $request, string $slug, HtmlSanitizer $sanitizer, ViewRecorder $recorder): View|RedirectResponse
     {
-        $savedIds = $this->blog->savedIds();
-        $posts = auth()->user()->bookmarks()->published()->with(['category', 'tags', 'user'])->orderByPivot('created_at', 'desc')->paginate(6)
-            ->through(fn (Post $post) => $post->toCard($savedIds));
-        return view('blog.saved', ['posts' => $posts]);
+        $post = Post::published()->where('slug', $slug)->with(['author', 'cover', 'ogImage', 'categories', 'tags'])->first();
+        if (! $post) {
+            $redirect = PostRedirect::where('slug', $slug)->whereHas('post', fn (Builder $query): Builder => $query->published())->first();
+            abort_unless($redirect, 404);
+
+            return redirect()->route('posts.show', $redirect->post->slug, 301);
+        }
+        $recorder->record($request, $post);
+
+        return $this->article($request, $post, $sanitizer);
+    }
+
+    public function preview(Request $request, Post $post, HtmlSanitizer $sanitizer): View
+    {
+        return $this->article($request, $post->load(['author', 'cover', 'ogImage', 'categories', 'tags']), $sanitizer, true);
+    }
+
+    private function article(Request $request, Post $post, HtmlSanitizer $sanitizer, bool $preview = false): View
+    {
+        $body = $sanitizer->withHeadings($post->content);
+        $userId = $request->user()?->id;
+        $likesCount = $preview ? 0 : $post->likers()->count();
+        $liked = ! $preview && $userId && $post->likers()->whereKey($userId)->exists();
+        $visible = function (Builder $query) use ($userId): void {
+            $query->where(function (Builder $query) use ($userId): void {
+                $query->where('status', 'approved');
+                if ($userId) {
+                    $query->orWhere(fn (Builder $query): Builder => $query->where('user_id', $userId)->where('status', 'pending'));
+                }
+            });
+        };
+        $comments = $post->comments()->whereNull('parent_id')->where($visible)
+            ->with(['user', 'replies' => fn (HasMany $query): HasMany => $query->where($visible)->with(['user', 'replies' => fn (HasMany $query): HasMany => $query->where($visible)->with('user')->oldest()])->oldest()])
+            ->latest()->paginate(10, ['*'], 'comments_page');
+        $related = Post::published()->whereKeyNot($post->id)->whereHas('categories', fn (Builder $query): Builder => $query->whereIn('categories.id', $post->categories->modelKeys()))->with(['author', 'cover', 'categories'])->latest('published_at')->limit(3)->get();
+
+        return view('blog.show', compact('post', 'body', 'comments', 'related', 'preview', 'likesCount', 'liked'));
+    }
+
+    public function page(string $page): View
+    {
+        abort_unless(in_array($page, ['about', 'contact', 'privacy', 'terms'], true), 404);
+
+        return view('blog.page', compact('page'));
+    }
+
+    public function author(): View
+    {
+        $author = User::where('role', 'admin')->oldest()->first();
+
+        return view('blog.author', ['author' => $author, 'posts' => Post::published()->with(['author', 'cover', 'categories'])->latest('published_at')->paginate(6)]);
+    }
+
+    public function sitemap(): Response
+    {
+        $posts = Post::published()->select(['slug', 'updated_at'])->latest()->get();
+
+        return response()->view('blog.sitemap', compact('posts'))->header('Content-Type', 'application/xml; charset=UTF-8');
+    }
+
+    public function robots(): Response
+    {
+        return response("User-agent: *\nAllow: /\nDisallow: /admin\nDisallow: /tai-khoan\nDisallow: /dang-nhap\nDisallow: /dang-ky\nDisallow: /bai-viet-da-luu\nSitemap: ".route('sitemap')."\n")->header('Content-Type', 'text/plain; charset=UTF-8');
     }
 }

@@ -2,11 +2,18 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
+#[Fillable(['name', 'slug', 'description'])]
 class Category extends Model
 {
-    protected $fillable = ['name', 'slug', 'description', 'icon', 'is_active'];
-    protected function casts(): array { return ['is_active' => 'boolean']; }
-    public function posts() { return $this->hasMany(Post::class); }
+    use HasFactory;
+
+    public function posts(): BelongsToMany
+    {
+        return $this->belongsToMany(Post::class, 'post_category');
+    }
 }

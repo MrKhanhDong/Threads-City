@@ -1,16 +1,3 @@
-@extends('layouts.blog')
-@section('title', 'Cài đặt blog')
-@section('robots', 'noindex,nofollow')
-@section('content')
-<header class="page-heading"><h1>Góc của mình<span class="heading-dot">.</span></h1><p>Thông tin hiển thị ở trang chủ, giới thiệu và thanh bên.</p></header><x-admin-nav />
-<form class="form-stack" method="post" enctype="multipart/form-data" action="{{ route('admin.settings.update') }}">@csrf @method('PATCH')
-<label for="blog_title">Tên blog</label><input id="blog_title" name="blog_title" value="{{ old('blog_title', auth()->user()->blog_title) }}" maxlength="100" required>
-<label for="headline">Dòng giới thiệu ngắn</label><input id="headline" name="headline" value="{{ old('headline', auth()->user()->headline) }}" maxlength="120">
-<label for="bio">Mô tả ngắn</label><textarea id="bio" name="bio" rows="3" maxlength="500">{{ old('bio', auth()->user()->bio) }}</textarea>
-<label for="about">Giới thiệu đầy đủ</label><textarea id="about" name="about" rows="9" maxlength="10000">{{ old('about', auth()->user()->about) }}</textarea><span class="field-hint">Văn bản thuần; dòng trống để tách đoạn.</span>
-<label for="website">Website liên hệ (không bắt buộc)</label><input id="website" name="website" type="url" value="{{ old('website', auth()->user()->website) }}" maxlength="255" placeholder="https://...">
-<label for="avatar">Ảnh đại diện JPG, PNG hoặc WebP (tối đa 2 MB)</label><input id="avatar" name="avatar" type="file" accept="image/jpeg,image/png,image/webp">
-@if(auth()->user()->avatar_path)<img class="avatar settings-avatar" src="{{ route('media', ['path'=>auth()->user()->avatar_path]) }}" alt="Ảnh đại diện hiện tại"><label class="check-label"><input type="checkbox" name="remove_avatar" value="1"> Xóa ảnh hiện tại</label>@endif
-<button class="button button--black" type="submit">Lưu cài đặt</button><a href="{{ route('account.edit') }}" class="text-link">Đổi tên, email hoặc mật khẩu tài khoản</a>
-</form>
-@endsection
+@extends('layouts.admin')
+@php $pageTitle='Cài đặt blog'; @endphp
+@section('content')<div class="admin-page-heading"><div><p class="eyebrow">THÔNG TIN & NHẬN DIỆN</p><h1>Cài đặt blog</h1><p class="muted">Thông tin được hiển thị trên website, không phải dữ liệu minh họa cố định.</p></div></div><section class="panel settings-panel"><form method="post" action="{{ route('admin.settings.update') }}">@csrf @method('patch')<x-field name="site_name" label="Tên blog" :value="$settings['site_name'] ?? config('blog.name')" required maxlength="100"/><x-field name="site_tagline" label="Dòng giới thiệu ngắn" :value="$settings['site_tagline'] ?? config('blog.tagline')" required maxlength="200"/><x-field name="site_description" label="Mô tả mặc định / SEO" type="textarea" :value="$settings['site_description'] ?? config('blog.description')" required maxlength="320"/><x-field name="about" label="Nội dung giới thiệu" type="textarea" :value="$settings['about'] ?? ''" rows="8" maxlength="10000"/><x-field name="contact_email" label="Email liên hệ công khai" type="email" :value="$settings['contact_email'] ?? ''" maxlength="255"/><button class="btn btn-forest">Lưu cài đặt ↗</button></form><hr><h2>Dịch vụ bên ngoài</h2><p>Google OAuth và SMTP được cấu hình bằng .env; không nhập hoặc hiển thị secrets ở trang này.</p><p class="status">Google: {{ config('services.google.client_id') && config('services.google.client_secret') ? 'Đã có cấu hình — cần kiểm thử kết nối thật' : 'Chưa cấu hình' }}</p><p class="status">Email: {{ in_array(config('mail.default'),['array','log']) ? 'Chưa có dịch vụ gửi thư thực tế' : 'Đã chọn mailer — cần kiểm thử gửi thật' }}</p></section>@endsection

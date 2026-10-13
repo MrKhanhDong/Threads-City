@@ -1,10 +1,25 @@
 {
-    "name": "khangs-journal-ui-tests",
+    "$schema": "https://www.schemastore.org/package.json",
     "private": true,
+    "type": "module",
     "scripts": {
-        "test:ui": "node --test tests/frontend/blog.test.cjs"
+        "build": "node resources/js/build-editor.mjs && vite build",
+        "dev": "vite",
+        "test": "node --test tests/JavaScript/*.test.mjs"
     },
     "devDependencies": {
-        "jsdom": "22.1.0"
+        "@tailwindcss/vite": "^4.0.0",
+        "concurrently": "^10.0.3",
+        "laravel-vite-plugin": "^3.1",
+        "tailwindcss": "^4.0.0",
+        "vite": "^8.0.0"
+    },
+    "optionalDependencies": {
+        "@laravel/multiplex": "^0.4.1"
+    },
+    "dependencies": {
+        "@popperjs/core": "^2.11.8",
+        "bootstrap": "^5.3.8",
+        "tinymce": "^8.9.3"
     }
 }
