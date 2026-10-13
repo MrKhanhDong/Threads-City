@@ -1,0 +1,3 @@
+@extends('layouts.public')
+@php $pageTitle='Đặt lại mật khẩu'; @endphp
+@section('content')<section class="container page-section auth-narrow"><h1>Một khởi đầu mới.</h1><form method="post" action="{{ route('password.update') }}">@csrf<input type="hidden" name="token" value="{{ $token }}"><x-field name="email" type="email" label="Email" :value="is_string($email) ? $email : ''" required/><x-field name="password" type="password" label="Mật khẩu mới" required minlength="8" autocomplete="new-password"/><x-field name="password_confirmation" type="password" label="Nhập lại mật khẩu" required autocomplete="new-password"/><button class="btn btn-forest">Đặt lại mật khẩu</button></form></section>@endsection
