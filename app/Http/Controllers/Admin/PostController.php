@@ -38,6 +38,19 @@ class PostController extends Controller
         return $this->form(new Post(['title' => '', 'content' => '', 'status' => 'draft']), $analyzer);
     }
 
+    public function seoChecks(Request $request, SeoAnalyzer $analyzer): JsonResponse
+    {
+        Gate::authorize('create', Post::class);
+        $data = $request->validate([
+            'title' => 'nullable|string|max:200', 'slug' => 'nullable|string|max:220',
+            'excerpt' => 'nullable|string|max:2000', 'content' => 'nullable|string|max:1000000',
+            'seo_title' => 'nullable|string|max:200', 'meta_description' => 'nullable|string|max:320',
+            'focus_keyword' => 'nullable|string|max:150', 'cover_media_id' => 'nullable|integer|exists:media,id',
+        ]);
+
+        return response()->json(['checks' => $analyzer->analyze(new Post($data))]);
+    }
+
     public function edit(Post $post, SeoAnalyzer $analyzer): View
     {
         Gate::authorize('update', $post);

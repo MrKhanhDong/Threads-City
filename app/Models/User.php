@@ -17,9 +17,12 @@ class User extends Authenticatable implements MustVerifyEmail
 {
     use HasFactory, Notifiable;
 
+    /** @var array<string, bool> */
+    protected $attributes = ['has_local_password' => true, 'google_profile_pending' => false];
+
     protected function casts(): array
     {
-        return ['email_verified_at' => 'datetime', 'password' => 'hashed', 'is_locked' => 'boolean'];
+        return ['email_verified_at' => 'datetime', 'password' => 'hashed', 'is_locked' => 'boolean', 'google_profile_pending' => 'boolean', 'has_local_password' => 'boolean'];
     }
 
     public function isAdmin(): bool

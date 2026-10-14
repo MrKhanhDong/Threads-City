@@ -118,7 +118,7 @@ class AuthController extends Controller
     {
         $data = $request->validate(['token' => 'required|string', 'email' => 'required|email', 'password' => ['required', 'confirmed', PasswordRule::min(8)->letters()->numbers()]]);
         $status = Password::reset($data, function (User $user, string $password): void {
-            $user->forceFill(['password' => Hash::make($password), 'remember_token' => Str::random(60)])->save();
+            $user->forceFill(['password' => Hash::make($password), 'has_local_password' => true, 'remember_token' => Str::random(60)])->save();
             event(new PasswordReset($user));
         });
         if ($status !== Password::PasswordReset) {

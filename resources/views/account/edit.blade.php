@@ -7,7 +7,7 @@
     <div class="profile-grid">
         <div class="profile-card">
             <x-avatar :user="$user" />
-            <h2>{{ $user->name }}</h2>
+            <h2 class="text-truncate" title="{{ $user->name }}">{{ $user->name }}</h2>
             <p>{{ $user->email }}</p>
             <p class="status">{{ $user->hasVerifiedEmail() ? 'Email đã xác minh' : 'Chưa xác minh email' }}</p>
             <a class="text-link" href="{{ route('saved') }}">Bài viết đã lưu ↗</a>
@@ -29,7 +29,11 @@
                 </form>
             </div>
             <div class="panel mt-4">
-                @if($user->google_id)
+                @if($user->google_id && !$user->has_local_password)
+                    <h2>Thêm mật khẩu</h2>
+                    <p>Bạn đang đăng nhập bằng Google. Tạo mật khẩu riêng để có thể đăng nhập bằng email và mật khẩu trên cùng tài khoản.</p>
+                    <p class="muted">Không cần mật khẩu hiện tại. Hãy chọn mật khẩu riêng cho website, ít nhất 8 ký tự, có chữ và số.</p>
+                @elseif($user->google_id)
                     <h2>Thiết lập mật khẩu qua email</h2>
                     <p>Bạn đã liên kết tài khoản Google. Nếu chưa đặt mật khẩu riêng cho website, hãy nhận liên kết qua email để thiết lập mà không cần mật khẩu hiện tại.</p>
                     <p class="muted">Thư được gửi tới <strong>{{ $user->email }}</strong>. Không dùng mật khẩu Gmail; sau khi thiết lập, bạn có thể đăng nhập bằng Google hoặc email và mật khẩu trên cùng một tài khoản.</p>
@@ -50,12 +54,14 @@
                 <form action="{{ route('account.password') }}" method="post" @class(['mt-3' => (bool) $user->google_id])>
                     @csrf
                     @method('put')
-                    <x-field name="current_password" label="Mật khẩu hiện tại" type="password" required autocomplete="current-password"/>
+                    @if(!$user->google_id || $user->has_local_password)
+                        <x-field name="current_password" label="Mật khẩu hiện tại" type="password" required autocomplete="current-password"/>
+                    @endif
                     <x-field name="password" label="Mật khẩu mới" type="password" required minlength="8" autocomplete="new-password"/>
                     <x-field name="password_confirmation" label="Nhập lại mật khẩu" type="password" required autocomplete="new-password"/>
-                    <button class="btn btn-outline-forest">Đổi mật khẩu</button>
+                    <button class="btn btn-outline-forest">{{ $user->google_id && !$user->has_local_password ? 'Thêm mật khẩu' : 'Đổi mật khẩu' }}</button>
                 </form>
-                @if($user->google_id)
+                @if($user->google_id && $user->has_local_password)
                     </details>
                 @endif
             </div>

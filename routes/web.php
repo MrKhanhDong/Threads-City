@@ -45,6 +45,8 @@ Route::get('/dat-lai-mat-khau/{token}', [AuthController::class, 'reset'])->name(
 Route::post('/dat-lai-mat-khau', [AuthController::class, 'updatePassword'])->middleware('throttle:password-reset')->name('password.update');
 
 Route::middleware('auth')->group(function (): void {
+    Route::get('/auth/google/hoan-tat', [GoogleAuthController::class, 'profile'])->name('google.profile');
+    Route::post('/auth/google/hoan-tat', [GoogleAuthController::class, 'completeProfile'])->middleware('throttle:10,1')->name('google.profile.store');
     Route::post('/dang-xuat', [AuthController::class, 'logout'])->name('logout');
     Route::get('/xac-minh-email', fn (): View => view('auth.verify'))->name('verification.notice');
     Route::get('/email/verify/{id}/{hash}', function (EmailVerificationRequest $request): RedirectResponse {
@@ -89,6 +91,7 @@ Route::middleware('auth')->group(function (): void {
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(function (): void {
     Route::get('/', [Admin\DashboardController::class, 'index'])->name('index');
     Route::resource('posts', Admin\PostController::class)->except('show')->whereNumber('post');
+    Route::post('/posts/seo-checks', [Admin\PostController::class, 'seoChecks'])->middleware('throttle:120,1')->name('posts.seo-checks');
     Route::get('/posts/{post}/preview', [BlogController::class, 'preview'])->whereNumber('post')->name('posts.preview');
     Route::post('/posts/{post}/autosave', [Admin\PostController::class, 'autosave'])->whereNumber('post')->name('posts.autosave');
     Route::post('/trash/{id}/restore', [Admin\PostController::class, 'restore'])->whereNumber('id')->name('posts.restore');

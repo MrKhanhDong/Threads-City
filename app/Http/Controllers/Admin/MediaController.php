@@ -58,7 +58,7 @@ class MediaController extends Controller
     {
         $media->update($request->validate(['alt' => 'nullable|string|max:255']));
 
-        return back()->with('success', 'Đã cập nhật ALT. ALT trong nội dung đã chèn cần sửa trực tiếp tại editor.');
+        return back()->with('success', 'Đã cập nhật ALT. Ảnh trong bài chưa có ALT riêng sẽ dùng mô tả từ thư viện.');
     }
 
     public function destroy(Media $media): RedirectResponse

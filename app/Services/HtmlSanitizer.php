@@ -8,10 +8,13 @@ use HTMLPurifier_Config;
 
 class HtmlSanitizer
 {
+    public function __construct(private MediaAltResolver $mediaAltResolver) {}
+
     public function clean(string $html): string
     {
         $config = HTMLPurifier_Config::createDefault();
         $config->set('Core.Encoding', 'UTF-8');
+        $config->set('Attr.DefaultImageAlt', '');
         $config->set('CSS.AllowTricky', true);
         $config->set('HTML.Allowed', 'p[style],div[style],span[style],h1[style],h2[style],h3[style],h4[style],h5[style],h6[style],strong,b,em,i,u,s,strike,br,hr,blockquote[style],ul[style],ol[start|style],li[style],a[href|title|target|rel],img[src|alt|width|height|style],table[style],thead,tbody,tfoot,tr,td[colspan|rowspan|style],th[colspan|rowspan|style],caption,pre,code,sup,sub,figure,figcaption');
         $config->set('CSS.AllowedProperties', ['color', 'background-color', 'font-family', 'font-size', 'font-weight', 'font-style', 'text-decoration', 'text-align', 'margin-left', 'padding-left', 'width', 'height', 'border', 'border-collapse', 'vertical-align', 'float', 'display', 'margin', 'margin-right', 'margin-top', 'margin-bottom', 'max-width']);
@@ -28,7 +31,25 @@ class HtmlSanitizer
         }
         $config->getCSSDefinition()->info['display'] = new \HTMLPurifier_AttrDef_Enum(['block', 'inline', 'inline-block']);
 
-        return (new HTMLPurifier($config))->purify($html);
+        $purifier = new HTMLPurifier($config);
+        if (! str_contains(strtolower($html), '<img')) {
+            return $purifier->purify($html);
+        }
+        $document = new DOMDocument;
+        $previousErrors = libxml_use_internal_errors(true);
+        try {
+            $document->loadHTML('<?xml encoding="UTF-8"><html><body>'.$html.'</body></html>', LIBXML_NONET);
+        } finally {
+            libxml_clear_errors();
+            libxml_use_internal_errors($previousErrors);
+        }
+        $this->mediaAltResolver->apply($document);
+        $output = '';
+        foreach ($document->getElementsByTagName('body')->item(0)->childNodes as $child) {
+            $output .= $document->saveHTML($child);
+        }
+
+        return $purifier->purify($output);
     }
 
     /** @return array{html:string,headings:array<int,array{id:string,title:string,level:int}>} */
