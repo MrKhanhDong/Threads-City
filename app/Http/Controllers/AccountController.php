@@ -26,7 +26,7 @@ class AccountController extends Controller
         $oldAvatar = $user->avatar_path;
         $newAvatar = $request->hasFile('avatar') ? $request->file('avatar')->store('avatars', 'local') : null;
         try {
-            $user->fill(collect($data)->only(['name', 'bio'])->all());
+            $user->fill(collect($data)->only(['name', 'username', 'bio'])->all());
             if ($newAvatar) {
                 $user->avatar_path = $newAvatar;
             }
@@ -46,8 +46,9 @@ class AccountController extends Controller
 
     public function password(Request $request): RedirectResponse
     {
-        $data = $request->validate(['current_password' => 'required|current_password', 'password' => ['required', 'confirmed', Password::min(8)->letters()->numbers()]]);
-        $request->user()->forceFill(['password' => $data['password'], 'remember_token' => Str::random(60)])->save();
+        $needsCurrentPassword = ! $request->user()->google_id || $request->user()->has_local_password;
+        $data = $request->validate(['current_password' => $needsCurrentPassword ? 'required|current_password' : 'exclude', 'password' => ['required', 'confirmed', Password::min(8)->letters()->numbers()]]);
+        $request->user()->forceFill(['password' => $data['password'], 'has_local_password' => true, 'remember_token' => Str::random(60)])->save();
         $request->session()->put('password_hash_web', $request->user()->password);
         $request->session()->regenerate();
 

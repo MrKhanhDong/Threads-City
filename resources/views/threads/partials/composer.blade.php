@@ -1,0 +1,84 @@
+@php
+    $currentUser = auth()->user();
+@endphp
+
+<div class="threads-composer-bar" @auth data-bs-toggle="modal" data-bs-target="#newThreadModal" @else onclick="window.location='{{ route('login') }}'" @endauth>
+    <div class="composer-bar-left">
+        @auth
+            @if($currentUser->avatar_path)
+                <img src="{{ route('avatar.show', $currentUser->id) }}" alt="{{ $currentUser->name }}" class="user-avatar-round" style="width: 36px; height: 36px;">
+            @else
+                <div class="user-avatar-letter" style="width: 36px; height: 36px; font-size: 14px;">{{ mb_substr($currentUser->name, 0, 1) }}</div>
+            @endif
+        @else
+            <div class="user-avatar-placeholder">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#777" stroke-width="2">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="12" cy="7" r="4"></circle>
+                </svg>
+            </div>
+        @endauth
+        <span class="composer-placeholder-text">Có gì mới?</span>
+    </div>
+    <button type="button" class="btn-composer-post-pill">
+        Đăng
+    </button>
+</div>
+
+<style>
+    .threads-composer-bar {
+        background: #000000;
+        border: 1px solid var(--border-color);
+        border-radius: 18px;
+        padding: 12px 18px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        margin: 14px 20px 16px;
+        cursor: pointer;
+        transition: border-color 0.2s, background 0.2s;
+    }
+    .threads-composer-bar:hover {
+        border-color: #333333;
+        background: #0a0a0a;
+    }
+    .composer-bar-left {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        flex: 1;
+        min-width: 0;
+    }
+    .user-avatar-placeholder {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background: #242424;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid #333;
+    }
+    .composer-placeholder-text {
+        color: var(--text-muted);
+        font-size: 14px;
+        font-weight: 500;
+        user-select: none;
+    }
+    .btn-composer-post-pill {
+        background: #121212;
+        color: #777777;
+        border: 1px solid #282828;
+        font-size: 13px;
+        font-weight: 700;
+        padding: 6px 18px;
+        border-radius: 9999px;
+        cursor: pointer;
+        transition: all 0.15s;
+    }
+    .threads-composer-bar:hover .btn-composer-post-pill {
+        color: #aaaaaa;
+        border-color: #383838;
+    }
+</style>

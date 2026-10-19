@@ -64,7 +64,7 @@ export function setupSeoPreview() {
         const values = {};
         ['title', 'slug', 'excerpt', 'seo_title', 'meta_description', 'canonical_url', 'og_title', 'og_description']
             .forEach(name => { values[name] = form.elements.namedItem(name)?.value || ''; });
-        values.cover_image = form.elements.namedItem('cover_media_id')?.selectedOptions[0]?.dataset.previewUrl || '';
+        values.cover_image = form.elements.namedItem('cover_media_id')?.dataset.previewUrl || '';
         values.og_image = form.elements.namedItem('og_media_id')?.selectedOptions[0]?.dataset.previewUrl || '';
         renderSeoPreview(panel, values, panel.dataset.seoBaseUrl);
     };

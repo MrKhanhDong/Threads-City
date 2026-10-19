@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use Illuminate\Auth\Events\PasswordReset;
-use Illuminate\Auth\Events\Registered;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -29,38 +28,63 @@ class AuthController extends Controller
 
     public function authenticate(Request $request): RedirectResponse
     {
-        $data = $request->validate(['email' => 'required|email|max:255', 'password' => 'required|string', 'remember' => 'sometimes|boolean']);
-        if (! Auth::attempt(['email' => Str::lower(trim($data['email'])), 'password' => $data['password']], $request->boolean('remember'))) {
-            throw ValidationException::withMessages(['email' => 'Email hoặc mật khẩu không đúng.']);
+        $loginInput = trim($request->input('login', $request->input('email', '')));
+        $password = $request->input('password', '');
+        $remember = $request->boolean('remember');
+
+        if (empty($loginInput) || empty($password)) {
+            throw ValidationException::withMessages(['login' => 'Vui lòng nhập email/tên người dùng và mật khẩu.']);
         }
+
+        $isEmail = filter_var($loginInput, FILTER_VALIDATE_EMAIL);
+        $credentials = $isEmail
+            ? ['email' => Str::lower($loginInput), 'password' => $password]
+            : ['username' => Str::lower(ltrim($loginInput, '@')), 'password' => $password];
+
+        if (! Auth::attempt($credentials, $remember)) {
+            if ($isEmail || ! Auth::attempt(['name' => $loginInput, 'password' => $password], $remember)) {
+                throw ValidationException::withMessages(['login' => 'Email/tên người dùng hoặc mật khẩu không chính xác.']);
+            }
+        }
+
         if (Auth::user()->is_locked) {
             Auth::logout();
-            throw ValidationException::withMessages(['email' => 'Tài khoản đang bị khóa.']);
+            throw ValidationException::withMessages(['login' => 'Tài khoản đang bị khóa.']);
         }
+
         $request->session()->regenerate();
 
-        return redirect()->intended(Auth::user()->isAdmin() ? route('admin.index') : route('home'));
+        return redirect()->intended(route('home'));
     }
 
     public function store(Request $request): RedirectResponse
     {
-        $data = $request->validate(['name' => 'required|string|max:100', 'email' => 'required|email|max:255', 'password' => ['required', 'confirmed', PasswordRule::min(8)->letters()->numbers()]]);
+        $data = $request->validate([
+            'name' => 'required|string|max:100',
+            'username' => 'nullable|string|min:3|max:30|alpha_dash|unique:users,username',
+            'email' => 'required|email|max:255|unique:users,email',
+            'password' => ['required', 'confirmed', PasswordRule::min(8)->letters()->numbers()],
+        ]);
+
         $data['email'] = Str::lower(trim($data['email']));
-        if (User::where('email', $data['email'])->exists()) {
-            throw ValidationException::withMessages(['email' => 'Email đã được đăng ký.']);
-        }
-        $user = User::create($data);
-        if (! in_array(config('mail.default'), ['array', 'log'], true)) {
-            try {
-                event(new Registered($user));
-            } catch (\Throwable) {
-                session()->flash('mail_error', 'Tài khoản đã tạo nhưng chưa gửi được thư xác minh. Kiểm tra SMTP hoặc thử gửi lại.');
+        if (empty($data['username'])) {
+            $baseUsername = Str::slug($data['name'], '_') ?: explode('@', $data['email'])[0];
+            $username = $baseUsername;
+            $counter = 1;
+            while (User::where('username', $username)->exists()) {
+                $username = $baseUsername.$counter++;
             }
+            $data['username'] = $username;
+        } else {
+            $data['username'] = Str::lower($data['username']);
         }
+
+        $user = User::create($data);
+
         Auth::login($user);
         $request->session()->regenerate();
 
-        return redirect()->route('verification.notice')->with('success', 'Đã tạo tài khoản độc giả. Hãy xác minh email trước khi bình luận.');
+        return redirect()->route('home')->with('success', 'Chào mừng bạn đến với Threads! Hãy tạo bài viết đầu tiên của bạn.');
     }
 
     public function logout(Request $request): RedirectResponse
@@ -118,7 +142,7 @@ class AuthController extends Controller
     {
         $data = $request->validate(['token' => 'required|string', 'email' => 'required|email', 'password' => ['required', 'confirmed', PasswordRule::min(8)->letters()->numbers()]]);
         $status = Password::reset($data, function (User $user, string $password): void {
-            $user->forceFill(['password' => Hash::make($password), 'remember_token' => Str::random(60)])->save();
+            $user->forceFill(['password' => Hash::make($password), 'has_local_password' => true, 'remember_token' => Str::random(60)])->save();
             event(new PasswordReset($user));
         });
         if ($status !== Password::PasswordReset) {

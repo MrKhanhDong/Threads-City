@@ -1,6 +1,8 @@
 import 'bootstrap';
 import { setupCommentThreads, setupReplyNotifications } from './comment-threads';
 import { setupSeoPreview } from './seo-preview';
+import { setupCoverPicker } from './cover-picker';
+import { setupSeoChecks } from './seo-checks';
 import { setupVietnameseValidation, requestErrorMessage } from './validation-messages';
 
 const showState = (element, text, error = false) => {
@@ -26,7 +28,9 @@ function setupEditor() {
     const textarea = form.querySelector('[data-editor]');
     const state = document.getElementById('editor-save-state');
     const csrf = document.querySelector('meta[name="csrf-token"]').content;
+    setupCoverPicker(form, csrf);
     let editor = null, revision = 0, dirty = false, submitting = false, timer = null, autosaveTask = null;
+    const updateSeoChecks = setupSeoChecks(form, csrf, () => editor?.initialized ? editor.getContent() : textarea.value);
 
     const markDirty = () => {
         revision += 1;
@@ -96,6 +100,7 @@ function setupEditor() {
             setup(instance) {
                 editor = instance;
                 instance.on('change input undo redo', markDirty);
+                instance.on('change input undo redo SetContent NodeChange ObjectResized init', updateSeoChecks);
                 instance.on('init', () => showState(state, 'Editor sẵn sàng. Ảnh được tải lên server khi chèn.'));
             }
         }).catch(() => showState(state, 'Chưa tải được editor. Nội dung vẫn còn trong textarea; kiểm tra npm run build trước khi biên tập.', true));

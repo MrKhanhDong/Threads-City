@@ -217,6 +217,26 @@ class AdminWorkflowTest extends TestCase
         $this->get($media->url())->assertNotFound();
     }
 
+    public function test_cover_picker_upload_can_be_used_without_reloading_or_saving_a_draft_first(): void
+    {
+        Storage::fake('local');
+        $admin = User::factory()->create(['role' => 'admin']);
+        $category = Category::factory()->create();
+        $this->actingAs($admin)->get(route('admin.posts.create'))->assertOk()
+            ->assertSee('data-cover-picker', false)->assertSee('Thư viện ảnh')->assertSee('Tải ảnh lên')
+            ->assertSee('Dùng làm ảnh bìa')->assertDontSee('Mở thư viện / tải ảnh');
+        $upload = $this->postJson(route('admin.media.store'), ['file' => UploadedFile::fake()->image('bia-moi.jpg', 640, 480), 'alt' => 'Ảnh bìa mới'])
+            ->assertCreated()->assertJsonStructure(['id', 'location', 'alt']);
+        $this->assertDatabaseCount('posts', 0);
+        $this->assertDatabaseCount('media', 1);
+        $this->post(route('admin.posts.store'), $this->postData($category->id, ['cover_media_id' => $upload->json('id')]))
+            ->assertSessionHasNoErrors()->assertRedirect();
+        $post = Post::sole();
+        $this->assertSame($upload->json('id'), $post->cover_media_id);
+        $this->get(route('admin.posts.edit', $post))->assertOk()->assertSee('src="'.$upload->json('location').'"', false);
+        Storage::disk('local')->assertExists(Media::sole()->path);
+    }
+
     public function test_upload_rejects_executables_svg_and_oversized_images(): void
     {
         Storage::fake('local');

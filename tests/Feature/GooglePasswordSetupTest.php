@@ -37,6 +37,48 @@ class GooglePasswordSetupTest extends TestCase
         return $token;
     }
 
+    public function test_new_google_reader_can_add_password_once_without_email_or_current_password(): void
+    {
+        Notification::fake();
+        $user = User::factory()->create(['google_id' => 'new-google', 'has_local_password' => false, 'password' => Str::random(64)]);
+        $this->actingAs($user)->get(route('account.edit'))->assertOk()
+            ->assertSee('Thêm mật khẩu')->assertDontSee('name="current_password"', false)
+            ->assertDontSee('Gửi liên kết thiết lập mật khẩu');
+        $this->from(route('account.edit'))->put(route('account.password'), [
+            'password' => 'WebsitePassword123', 'password_confirmation' => 'WebsitePassword123',
+            'role' => 'admin', 'email' => 'changed@example.com',
+        ])->assertRedirect(route('account.edit'))->assertSessionHasNoErrors();
+        $user->refresh();
+        $this->assertTrue($user->has_local_password);
+        $this->assertTrue(Hash::check('WebsitePassword123', $user->password));
+        $this->assertSame('reader', $user->role);
+        $this->assertSame('new-google', $user->google_id);
+        $this->assertNotSame('changed@example.com', $user->email);
+        $this->get(route('account.edit'))->assertOk()->assertSee('name="current_password"', false);
+        $this->put(route('account.password'), [
+            'password' => 'AnotherPassword123', 'password_confirmation' => 'AnotherPassword123', 'has_local_password' => false,
+        ])->assertSessionHasErrors('current_password');
+        $this->assertTrue(Hash::check('WebsitePassword123', $user->fresh()->password));
+        Notification::assertNothingSent();
+        $this->post(route('logout'));
+        $this->post(route('login.store'), ['email' => $user->email, 'password' => 'WebsitePassword123'])
+            ->assertRedirect(route('home'))->assertSessionHasNoErrors();
+        $this->assertAuthenticatedAs($user);
+    }
+
+    public function test_first_password_requires_strength_and_confirmation(): void
+    {
+        $user = User::factory()->create(['google_id' => 'new-google', 'has_local_password' => false]);
+        $hash = $user->password;
+        $this->actingAs($user);
+        foreach ([['weak', 'weak'], ['Password123', 'Different123']] as [$password, $confirmation]) {
+            $this->put(route('account.password'), ['password' => $password, 'password_confirmation' => $confirmation])
+                ->assertSessionHasErrors('password');
+            $this->assertSame($hash, $user->fresh()->password);
+            $this->assertFalse($user->fresh()->has_local_password);
+        }
+    }
+
     public function test_google_profile_offers_email_setup_without_requiring_current_password(): void
     {
         $user = $this->googleReader();

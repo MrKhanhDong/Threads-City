@@ -8,13 +8,20 @@ use App\Http\Controllers\CommentThreadController;
 use App\Http\Controllers\GoogleAuthController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ReaderController;
+use App\Http\Controllers\ThreadActionController;
+use App\Http\Controllers\ThreadController;
+use App\Http\Controllers\UserProfileController;
 use Illuminate\Contracts\View\View;
 use Illuminate\Foundation\Auth\EmailVerificationRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', [BlogController::class, 'home'])->name('home');
+Route::get('/', [ThreadController::class, 'index'])->name('home');
+Route::get('/threads', [ThreadController::class, 'index'])->name('threads.index');
+Route::get('/t/{thread}', [ThreadController::class, 'show'])->whereNumber('thread')->name('threads.show');
+Route::get('/blog-cu', [BlogController::class, 'home'])->name('blog.legacy_home');
+
 Route::get('/bai-viet', [BlogController::class, 'archive'])->name('posts.index');
 Route::get('/bai-viet/{slug}', [BlogController::class, 'show'])->name('posts.show');
 Route::get('/danh-muc/{category:slug}', [BlogController::class, 'category'])->name('categories.show');
@@ -45,6 +52,8 @@ Route::get('/dat-lai-mat-khau/{token}', [AuthController::class, 'reset'])->name(
 Route::post('/dat-lai-mat-khau', [AuthController::class, 'updatePassword'])->middleware('throttle:password-reset')->name('password.update');
 
 Route::middleware('auth')->group(function (): void {
+    Route::get('/auth/google/hoan-tat', [GoogleAuthController::class, 'profile'])->name('google.profile');
+    Route::post('/auth/google/hoan-tat', [GoogleAuthController::class, 'completeProfile'])->middleware('throttle:10,1')->name('google.profile.store');
     Route::post('/dang-xuat', [AuthController::class, 'logout'])->name('logout');
     Route::get('/xac-minh-email', fn (): View => view('auth.verify'))->name('verification.notice');
     Route::get('/email/verify/{id}/{hash}', function (EmailVerificationRequest $request): RedirectResponse {
@@ -74,6 +83,14 @@ Route::middleware('auth')->group(function (): void {
     Route::patch('/tai-khoan', [AccountController::class, 'update'])->name('account.update');
     Route::put('/tai-khoan/mat-khau', [AccountController::class, 'password'])->name('account.password');
     Route::get('/bai-viet-da-luu', [ReaderController::class, 'saved'])->name('saved');
+    Route::post('/threads', [ThreadController::class, 'store'])->middleware('throttle:30,1')->name('threads.store');
+    Route::delete('/threads/{thread}', [ThreadController::class, 'destroy'])->whereNumber('thread')->name('threads.destroy');
+    Route::post('/threads/upload-media', [ThreadController::class, 'uploadMedia'])->middleware('throttle:30,1')->name('threads.upload-media');
+    Route::post('/threads/{thread}/like', [ThreadActionController::class, 'like'])->whereNumber('thread')->name('threads.like');
+    Route::post('/threads/{thread}/bookmark', [ThreadActionController::class, 'bookmark'])->whereNumber('thread')->name('threads.bookmark');
+    Route::post('/threads/{thread}/repost', [ThreadActionController::class, 'repost'])->whereNumber('thread')->name('threads.repost');
+    Route::post('/users/{user}/follow', [ThreadActionController::class, 'follow'])->whereNumber('user')->name('users.follow');
+
     Route::middleware('verified')->group(function (): void {
         Route::post('/bai-viet/{id}/thich', [ReaderController::class, 'like'])->whereNumber('id')->middleware('throttle:60,1')->name('likes.store');
         Route::delete('/bai-viet/{id}/thich', [ReaderController::class, 'unlike'])->whereNumber('id')->middleware('throttle:60,1')->name('likes.destroy');
@@ -89,6 +106,7 @@ Route::middleware('auth')->group(function (): void {
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(function (): void {
     Route::get('/', [Admin\DashboardController::class, 'index'])->name('index');
     Route::resource('posts', Admin\PostController::class)->except('show')->whereNumber('post');
+    Route::post('/posts/seo-checks', [Admin\PostController::class, 'seoChecks'])->middleware('throttle:120,1')->name('posts.seo-checks');
     Route::get('/posts/{post}/preview', [BlogController::class, 'preview'])->whereNumber('post')->name('posts.preview');
     Route::post('/posts/{post}/autosave', [Admin\PostController::class, 'autosave'])->whereNumber('post')->name('posts.autosave');
     Route::post('/trash/{id}/restore', [Admin\PostController::class, 'restore'])->whereNumber('id')->name('posts.restore');
@@ -110,3 +128,6 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::get('/settings', [Admin\SettingController::class, 'edit'])->name('settings.edit');
     Route::patch('/settings', [Admin\SettingController::class, 'update'])->name('settings.update');
 });
+
+Route::get('/@{username}', [UserProfileController::class, 'show'])->name('profile.show');
+Route::get('/u/{username}', [UserProfileController::class, 'show']);

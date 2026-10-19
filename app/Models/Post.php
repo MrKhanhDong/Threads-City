@@ -10,20 +10,54 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\DB;
 
-#[Fillable(['title', 'slug', 'excerpt', 'content', 'status', 'published_at', 'is_featured', 'cover_media_id', 'seo_title', 'meta_description', 'focus_keyword', 'canonical_url', 'og_title', 'og_description', 'og_media_id'])]
+#[Fillable([
+    'user_id', 'parent_id', 'repost_of_id', 'type', 'title', 'slug', 'excerpt',
+    'content', 'status', 'published_at', 'is_featured', 'cover_media_id',
+    'seo_title', 'meta_description', 'focus_keyword', 'canonical_url',
+    'og_title', 'og_description', 'og_media_id', 'likes_count', 'replies_count', 'reposts_count',
+])]
 class Post extends Model
 {
     use HasFactory, SoftDeletes;
 
     protected function casts(): array
     {
-        return ['published_at' => 'datetime', 'is_featured' => 'boolean', 'views_count' => 'integer', 'lock_version' => 'integer'];
+        return [
+            'published_at' => 'datetime',
+            'is_featured' => 'boolean',
+            'views_count' => 'integer',
+            'lock_version' => 'integer',
+            'likes_count' => 'integer',
+            'replies_count' => 'integer',
+            'reposts_count' => 'integer',
+        ];
     }
 
     public function author(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id');
+    }
+
+    public function parent(): BelongsTo
+    {
+        return $this->belongsTo(Post::class, 'parent_id');
+    }
+
+    public function replies(): HasMany
+    {
+        return $this->hasMany(Post::class, 'parent_id')->published()->latest();
+    }
+
+    public function repostOf(): BelongsTo
+    {
+        return $this->belongsTo(Post::class, 'repost_of_id');
+    }
+
+    public function reposts(): HasMany
+    {
+        return $this->hasMany(Post::class, 'repost_of_id');
     }
 
     public function cover(): BelongsTo
@@ -61,6 +95,33 @@ class Post extends Model
         return $this->belongsToMany(User::class, 'post_likes')->withPivot('created_at');
     }
 
+    public function isLikedBy(?User $user): bool
+    {
+        if (! $user) {
+            return false;
+        }
+
+        return $this->likers()->where('user_id', $user->id)->exists();
+    }
+
+    public function isBookmarkedBy(?User $user): bool
+    {
+        if (! $user) {
+            return false;
+        }
+
+        return DB::table('bookmarks')->where('post_id', $this->id)->where('user_id', $user->id)->exists();
+    }
+
+    public function isRepostedBy(?User $user): bool
+    {
+        if (! $user) {
+            return false;
+        }
+
+        return static::where('user_id', $user->id)->where('repost_of_id', $this->id)->where('type', 'repost')->exists();
+    }
+
     public function dailyViews(): HasMany
     {
         return $this->hasMany(PostDailyView::class);
@@ -83,6 +144,6 @@ class Post extends Model
 
     public function publicUrl(): string
     {
-        return route('posts.show', $this->slug);
+        return $this->slug ? route('posts.show', $this->slug) : route('threads.show', $this->id);
     }
 }

@@ -18,7 +18,13 @@ class ReaderController extends Controller
 {
     public function saved(Request $request): View
     {
-        return view('blog.archive', ['posts' => $request->user()->bookmarks()->published()->with(['cover', 'author', 'categories', 'tags'])->latest('bookmarks.created_at')->paginate(9), 'heading' => 'Bài viết đã lưu', 'subtitle' => 'Góc đọc nhỏ của riêng bạn.', 'filters' => []]);
+        $threads = $request->user()->bookmarks()
+            ->published()
+            ->with(['author', 'media', 'repostOf.author', 'repostOf.media', 'tags'])
+            ->latest('bookmarks.created_at')
+            ->paginate(15);
+
+        return view('threads.saved', compact('threads'));
     }
 
     public function bookmark(Request $request, string $id): RedirectResponse

@@ -22,6 +22,10 @@ class EnsureActiveAccount
             return redirect()->route('login')->withErrors(['email' => 'Tài khoản đang bị khóa.']);
         }
 
+        if ($request->user()?->google_profile_pending && ! $request->routeIs('google.profile', 'google.profile.store', 'logout', 'terms', 'privacy')) {
+            return redirect()->route('google.profile');
+        }
+
         return $next($request);
     }
 }
