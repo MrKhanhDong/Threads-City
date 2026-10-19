@@ -26,7 +26,7 @@ class AccountController extends Controller
         $oldAvatar = $user->avatar_path;
         $newAvatar = $request->hasFile('avatar') ? $request->file('avatar')->store('avatars', 'local') : null;
         try {
-            $user->fill(collect($data)->only(['name', 'bio'])->all());
+            $user->fill(collect($data)->only(['name', 'username', 'bio'])->all());
             if ($newAvatar) {
                 $user->avatar_path = $newAvatar;
             }
