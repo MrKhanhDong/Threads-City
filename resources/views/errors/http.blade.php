@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Lỗi {{ $status }} — Mộc Journal</title>
+    <title>Lỗi {{ $status }} — {{ config('blog.name') }}</title>
 </head>
 <body style="font:18px/1.7 system-ui;background:#f7f5ef;color:#24332d;max-width:760px;margin:80px auto;padding:24px">
     <main>

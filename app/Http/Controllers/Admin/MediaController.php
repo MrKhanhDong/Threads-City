@@ -46,7 +46,7 @@ class MediaController extends Controller
 
     public function show(Request $request, Media $media): BinaryFileResponse
     {
-        if (! $request->user()?->isAdmin()) {
+        if (! $request->user()?->isAdmin() && $request->user()?->id !== $media->user_id) {
             abort_unless($this->references($media)->published()->exists(), 404);
         }
         abort_unless(preg_match('~^media/[A-Za-z0-9]+\.(jpg|jpeg|png|webp)$~', $media->path) && Storage::disk('local')->exists($media->path), 404);

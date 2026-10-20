@@ -1,71 +1,181 @@
-@extends('layouts.public')
-@php $pageTitle='Hồ sơ của tôi'; $user=auth()->user(); @endphp
+@extends('layouts.threads')
+
+@php
+    $pageTitle = 'Cài đặt tài khoản';
+    $user = auth()->user();
+@endphp
+
 @section('content')
-<section class="container page-section">
-    <p class="eyebrow">GÓC ĐỌC CỦA BẠN</p>
-    <h1>Hồ sơ của tôi</h1>
-    <div class="profile-grid">
-        <div class="profile-card">
-            <x-avatar :user="$user" />
-            <h2 class="text-truncate" title="{{ $user->name }}">{{ $user->name }}</h2>
-            <p>{{ $user->email }}</p>
-            <p class="status">{{ $user->hasVerifiedEmail() ? 'Email đã xác minh' : 'Chưa xác minh email' }}</p>
-            <a class="text-link" href="{{ route('saved') }}">Bài viết đã lưu ↗</a>
-            @if(!$user->hasVerifiedEmail())
-                <a class="text-link d-block mt-3" href="{{ route('verification.notice') }}">Xác minh email ↗</a>
-            @endif
-        </div>
+<div class="py-3">
+    <!-- Header -->
+    <div class="d-flex align-items-center gap-3 mb-4 pb-3 border-bottom border-dark">
+        <a href="{{ route('home') }}" class="btn-threads-outline rounded-circle p-2 d-inline-flex align-items-center justify-content-center" style="width: 38px; height: 38px;" title="Về góc đọc">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="19" y1="12" x2="5" y2="12"></line>
+                <polyline points="12 19 5 12 12 5"></polyline>
+            </svg>
+        </a>
         <div>
-            <div class="panel">
-                <h2>Thông tin cá nhân</h2>
-                <form action="{{ route('account.update') }}" method="post" enctype="multipart/form-data">
-                    @csrf
-                    @method('patch')
-                    <x-field name="name" label="Tên hiển thị" :value="$user->name" required maxlength="100"/>
-                    <x-field name="bio" label="Một chút về bạn" type="textarea" :value="$user->bio" maxlength="1000"/>
-                    <x-field name="avatar" type="file" label="Ảnh đại diện" accept="image/jpeg,image/png,image/webp"/>
-                    <p class="muted small">JPEG, PNG, WebP; tối đa 2 MB.</p>
-                    <button class="btn btn-forest">Lưu hồ sơ</button>
-                </form>
-            </div>
-            <div class="panel mt-4">
-                @if($user->google_id && !$user->has_local_password)
-                    <h2>Thêm mật khẩu</h2>
-                    <p>Bạn đang đăng nhập bằng Google. Tạo mật khẩu riêng để có thể đăng nhập bằng email và mật khẩu trên cùng tài khoản.</p>
-                    <p class="muted">Không cần mật khẩu hiện tại. Hãy chọn mật khẩu riêng cho website, ít nhất 8 ký tự, có chữ và số.</p>
-                @elseif($user->google_id)
-                    <h2>Thiết lập mật khẩu qua email</h2>
-                    <p>Bạn đã liên kết tài khoản Google. Nếu chưa đặt mật khẩu riêng cho website, hãy nhận liên kết qua email để thiết lập mà không cần mật khẩu hiện tại.</p>
-                    <p class="muted">Thư được gửi tới <strong>{{ $user->email }}</strong>. Không dùng mật khẩu Gmail; sau khi thiết lập, bạn có thể đăng nhập bằng Google hoặc email và mật khẩu trên cùng một tài khoản.</p>
-                    <x-local-mail-preview />
-                    @if(in_array(config('mail.default'), ['array', 'log']))
-                        <p class="alert alert-warning">SMTP chưa được cấu hình. Hiện tại website chưa gửi được liên kết thiết lập mật khẩu.</p>
-                    @endif
-                    <form action="{{ route('password.email') }}" method="post">
-                        @csrf
-                        <button class="btn btn-forest">Gửi liên kết thiết lập mật khẩu</button>
-                    </form>
-                    <p class="muted small mt-3">Nếu đã có mật khẩu riêng, bạn cũng có thể dùng liên kết này để đặt lại mật khẩu.</p>
-                    <details class="mt-4" @if($errors->hasAny(['current_password', 'password', 'password_confirmation'])) open @endif>
-                        <summary class="text-link">Đã có mật khẩu? Đổi mật khẩu hiện tại</summary>
-                @else
-                    <h2>Đổi mật khẩu</h2>
-                @endif
-                <form action="{{ route('account.password') }}" method="post" @class(['mt-3' => (bool) $user->google_id])>
-                    @csrf
-                    @method('put')
-                    @if(!$user->google_id || $user->has_local_password)
-                        <x-field name="current_password" label="Mật khẩu hiện tại" type="password" required autocomplete="current-password"/>
-                    @endif
-                    <x-field name="password" label="Mật khẩu mới" type="password" required minlength="8" autocomplete="new-password"/>
-                    <x-field name="password_confirmation" label="Nhập lại mật khẩu" type="password" required autocomplete="new-password"/>
-                    <button class="btn btn-outline-forest">{{ $user->google_id && !$user->has_local_password ? 'Thêm mật khẩu' : 'Đổi mật khẩu' }}</button>
-                </form>
-                @if($user->google_id && $user->has_local_password)
-                    </details>
-                @endif
-            </div>
+            <h4 class="text-white fs-5 fw-bold mb-0">Cài đặt tài khoản</h4>
+            <small class="text-secondary">Quản lý thông tin hồ sơ và bảo mật</small>
         </div>
     </div>
-</section>
+
+    @if($errors->any())
+        <div class="alert alert-danger py-2 px-3 rounded-3 small mb-4 border-0" style="background: rgba(239, 68, 68, 0.15); color: #fca5a5;">
+            {{ $errors->first() }}
+        </div>
+    @endif
+
+    <!-- Profile Information Panel -->
+    <div class="p-4 rounded-4 mb-4" style="background: #181818; border: 1px solid var(--border-color);">
+        <h5 class="text-white fw-bold mb-3 fs-6">Hồ sơ cá nhân</h5>
+
+        <form action="{{ route('account.update') }}" method="post" enctype="multipart/form-data">
+            @csrf
+            @method('patch')
+
+            <!-- Avatar Section -->
+            <div class="d-flex align-items-center gap-3 mb-4">
+                @if($user->avatar_path)
+                    <img src="{{ route('avatar.show', $user->id) }}" alt="{{ $user->name }}" style="width: 64px; height: 64px; border-radius: 50%; object-fit: cover; border: 2px solid #333;">
+                @else
+                    <div style="width: 64px; height: 64px; border-radius: 50%; background: #262626; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold; border: 2px solid #333;">
+                        {{ mb_substr($user->name, 0, 1) }}
+                    </div>
+                @endif
+                <div>
+                    <label for="avatarInput" class="btn-threads-outline px-3 py-1 cursor-pointer">
+                        Đổi ảnh đại diện
+                    </label>
+                    <input type="file" name="avatar" id="avatarInput" accept="image/jpeg,image/png,image/webp" hidden>
+                    <div class="text-secondary small mt-1">JPEG, PNG, WebP tối đa 2 MB</div>
+                </div>
+            </div>
+
+            <!-- Full Name -->
+            <div class="mb-3">
+                <label for="name" class="form-label text-secondary small fw-semibold">Họ và tên</label>
+                <input
+                    type="text"
+                    name="name"
+                    id="name"
+                    class="threads-form-input"
+                    value="{{ old('name', $user->name) }}"
+                    required
+                    maxlength="100"
+                >
+            </div>
+
+            <!-- Username -->
+            <div class="mb-3">
+                <label for="username" class="form-label text-secondary small fw-semibold">Tên người dùng (Handle)</label>
+                <div class="position-relative">
+                    <span class="position-absolute text-secondary" style="left: 14px; top: 14px; font-size: 15px;">@</span>
+                    <input
+                        type="text"
+                        name="username"
+                        id="username"
+                        class="threads-form-input"
+                        style="padding-left: 32px;"
+                        value="{{ old('username', $user->username) }}"
+                        maxlength="30"
+                    >
+                </div>
+            </div>
+
+            <!-- Bio -->
+            <div class="mb-4">
+                <label for="bio" class="form-label text-secondary small fw-semibold">Tiểu sử</label>
+                <textarea
+                    name="bio"
+                    id="bio"
+                    class="threads-form-input"
+                    rows="3"
+                    placeholder="Viết một vài dòng giới thiệu về bạn..."
+                    maxlength="1000"
+                >{{ old('bio', $user->bio) }}</textarea>
+            </div>
+
+            <button type="submit" class="btn-threads-primary px-4 py-2 fw-bold">
+                Lưu thay đổi
+            </button>
+        </form>
+    </div>
+
+    <!-- Security & Password Panel -->
+    <div class="p-4 rounded-4" style="background: #181818; border: 1px solid var(--border-color);">
+        <h5 class="text-white fw-bold mb-3 fs-6">{{ $user->google_id && !$user->has_local_password ? 'Thêm mật khẩu' : 'Đổi mật khẩu' }}</h5>
+
+        <form action="{{ route('account.password') }}" method="post">
+            @csrf
+            @method('put')
+
+            @if(!$user->google_id || $user->has_local_password)
+                <div class="mb-3">
+                    <label for="current_password" class="form-label text-secondary small fw-semibold">Mật khẩu hiện tại</label>
+                    <input
+                        type="password"
+                        name="current_password"
+                        id="current_password"
+                        class="threads-form-input"
+                        required
+                        autocomplete="current-password"
+                    >
+                </div>
+            @endif
+
+            <div class="mb-3">
+                <label for="password" class="form-label text-secondary small fw-semibold">Mật khẩu mới</label>
+                <input
+                    type="password"
+                    name="password"
+                    id="password"
+                    class="threads-form-input"
+                    placeholder="Tối thiểu 8 ký tự, có chữ và số"
+                    required
+                    minlength="8"
+                    autocomplete="new-password"
+                >
+            </div>
+
+            <div class="mb-4">
+                <label for="password_confirmation" class="form-label text-secondary small fw-semibold">Xác nhận mật khẩu mới</label>
+                <input
+                    type="password"
+                    name="password_confirmation"
+                    id="password_confirmation"
+                    class="threads-form-input"
+                    required
+                    autocomplete="new-password"
+                >
+            </div>
+
+            <button type="submit" class="btn-threads-outline px-4 py-2 fw-bold">
+                Cập nhật mật khẩu
+            </button>
+        </form>
+    </div>
+</div>
+
+<style>
+    .threads-form-input {
+        width: 100%;
+        background: #242424;
+        border: 1px solid #333333;
+        border-radius: 12px;
+        padding: 12px 16px;
+        color: #ffffff;
+        font-size: 14px;
+        outline: none;
+        transition: border-color 0.2s, background 0.2s;
+    }
+    .threads-form-input:focus {
+        border-color: #555555;
+        background: #282828;
+    }
+    .cursor-pointer {
+        cursor: pointer;
+    }
+</style>
 @endsection

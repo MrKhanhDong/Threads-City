@@ -10,8 +10,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Str;
 
-#[Fillable(['name', 'email', 'password', 'bio', 'avatar_path'])]
+#[Fillable(['name', 'username', 'email', 'password', 'bio', 'avatar_path'])]
 #[Hidden(['password', 'remember_token', 'google_id'])]
 class User extends Authenticatable implements MustVerifyEmail
 {
@@ -28,6 +29,11 @@ class User extends Authenticatable implements MustVerifyEmail
     public function isAdmin(): bool
     {
         return $this->role === 'admin';
+    }
+
+    public function handle(): string
+    {
+        return $this->username ? '@'.$this->username : '@'.Str::slug($this->name, '_');
     }
 
     public function posts(): HasMany
@@ -48,5 +54,20 @@ class User extends Authenticatable implements MustVerifyEmail
     public function likedPosts(): BelongsToMany
     {
         return $this->belongsToMany(Post::class, 'post_likes')->withPivot('created_at');
+    }
+
+    public function followers(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'follows', 'following_id', 'follower_id')->withPivot('created_at');
+    }
+
+    public function following(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'follows', 'follower_id', 'following_id')->withPivot('created_at');
+    }
+
+    public function isFollowing(User $user): bool
+    {
+        return $this->following()->where('following_id', $user->id)->exists();
     }
 }

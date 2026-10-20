@@ -7,7 +7,6 @@ use App\Models\Comment;
 use App\Models\Post;
 use App\Models\PostRedirect;
 use App\Models\Tag;
-use App\Models\User;
 use App\Services\CommentThreads;
 use App\Services\HtmlSanitizer;
 use App\Services\ViewRecorder;
@@ -21,7 +20,7 @@ class BlogController extends Controller
 {
     public function home(): View
     {
-        $featured = Post::published()->with(['author', 'cover', 'categories'])->orderByDesc('is_featured')->latest('published_at')->first();
+        $featured = Post::published()->where('is_featured', true)->with(['author', 'cover', 'categories'])->latest('published_at')->first();
         $posts = Post::published()->with(['author', 'cover', 'categories'])->when($featured, fn (Builder $query): Builder => $query->whereKeyNot($featured->id))->latest('published_at')->paginate(6);
 
         return view('blog.home', compact('featured', 'posts'));
@@ -115,11 +114,9 @@ class BlogController extends Controller
         return view('blog.page', compact('page'));
     }
 
-    public function author(): View
+    public function author(): RedirectResponse
     {
-        $author = User::where('role', 'admin')->oldest()->first();
-
-        return view('blog.author', ['author' => $author, 'posts' => Post::published()->with(['author', 'cover', 'categories'])->latest('published_at')->paginate(6)]);
+        return redirect()->route('about');
     }
 
     public function sitemap(): Response
