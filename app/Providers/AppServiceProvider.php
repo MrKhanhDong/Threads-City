@@ -18,7 +18,7 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->scoped('blog.context', fn (): array => [
-            'site' => array_merge(['site_name' => config('blog.name'), 'site_tagline' => config('blog.tagline'), 'site_description' => config('blog.description'), 'about' => '', 'contact_email' => ''], Setting::pluck('value', 'key')->all()),
+            'site' => array_merge(['site_name' => config('blog.name'), 'site_tagline' => config('blog.tagline'), 'site_description' => config('blog.description'), 'about' => config('blog.about'), 'contact_email' => ''], Setting::pluck('value', 'key')->all()),
             'navigationCategories' => Category::withCount(['posts' => fn (Builder $query): Builder => $query->published()])->orderBy('name')->get(),
         ]);
         $this->app->scoped('blog.saved', fn (): array => request()->user()?->bookmarks()->pluck('posts.id')->all() ?? []);
@@ -31,6 +31,7 @@ class AppServiceProvider extends ServiceProvider
             $view->with(app('blog.context'))->with('savedIds', app('blog.saved'));
         });
 
+<<<<<<< HEAD
         View::composer(['layouts.threads', 'threads.*', 'profile.*'], function (\Illuminate\View\View $view): void {
             $currentUserId = auth()->id();
             $suggestedUsers = User::query()
@@ -52,6 +53,8 @@ class AppServiceProvider extends ServiceProvider
                 'trendingTopics' => $trendingTopics,
             ]);
         });
+=======
+>>>>>>> Phuong
         RateLimiter::for('login', function (Request $request): Limit {
             $email = $request->input('email');
 

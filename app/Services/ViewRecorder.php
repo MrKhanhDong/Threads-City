@@ -10,7 +10,7 @@ class ViewRecorder
 {
     public function record(Request $request, Post $post): void
     {
-        if ($request->user()?->isAdmin()) {
+        if ($request->user()?->isAdmin() || $request->user()?->id === $post->user_id) {
             return;
         }
         $day = now()->toDateString();

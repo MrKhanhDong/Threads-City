@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 @forelse($threads as $thread)
     @include('threads.partials.thread_card', ['thread' => $thread])
 @empty
@@ -16,3 +17,8 @@
         @endauth
     </div>
 @endforelse
+=======
+@foreach($threads as $thread)
+    @include('threads.partials.thread_card', ['thread' => $thread])
+@endforeach
+>>>>>>> Phuong

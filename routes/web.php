@@ -8,6 +8,8 @@ use App\Http\Controllers\CommentThreadController;
 use App\Http\Controllers\GoogleAuthController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ReaderController;
+use App\Http\Controllers\ReaderSpaceController;
+use App\Http\Controllers\SearchController;
 use App\Http\Controllers\ThreadActionController;
 use App\Http\Controllers\ThreadController;
 use App\Http\Controllers\UserProfileController;
@@ -19,6 +21,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', [ThreadController::class, 'index'])->name('home');
 Route::get('/threads', [ThreadController::class, 'index'])->name('threads.index');
+Route::get('/search', [SearchController::class, 'index'])->name('search.index');
 Route::get('/t/{thread}', [ThreadController::class, 'show'])->whereNumber('thread')->name('threads.show');
 Route::get('/blog-cu', [BlogController::class, 'home'])->name('blog.legacy_home');
 
@@ -89,6 +92,19 @@ Route::middleware('auth')->group(function (): void {
     Route::post('/threads/{thread}/like', [ThreadActionController::class, 'like'])->whereNumber('thread')->name('threads.like');
     Route::post('/threads/{thread}/bookmark', [ThreadActionController::class, 'bookmark'])->whereNumber('thread')->name('threads.bookmark');
     Route::post('/threads/{thread}/repost', [ThreadActionController::class, 'repost'])->whereNumber('thread')->name('threads.repost');
+    Route::get('/hoat-dong', [ReaderSpaceController::class, 'activity'])->name('activity.index');
+    Route::get('/thong-tin-chi-tiet', [ReaderSpaceController::class, 'insights'])->name('insights.index');
+    Route::get('/da-thich', [ReaderSpaceController::class, 'liked'])->name('liked.index');
+    Route::get('/luu-tru', [ReaderSpaceController::class, 'archives'])->name('archives.index');
+    Route::post('/threads/{thread}/archive', [ReaderSpaceController::class, 'archive'])->whereNumber('thread')->name('threads.archive');
+    Route::post('/threads/{thread}/unarchive', [ReaderSpaceController::class, 'restore'])->whereNumber('thread')->name('threads.unarchive');
+    Route::post('/threads', [ThreadController::class, 'store'])->middleware('throttle:30,1')->name('threads.store');
+    Route::patch('/threads/{thread}', [ThreadController::class, 'update'])->whereNumber('thread')->middleware('throttle:30,1')->name('threads.update');
+    Route::delete('/threads/{thread}', [ThreadController::class, 'destroy'])->whereNumber('thread')->name('threads.destroy');
+    Route::post('/threads/upload-media', [ThreadController::class, 'uploadMedia'])->middleware('throttle:30,1')->name('threads.upload-media');
+    Route::post('/threads/{thread}/like', [ThreadActionController::class, 'like'])->whereNumber('thread')->middleware('throttle:60,1')->name('threads.like');
+    Route::post('/threads/{thread}/bookmark', [ThreadActionController::class, 'bookmark'])->whereNumber('thread')->name('threads.bookmark');
+    Route::post('/threads/{thread}/repost', [ThreadActionController::class, 'repost'])->whereNumber('thread')->middleware('throttle:60,1')->name('threads.repost');
     Route::post('/users/{user}/follow', [ThreadActionController::class, 'follow'])->whereNumber('user')->name('users.follow');
 
     Route::middleware('verified')->group(function (): void {

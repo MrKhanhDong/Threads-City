@@ -1,4 +1,10 @@
-import 'bootstrap';
+import { Dropdown, Offcanvas } from 'bootstrap';
+import { setupJournalTheme } from './journal-theme';
+import { setupThreadStream } from './thread-stream';
+import { setupSidebarFeeds } from './sidebar-feeds';
+import { setupSidebarDrawer } from './sidebar-drawer';
+import { setupDesktopColumns } from './desktop-columns';
+import { setupInsights } from './insights';
 import { setupCommentThreads, setupReplyNotifications } from './comment-threads';
 import { setupSeoPreview } from './seo-preview';
 import { setupCoverPicker } from './cover-picker';
@@ -168,6 +174,11 @@ function setupEditor() {
 }
 
 function init() {
+    setupJournalTheme();
+    setupInsights();
+    setupSidebarFeeds();
+    setupSidebarDrawer(Offcanvas);
+    setupDesktopColumns(document, window, Dropdown);
     setupVietnameseValidation();
     setupCommentThreads();
     setupReplyNotifications();
@@ -185,6 +196,7 @@ function init() {
     }));
     setupSeoPreview();
     setupEditor();
+    setupThreadStream();
 }
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, { once: true });
 else init();

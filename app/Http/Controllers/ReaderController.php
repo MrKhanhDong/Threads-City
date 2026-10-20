@@ -20,7 +20,11 @@ class ReaderController extends Controller
     {
         $threads = $request->user()->bookmarks()
             ->published()
+<<<<<<< HEAD
             ->with(['author', 'media', 'repostOf.author', 'repostOf.media', 'tags'])
+=======
+            ->withThreadContext($request->user())
+>>>>>>> Phuong
             ->latest('bookmarks.created_at')
             ->paginate(15);
 

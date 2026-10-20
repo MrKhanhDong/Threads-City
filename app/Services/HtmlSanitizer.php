@@ -10,6 +10,21 @@ class HtmlSanitizer
 {
     public function __construct(private MediaAltResolver $mediaAltResolver) {}
 
+    public function cleanThread(string $html): string
+    {
+        $config = HTMLPurifier_Config::createDefault();
+        $config->set('Core.Encoding', 'UTF-8');
+        $config->set('HTML.Allowed', 'p[style],div[style],span[style],h1[style],h2[style],h3[style],h4[style],h5[style],h6[style],strong,b,em,i,u,s,br,hr,blockquote,ul,ol[start],li,a[href|title|target|rel],pre,code');
+        $config->set('CSS.AllowedProperties', ['text-align', 'color', 'background-color']);
+        $config->set('URI.AllowedSchemes', ['http' => true, 'https' => true, 'mailto' => true]);
+        $config->set('Attr.AllowedFrameTargets', ['_blank']);
+        $config->set('HTML.Nofollow', true);
+        $config->set('HTML.TargetBlank', true);
+        $config->set('Cache.SerializerPath', storage_path('framework/cache'));
+
+        return (new HTMLPurifier($config))->purify($html);
+    }
+
     public function clean(string $html): string
     {
         $config = HTMLPurifier_Config::createDefault();

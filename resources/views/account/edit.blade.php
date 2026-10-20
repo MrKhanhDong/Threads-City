@@ -1,15 +1,25 @@
 @extends('layouts.threads')
 
+<<<<<<< HEAD
 @php 
     $pageTitle = 'Cài đặt tài khoản'; 
     $user = auth()->user(); 
+=======
+@php
+    $pageTitle = 'Cài đặt tài khoản';
+    $user = auth()->user();
+>>>>>>> Phuong
 @endphp
 
 @section('content')
 <div class="py-3">
     <!-- Header -->
     <div class="d-flex align-items-center gap-3 mb-4 pb-3 border-bottom border-dark">
+<<<<<<< HEAD
         <a href="{{ route('profile.show', $user->username ?? $user->id) }}" class="btn-threads-outline rounded-circle p-2 d-inline-flex align-items-center justify-content-center" style="width: 38px; height: 38px;" title="Quay lại">
+=======
+        <a href="{{ route('home') }}" class="btn-threads-outline rounded-circle p-2 d-inline-flex align-items-center justify-content-center" style="width: 38px; height: 38px;" title="Về góc đọc">
+>>>>>>> Phuong
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <line x1="19" y1="12" x2="5" y2="12"></line>
                 <polyline points="12 19 5 12 12 5"></polyline>
@@ -30,7 +40,11 @@
     <!-- Profile Information Panel -->
     <div class="p-4 rounded-4 mb-4" style="background: #181818; border: 1px solid var(--border-color);">
         <h5 class="text-white fw-bold mb-3 fs-6">Hồ sơ cá nhân</h5>
+<<<<<<< HEAD
         
+=======
+
+>>>>>>> Phuong
         <form action="{{ route('account.update') }}" method="post" enctype="multipart/form-data">
             @csrf
             @method('patch')
@@ -56,6 +70,7 @@
             <!-- Full Name -->
             <div class="mb-3">
                 <label for="name" class="form-label text-secondary small fw-semibold">Họ và tên</label>
+<<<<<<< HEAD
                 <input 
                     type="text" 
                     name="name" 
@@ -63,6 +78,15 @@
                     class="threads-form-input" 
                     value="{{ old('name', $user->name) }}" 
                     required 
+=======
+                <input
+                    type="text"
+                    name="name"
+                    id="name"
+                    class="threads-form-input"
+                    value="{{ old('name', $user->name) }}"
+                    required
+>>>>>>> Phuong
                     maxlength="100"
                 >
             </div>
@@ -72,6 +96,7 @@
                 <label for="username" class="form-label text-secondary small fw-semibold">Tên người dùng (Handle)</label>
                 <div class="position-relative">
                     <span class="position-absolute text-secondary" style="left: 14px; top: 14px; font-size: 15px;">@</span>
+<<<<<<< HEAD
                     <input 
                         type="text" 
                         name="username" 
@@ -79,6 +104,15 @@
                         class="threads-form-input" 
                         style="padding-left: 32px;"
                         value="{{ old('username', $user->username) }}" 
+=======
+                    <input
+                        type="text"
+                        name="username"
+                        id="username"
+                        class="threads-form-input"
+                        style="padding-left: 32px;"
+                        value="{{ old('username', $user->username) }}"
+>>>>>>> Phuong
                         maxlength="30"
                     >
                 </div>
@@ -87,11 +121,19 @@
             <!-- Bio -->
             <div class="mb-4">
                 <label for="bio" class="form-label text-secondary small fw-semibold">Tiểu sử</label>
+<<<<<<< HEAD
                 <textarea 
                     name="bio" 
                     id="bio" 
                     class="threads-form-input" 
                     rows="3" 
+=======
+                <textarea
+                    name="bio"
+                    id="bio"
+                    class="threads-form-input"
+                    rows="3"
+>>>>>>> Phuong
                     placeholder="Viết một vài dòng giới thiệu về bạn..."
                     maxlength="1000"
                 >{{ old('bio', $user->bio) }}</textarea>
@@ -105,7 +147,11 @@
 
     <!-- Security & Password Panel -->
     <div class="p-4 rounded-4" style="background: #181818; border: 1px solid var(--border-color);">
+<<<<<<< HEAD
         <h5 class="text-white fw-bold mb-3 fs-6">Đổi mật khẩu</h5>
+=======
+        <h5 class="text-white fw-bold mb-3 fs-6">{{ $user->google_id && !$user->has_local_password ? 'Thêm mật khẩu' : 'Đổi mật khẩu' }}</h5>
+>>>>>>> Phuong
 
         <form action="{{ route('account.password') }}" method="post">
             @csrf
@@ -114,12 +160,21 @@
             @if(!$user->google_id || $user->has_local_password)
                 <div class="mb-3">
                     <label for="current_password" class="form-label text-secondary small fw-semibold">Mật khẩu hiện tại</label>
+<<<<<<< HEAD
                     <input 
                         type="password" 
                         name="current_password" 
                         id="current_password" 
                         class="threads-form-input" 
                         required 
+=======
+                    <input
+                        type="password"
+                        name="current_password"
+                        id="current_password"
+                        class="threads-form-input"
+                        required
+>>>>>>> Phuong
                         autocomplete="current-password"
                     >
                 </div>
@@ -127,6 +182,7 @@
 
             <div class="mb-3">
                 <label for="password" class="form-label text-secondary small fw-semibold">Mật khẩu mới</label>
+<<<<<<< HEAD
                 <input 
                     type="password" 
                     name="password" 
@@ -135,18 +191,37 @@
                     placeholder="Tối thiểu 8 ký tự, có chữ và số"
                     required 
                     minlength="8" 
+=======
+                <input
+                    type="password"
+                    name="password"
+                    id="password"
+                    class="threads-form-input"
+                    placeholder="Tối thiểu 8 ký tự, có chữ và số"
+                    required
+                    minlength="8"
+>>>>>>> Phuong
                     autocomplete="new-password"
                 >
             </div>
 
             <div class="mb-4">
                 <label for="password_confirmation" class="form-label text-secondary small fw-semibold">Xác nhận mật khẩu mới</label>
+<<<<<<< HEAD
                 <input 
                     type="password" 
                     name="password_confirmation" 
                     id="password_confirmation" 
                     class="threads-form-input" 
                     required 
+=======
+                <input
+                    type="password"
+                    name="password_confirmation"
+                    id="password_confirmation"
+                    class="threads-form-input"
+                    required
+>>>>>>> Phuong
                     autocomplete="new-password"
                 >
             </div>

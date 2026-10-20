@@ -26,6 +26,11 @@ class Post extends Model
     {
         return [
             'published_at' => 'datetime',
+<<<<<<< HEAD
+=======
+            'archived_at' => 'datetime',
+            'archive_root_id' => 'integer',
+>>>>>>> Phuong
             'is_featured' => 'boolean',
             'views_count' => 'integer',
             'lock_version' => 'integer',
@@ -95,6 +100,29 @@ class Post extends Model
         return $this->belongsToMany(User::class, 'post_likes')->withPivot('created_at');
     }
 
+<<<<<<< HEAD
+=======
+    public function bookmarkers(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'bookmarks')->withPivot('created_at');
+    }
+
+    public function scopeWithThreadContext(Builder $query, ?User $viewer = null): Builder
+    {
+        return $query->threadInteractions($viewer)->with(['author', 'media', 'cover', 'categories', 'tags', 'repostOf' => fn (BelongsTo $original): BelongsTo => $original->published()->threadInteractions($viewer)->with(['author', 'media', 'cover', 'categories'])]);
+    }
+
+    public function scopeThreadInteractions(Builder $query, ?User $viewer = null): Builder
+    {
+        return $query->withCount(['likers as likes_count', 'replies as replies_count', 'reposts as reposts_count' => fn (Builder $reposts): Builder => $reposts->published()])
+            ->withExists([
+                'likers as viewer_liked' => fn (Builder $users): Builder => $users->whereKey($viewer?->id ?? 0),
+                'bookmarkers as viewer_bookmarked' => fn (Builder $users): Builder => $users->whereKey($viewer?->id ?? 0),
+                'reposts as viewer_reposted' => fn (Builder $posts): Builder => $posts->published()->where('user_id', $viewer?->id ?? 0)->where('type', 'repost'),
+            ]);
+    }
+
+>>>>>>> Phuong
     public function isLikedBy(?User $user): bool
     {
         if (! $user) {
@@ -134,7 +162,7 @@ class Post extends Model
 
     public function scopePublished(Builder $q): Builder
     {
-        return $q->whereIn('status', ['published', 'scheduled'])->whereNotNull('published_at')->where('published_at', '<=', now());
+        return $q->whereNull('archived_at')->whereIn('status', ['published', 'scheduled'])->whereNotNull('published_at')->where('published_at', '<=', now());
     }
 
     public function readingMinutes(): int
