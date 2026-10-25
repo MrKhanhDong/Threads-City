@@ -82,3 +82,9 @@ return Application::configure(basePath: dirname(__DIR__))
             return response()->view('errors.http', ['status' => $status, 'message' => $message], $status, $headers);
         });
     })->create();
+
+if (isset($_ENV['VERCEL']) || isset($_SERVER['VERCEL']) || env('VERCEL')) {
+    $app->useStoragePath('/tmp/storage');
+}
+
+return $app;
