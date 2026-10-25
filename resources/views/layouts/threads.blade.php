@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 <!doctype html>
 <html lang="vi" class="dark">
 <head>
@@ -867,6 +866,3 @@
     </script>
 </body>
 </html>
-=======
-@extends('layouts.public')
->>>>>>> Phuong

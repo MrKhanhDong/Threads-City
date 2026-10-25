@@ -89,7 +89,7 @@ class BlogSeeder extends Seeder
                 Comment::firstOrCreate(['post_id' => $article->id, 'user_id' => $reader->id, 'body' => 'Một câu chuyện nhỏ giúp mình có thêm cảm hứng viết.'], ['status' => 'approved']);
             }
 
-            foreach (['site_name' => config('blog.name'), 'site_tagline' => config('blog.tagline'), 'site_description' => config('blog.description'), 'about' => config('blog.about'), 'contact_email' => 'hello@example.com'] as $key => $value) {
+            foreach (['site_name' => 'Mộc Journal', 'site_tagline' => 'Một góc viết, một nhịp sống chậm.', 'site_description' => 'Blog cá nhân về đời sống, học tập và những hành trình nhỏ.', 'about' => 'Chào bạn, đây là góc viết của tôi. Tôi chia sẻ những điều đã học, những trải nghiệm đời thường và câu chuyện trên đường đi.', 'contact_email' => 'hello@example.com'] as $key => $value) {
                 Setting::firstOrCreate(['key' => $key], ['value' => $value]);
             }
         });

@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 @extends('layouts.threads')
 
 @section('content')
@@ -33,6 +32,7 @@
                 @csrf
                 <input type="hidden" name="parent_id" value="{{ $thread->id }}">
                 <input type="hidden" name="type" value="reply">
+                <div id="replyMediaIdsContainer"></div>
 
                 <div class="d-flex gap-3 align-items-start">
                     @if(auth()->user()->avatar_path)
@@ -51,14 +51,25 @@
                             style="font-size: 15px; resize: none; min-height: 60px; outline: none !important;"
                             placeholder="Nhập câu trả lời của bạn..." 
                             maxlength="2000"
-                            required
                         ></textarea>
                     </div>
                 </div>
 
+                <div id="replyMediaPreview" class="modal-media-grid my-2" style="display: none;"></div>
+
                 <div class="d-flex justify-content-between align-items-center pt-2 mt-2 border-top border-dark">
-                    <span class="text-secondary small">Nhấn Đăng để gửi phản hồi</span>
-                    <button type="submit" class="btn-threads-primary px-3 py-1">
+                    <div class="d-flex align-items-center gap-2">
+                        <button type="button" class="btn btn-sm text-secondary p-1 border-0" id="replyAddImageBtn" title="Đính kèm ảnh">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                                <rect x="3" y="3" width="18" height="18" rx="3" ry="3"></rect>
+                                <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                                <polyline points="21 15 16 10 5 21"></polyline>
+                            </svg>
+                        </button>
+                        <input type="file" id="replyFileInput" accept="image/*" multiple hidden>
+                        <span class="text-secondary" style="font-size: 12px;" id="replyStatusText">Nhấn Đăng để gửi phản hồi</span>
+                    </div>
+                    <button type="submit" class="btn-threads-primary px-3 py-1" id="replySubmitBtn">
                         Trả lời
                     </button>
                 </div>
@@ -88,6 +99,98 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const replyInput = document.getElementById('replyContentInput');
+    const replyForm = document.getElementById('replyForm');
+    const replyAddBtn = document.getElementById('replyAddImageBtn');
+    const replyFileInput = document.getElementById('replyFileInput');
+    const replyPreview = document.getElementById('replyMediaPreview');
+    const replyMediaIds = document.getElementById('replyMediaIdsContainer');
+    const replySubmit = document.getElementById('replySubmitBtn');
+    const replyStatus = document.getElementById('replyStatusText');
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+
+    let uploadedMedia = [];
+    let isUploading = 0;
+
+    function renderReplyPreviews() {
+        if (!replyPreview || !replyMediaIds) return;
+        replyMediaIds.innerHTML = '';
+        replyPreview.innerHTML = '';
+        if (uploadedMedia.length === 0) {
+            replyPreview.style.display = 'none';
+            return;
+        }
+        replyPreview.style.display = 'grid';
+        uploadedMedia.forEach((media, idx) => {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'media_ids[]';
+            input.value = media.id;
+            replyMediaIds.appendChild(input);
+
+            const thumb = document.createElement('div');
+            thumb.className = 'modal-media-thumb';
+            thumb.innerHTML = `
+                <img src="${media.url}" alt="Reply media ${idx+1}">
+                <button type="button" class="modal-media-remove" data-idx="${idx}">✕</button>
+            `;
+            replyPreview.appendChild(thumb);
+        });
+    }
+
+    replyPreview?.addEventListener('click', function(e) {
+        const rm = e.target.closest('.modal-media-remove');
+        if (!rm) return;
+        e.preventDefault();
+        const idx = parseInt(rm.getAttribute('data-idx'));
+        if (!isNaN(idx)) {
+            uploadedMedia.splice(idx, 1);
+            renderReplyPreviews();
+        }
+    });
+
+    if (replyAddBtn && replyFileInput) {
+        replyAddBtn.addEventListener('click', () => replyFileInput.click());
+        replyFileInput.addEventListener('change', function() {
+            if (!this.files || this.files.length === 0) return;
+            const files = Array.from(this.files).slice(0, 4 - uploadedMedia.length);
+            this.value = '';
+
+            files.forEach(file => {
+                if (!file.type.startsWith('image/')) return;
+                isUploading++;
+                if (replySubmit) replySubmit.disabled = true;
+                if (replyStatus) replyStatus.textContent = 'Đang tải ảnh...';
+
+                const formData = new FormData();
+                formData.append('image', file);
+
+                fetch('{{ route("threads.upload-media") }}', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': csrfToken,
+                        'Accept': 'application/json'
+                    },
+                    body: formData
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data && data.id && data.url) {
+                        uploadedMedia.push({ id: data.id, url: data.url });
+                    }
+                })
+                .catch(err => console.error(err))
+                .finally(() => {
+                    isUploading = Math.max(0, isUploading - 1);
+                    if (isUploading === 0) {
+                        if (replySubmit) replySubmit.disabled = false;
+                        if (replyStatus) replyStatus.textContent = 'Nhấn Đăng để gửi phản hồi';
+                    }
+                    renderReplyPreviews();
+                });
+            });
+        });
+    }
+
     if (replyInput) {
         replyInput.addEventListener('input', function() {
             this.style.height = 'auto';
@@ -101,16 +204,3 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 @endpush
-=======
-@extends('layouts.public')
-@php($pageTitle = 'Cuộc trò chuyện')
-@section('content')
-<div class="stream-detail-heading"><a href="{{ route('home') }}">← Bảng tin</a><h1>Thread</h1></div>
-@if($thread->parent && $thread->parent->status === 'published')<a class="stream-parent-link" href="{{ route('threads.show', $thread->parent) }}">Đang trả lời {{ $thread->parent->author->name }} · Xem bài gốc ↗</a>@endif
-@include('threads.partials.thread_card', ['thread' => $thread])
-<div class="stream-reply-heading"><h2>Trả lời <span data-thread-replies-total>{{ $thread->replies_count }}</span></h2>@auth<button type="button" class="btn-threads-outline" data-compose="reply" data-target-id="{{ $thread->id }}" data-context="{{ $thread->author->name }}: {{ \Illuminate\Support\Str::limit(strip_tags($thread->content), 100) }}">Viết trả lời</button>@else<a class="btn-threads-outline" href="{{ route('login') }}">Đăng nhập để trả lời</a>@endauth</div>
-<div data-stream-replies="{{ $thread->id }}">@include('threads.partials.thread_list', ['threads' => $replies])</div>
-@if($replies->isEmpty())<p class="stream-no-replies" data-no-replies>Chưa có trả lời. Chia sẻ suy nghĩ của bạn nhé.</p>@endif
-<div class="journal-pagination">{{ $replies->links() }}</div>
-@endsection
->>>>>>> Phuong

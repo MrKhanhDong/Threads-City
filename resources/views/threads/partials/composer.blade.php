@@ -20,9 +20,20 @@
         @endauth
         <span class="composer-placeholder-text">Có gì mới?</span>
     </div>
-    <button type="button" class="btn-composer-post-pill">
-        Đăng
-    </button>
+    <div class="composer-bar-right d-flex align-items-center gap-2">
+        @auth
+            <button type="button" class="btn-composer-icon-pill" onclick="event.stopPropagation(); window.openThreadComposerWithImagePicker ? window.openThreadComposerWithImagePicker() : document.getElementById('newThreadModal')?.click();" title="Đính kèm ảnh">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                    <rect x="3" y="3" width="18" height="18" rx="3" ry="3"></rect>
+                    <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                    <polyline points="21 15 16 10 5 21"></polyline>
+                </svg>
+            </button>
+        @endauth
+        <button type="button" class="btn-composer-post-pill">
+            Đăng
+        </button>
+    </div>
 </div>
 
 <style>
@@ -80,5 +91,22 @@
     .threads-composer-bar:hover .btn-composer-post-pill {
         color: #aaaaaa;
         border-color: #383838;
+    }
+    .btn-composer-icon-pill {
+        background: transparent;
+        color: #777777;
+        border: none;
+        padding: 6px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: color 0.15s, background 0.15s, transform 0.15s;
+    }
+    .btn-composer-icon-pill:hover {
+        color: #ffffff;
+        background: #202020;
+        transform: scale(1.08);
     }
 </style>

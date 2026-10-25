@@ -66,11 +66,3 @@
 .notification-item small { display: block; color: var(--muted); margin-top: 5px; font-size: 10px; }
 .notification-page { max-width: 850px; }
 .notification-page .notification-item button { font-size: 14px; }
-.site-breadcrumbs { color: var(--journal-muted, var(--muted)); font-size: 11px; line-height: 1.7; }
-.site-breadcrumbs ol { display: flex; flex-wrap: wrap; gap: 5px 10px; list-style: none; margin: 0; padding: 0; }
-.site-breadcrumbs li { display: inline-flex; align-items: baseline; gap: 10px; min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
-.site-breadcrumbs a { color: inherit; text-decoration: none; }
-.site-breadcrumbs a:hover { text-decoration: underline; text-underline-offset: 3px; }
-.site-breadcrumbs [aria-current="page"] { color: var(--journal-text, var(--forest)); }
-.site-breadcrumb-separator { opacity: .55; }
-.admin-main > .site-breadcrumbs { margin-bottom: 22px; }

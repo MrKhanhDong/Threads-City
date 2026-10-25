@@ -35,11 +35,7 @@
                         @endif
                         <div class="notification-item-text">
                             <div class="text-white">
-<<<<<<< HEAD
                                 <strong>{{ $reply->user->name }}</strong> 
-=======
-                                <strong>{{ $reply->user->name }}</strong>
->>>>>>> Phuong
                                 <span class="text-secondary">đã trả lời bình luận của bạn:</span>
                             </div>
                             <div class="text-secondary small mt-1 font-monospace" style="overflow-wrap: anywhere;">
@@ -49,11 +45,6 @@
                                 <span>{{ $notification->created_at->diffForHumans() }}</span>
                                 @if(!$notification->read_at)
                                     <span class="unread-badge">Mới</span>
-<<<<<<< HEAD
-=======
-                                @else
-                                    <span>Đã đọc</span>
->>>>>>> Phuong
                                 @endif
                             </div>
                         </div>
@@ -64,12 +55,7 @@
             <div class="text-center py-5">
                 <div class="mb-2 text-secondary" style="font-size: 36px;">🔔</div>
                 <h6 class="text-white fw-bold mb-1">Chưa có thông báo nào</h6>
-<<<<<<< HEAD
                 <p class="text-secondary small">Khi có ai đó thích, trả lời hoặc tương tác với bài viết của bạn, thông báo sẽ hiển thị ở đây.</p>
-=======
-                <p class="text-secondary small">Khi có ai đó trả lời bình luận của bạn, thông báo sẽ hiển thị ở đây.</p>
-                <a class="btn-threads-outline" href="{{ route('activity.index') }}">Xem tất cả hoạt động</a>
->>>>>>> Phuong
             </div>
         @endforelse
     </div>
