@@ -49,7 +49,8 @@ class ThreadController extends Controller
 
     public function index(Request $request): View|JsonResponse
     {
-        $tab = $request->query('tab', 'for-you');
+        $filters = $request->validate(['tab' => 'nullable|in:for-you,following', 'q' => 'nullable|string|max:150', 'search' => 'nullable|boolean']);
+        $tab = $filters['tab'] ?? 'for-you';
         $query = Post::published()
             ->whereNull('parent_id')
             ->where(function ($q): void {
@@ -85,6 +86,14 @@ class ThreadController extends Controller
             }
         }
 
+        if (! empty($filters['q'])) {
+            $search = $filters['q'];
+            $query->where(function ($query) use ($search): void {
+                $query->where('title', 'like', '%'.$search.'%')
+                    ->orWhere('content', 'like', '%'.$search.'%')
+                    ->orWhereHas('tags', fn ($tags) => $tags->where('name', 'like', '%'.ltrim($search, '#').'%'));
+            });
+        }
         $threads = $query->paginate(15)->withQueryString();
         $userInteractions = $this->batchPreloadInteractions($request->user(), $threads->items());
 
