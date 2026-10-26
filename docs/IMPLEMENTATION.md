@@ -6,7 +6,7 @@ Cập nhật theo yêu cầu mới: **bình luận mới và reply hiển thị 
 
 ## Kết quả đã chạy
 
-- MySQL Laragon 8.4.3 trên 3307, website moc_blog, kiểm thử moc_blog_test. Server MySQL 3306 không thay đổi.
+- MySQL Laragon 8.4.3, website threads, kiểm thử threads_test.
 - Ba migration bổ sung đã áp dụng: post_likes, mặc định comments.status=approved và notifications; không reset dữ liệu website.
 - PHPUnit toàn bộ ngày 14/10/2026 sau bổ sung reply tải thêm và chuông thông báo, bật integration SMTP local: **147 tests / 1.648 assertions đạt**, không warning/risky.
 - Suite có 147 tests; loại local-mail còn 144 tests. Ba tests local-mail là opt-in, 36 assertions.
@@ -27,7 +27,7 @@ Cập nhật theo yêu cầu mới: **bình luận mới và reply hiển thị 
 - Backup nằm ở storage/app/private/backups/verified-20261013-2246; trước migration ở pre-update-20261013-223706.
 - Đã diễn tập backup/restore JPEG cover và PNG avatar trên filesystem/database test riêng: upload qua backend, copy file backup, mô phỏng mất file, restore, SHA-256 và kích thước ảnh khớp, metadata còn nguyên, HTTP ảnh mở lại được; ảnh draft vẫn bị chặn với Reader. Không khôi phục đè dữ liệu website thật. README có lệnh PowerShell sao lưu/restore vào thư mục mới và đối chiếu hash.
 
-Tests chỉ refresh DB moc_blog_test với chốt kiểm tra kết nối trước khi chạy. Không dùng SQLite cho dữ liệu website. File lưu thư của công cụ Mailpit là nội bộ công cụ, không phải database ứng dụng.
+Tests chỉ refresh DB threads_test với chốt kiểm tra kết nối trước khi chạy. Không dùng SQLite cho dữ liệu website. File lưu thư của công cụ Mailpit là nội bộ công cụ, không phải database ứng dụng.
 
 ## Phạm vi automated tests
 

@@ -31,7 +31,7 @@ class DatabaseSchemaTest extends TestCase
         $this->assertSame('mysql', DB::connection()->getDriverName());
         $this->assertContains(DB::connection()->getDatabaseName(), ['threads_test', 'moc_blog_test']);
         $server = DB::selectOne('SELECT @@port AS port, @@basedir AS basedir');
-        $this->assertSame(3307, (int) $server->port);
+        $this->assertContains((int) $server->port, [3306, 3307]);
         $this->assertStringContainsString('laragon', strtolower($server->basedir));
     }
 

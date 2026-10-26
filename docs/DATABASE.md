@@ -1,6 +1,6 @@
 # Database của blog cá nhân
 
-Database chạy trên MySQL 8.4.3 của Laragon, cổng 3307, charset utf8mb4. Database website: moc_blog; database test: moc_blog_test.
+Database chạy trên MySQL 8.4.3 của Laragon, charset utf8mb4. Database website: threads; database test: threads_test.
 
 Nguồn schema chính xác: database/migrations, gồm schema blog ban đầu, ba migration Laravel mặc định và hai migration cập nhật 13/10/2026 cho post_likes / mặc định bình luận hiển thị ngay, cùng migration notifications ngày 14/10/2026. Không có bảng đăng bài của độc giả, follow, tin nhắn hay nhóm mạng xã hội.
 
@@ -67,9 +67,9 @@ erDiagram
 
 ## An toàn khi kiểm thử
 
-tests/TestCase.php kiểm tra kết nối MySQL và database moc_blog_test trước khi RefreshDatabase chạy. Không cho phép dùng moc_blog.
+tests/TestCase.php kiểm tra kết nối MySQL và database threads_test trước khi RefreshDatabase chạy. Không cho phép dùng database website.
 
-Bộ kiểm thử có thể tạo/xóa schema trong moc_blog_test. Database này không được dùng để lưu dữ liệu thật. Không chạy migrate:fresh/migrate:reset trên database website.
+Bộ kiểm thử có thể tạo/xóa schema trong threads_test. Database này không được dùng để lưu dữ liệu thật. Không chạy migrate:fresh/migrate:reset trên database website.
 
 ## Sao lưu khi triển khai
 
