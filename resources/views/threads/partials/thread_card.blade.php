@@ -86,6 +86,25 @@
                     <time class="author-time-text" datetime="{{ $displayThread->published_at?->toISOString() }}">
                         {{ $displayThread->published_at ? $displayThread->published_at->diffForHumans(null, true) : 'vừa xong' }}
                     </time>
+                    @php
+                        $threadLocation = null;
+                        if (!empty($displayThread->excerpt)) {
+                            $parsedExcerpt = json_decode($displayThread->excerpt, true);
+                            if (is_array($parsedExcerpt) && !empty($parsedExcerpt['location'])) {
+                                $threadLocation = $parsedExcerpt['location'];
+                            }
+                        }
+                    @endphp
+                    @if($threadLocation)
+                        <span class="meta-separator text-secondary" style="font-size: 11px;">·</span>
+                        <span class="thread-location-pill" title="Địa điểm: {{ $threadLocation }}">
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                                <circle cx="12" cy="10" r="3"></circle>
+                            </svg>
+                            <span>{{ $threadLocation }}</span>
+                        </span>
+                    @endif
                 </div>
 
                 <!-- More Options (3 dots) -->
@@ -712,6 +731,21 @@
         0% { transform: scale(1); }
         50% { transform: scale(1.35); }
         100% { transform: scale(1); }
+    }
+
+    /* Thread Location Tag in Header */
+    .thread-location-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        color: #8e8e8e;
+        font-size: 13px;
+        font-weight: 500;
+        cursor: default;
+        transition: color 0.15s;
+    }
+    .thread-location-pill:hover {
+        color: #0095f6;
     }
 
     /* Attached Document Display Card Styling */

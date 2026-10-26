@@ -92,6 +92,19 @@
                                         <li><a class="dropdown-item topic-item" href="javascript:void(0)" data-tag="huit">🎓 HUIT</a></li>
                                     </ul>
                                 </div>
+
+                                <!-- Attached Location Badge -->
+                                <div id="composerLocationBadge" class="composer-location-badge ms-auto" style="display: none;">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                                        <circle cx="12" cy="10" r="3"></circle>
+                                    </svg>
+                                    <span id="composerLocationText"></span>
+                                    <button type="button" class="composer-location-remove-btn" id="btnRemoveLocation" title="Gỡ vị trí">
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                    </button>
+                                    <input type="hidden" name="location" id="modalLocationInput" value="">
+                                </div>
                             </div>
 
                             <!-- Textarea with placeholder "Có gì mới?" -->
@@ -451,6 +464,33 @@
 }
 .composer-topic-picker:hover {
     color: #a0a0a0;
+}
+.composer-location-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(0, 149, 246, 0.12);
+    color: #0095f6;
+    border: 1px solid rgba(0, 149, 246, 0.3);
+    border-radius: 20px;
+    padding: 3px 10px;
+    font-size: 13px;
+    font-weight: 500;
+}
+.composer-location-remove-btn {
+    background: transparent;
+    border: none;
+    color: #0095f6;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    opacity: 0.7;
+    transition: opacity 0.15s;
+}
+.composer-location-remove-btn:hover {
+    opacity: 1;
 }
 
 /* Textarea */
@@ -952,23 +992,16 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Interactive Location button
-    document.getElementById('modalAddLocationBtn')?.addEventListener('click', function() {
-        if (navigator.geolocation) {
-            toast('Đang xác định vị trí...');
-            navigator.geolocation.getCurrentPosition(() => {
-                if (modalText && !modalText.value.includes('📍')) {
-                    modalText.value = (modalText.value.trim() + ' 📍 TP. Hồ Chí Minh').trim() + ' ';
-                    updateSubmitState();
-                    toast('Đã đính kèm vị trí');
-                }
-            }, () => {
-                if (modalText && !modalText.value.includes('📍')) {
-                    modalText.value = (modalText.value.trim() + ' 📍 TP. Hồ Chí Minh').trim() + ' ';
-                    updateSubmitState();
-                }
-            });
-        }
+    // Remove Location button listener
+    document.getElementById('btnRemoveLocation')?.addEventListener('click', function(e) {
+        e.preventDefault();
+        const badge = document.getElementById('composerLocationBadge');
+        const input = document.getElementById('modalLocationInput');
+        const textSpan = document.getElementById('composerLocationText');
+        if (badge) badge.style.display = 'none';
+        if (input) input.value = '';
+        if (textSpan) textSpan.textContent = '';
+        updateSubmitState();
     });
 
     // Interactive Audio button
@@ -987,13 +1020,15 @@ document.addEventListener('DOMContentLoaded', function() {
         const pollValid = isPollActive && pollInputs.length >= 2;
         const attachedDocInput = document.getElementById('modalAttachedDocHtml');
         const hasAttachedDoc = !!(attachedDocInput && attachedDocInput.value && attachedDocInput.value.trim().length > 0);
+        const locationVal = (document.getElementById('modalLocationInput')?.value || '').trim();
+        const hasLocation = locationVal.length > 0;
 
         if (modalCharCount) {
             modalCharCount.textContent = `${textLen}/2000`;
             modalCharCount.style.display = textLen > 1500 ? 'inline-block' : 'none';
         }
 
-        const canSubmit = ((textLen > 0 || mediaCount > 0 || pollValid || hasAttachedDoc)) && isUploadingCount === 0;
+        const canSubmit = ((textLen > 0 || mediaCount > 0 || pollValid || hasAttachedDoc || hasLocation)) && isUploadingCount === 0;
         if (modalSubmitBtn) {
             modalSubmitBtn.disabled = !canSubmit;
             if (canSubmit) {
@@ -1202,9 +1237,10 @@ document.addEventListener('DOMContentLoaded', function() {
             : [];
         const attachedDocInput = document.getElementById('modalAttachedDocHtml');
         const attachedDocHtml = attachedDocInput ? decodeURIComponent(attachedDocInput.value || '') : '';
+        const locationVal = (document.getElementById('modalLocationInput')?.value || '').trim();
 
-        if (!content && uploadedMedia.length === 0 && pollOptions.length === 0 && !attachedDocHtml) {
-            toast('Vui lòng nhập nội dung, đính kèm ảnh hoặc văn bản');
+        if (!content && uploadedMedia.length === 0 && pollOptions.length === 0 && !attachedDocHtml && !locationVal) {
+            toast('Vui lòng nhập nội dung, đính kèm ảnh, cuộc thăm dò hoặc vị trí');
             return;
         }
 
@@ -1230,7 +1266,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 type: postType,
                 media_ids: uploadedMedia.map(m => m.id),
                 ...(isPollActive ? { poll_options: pollOptions } : {}),
-                attached_document_html: attachedDocHtml
+                attached_document_html: attachedDocHtml,
+                location: locationVal
             })
         })
         .then(res => {
@@ -1321,6 +1358,13 @@ document.addEventListener('DOMContentLoaded', function() {
         if (textDocEditor) {
             textDocEditor.innerHTML = '';
         }
+        const locationBadge = document.getElementById('composerLocationBadge');
+        if (locationBadge) locationBadge.style.display = 'none';
+        const locationInput = document.getElementById('modalLocationInput');
+        if (locationInput) locationInput.value = '';
+        const locationText = document.getElementById('composerLocationText');
+        if (locationText) locationText.textContent = '';
+
         if (modalSubmitBtn) {
             modalSubmitBtn.disabled = true;
             modalSubmitBtn.classList.remove('is-active');

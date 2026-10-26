@@ -244,4 +244,27 @@ class ThreadSocialInteractionsTest extends TestCase
             ->assertSee('Văn bản đính kèm')
             ->assertSee('Nội dung in đậm');
     }
+
+    public function test_user_can_create_thread_with_location(): void
+    {
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user)
+            ->postJson(route('threads.store'), [
+                'content' => 'Check in tại một nơi tuyệt đẹp',
+                'location' => 'TP. Hồ Chí Minh',
+            ]);
+
+        $response->assertOk()
+            ->assertJson(['success' => true]);
+
+        $thread = Post::where('user_id', $user->id)->latest('id')->first();
+        $this->assertNotNull($thread);
+        $this->assertStringContainsString('TP. Hồ Chí Minh', $thread->excerpt);
+
+        // Verify thread page renders the location pill
+        $showResponse = $this->actingAs($user)->get(route('threads.show', $thread->id));
+        $showResponse->assertOk()
+            ->assertSee('TP. Hồ Chí Minh');
+    }
 }

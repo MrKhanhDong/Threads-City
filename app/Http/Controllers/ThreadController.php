@@ -100,7 +100,7 @@ class ThreadController extends Controller
         }
 
         $data = $request->validate([
-            'content' => 'required_without_all:media_ids,images,poll_options,attached_document_html|nullable|string|max:2000',
+            'content' => 'required_without_all:media_ids,images,poll_options,attached_document_html,location|nullable|string|max:2000',
             'parent_id' => 'nullable|exists:posts,id',
             'repost_of_id' => 'nullable|exists:posts,id',
             'type' => 'nullable|in:post,reply,repost,quote',
@@ -111,6 +111,7 @@ class ThreadController extends Controller
             'poll_options' => 'nullable|array|min:2|max:4',
             'poll_options.*' => 'required|string|max:100',
             'attached_document_html' => 'nullable|string|max:50000',
+            'location' => 'nullable|string|max:150',
         ]);
 
         $type = $data['type'] ?? 'post';
@@ -158,12 +159,17 @@ class ThreadController extends Controller
                 }
             }
 
+            $location = ! empty($data['location']) ? trim(strip_tags($data['location'])) : null;
+
             $metaExcerpt = [];
             if ($pollData) {
                 $metaExcerpt = $pollData;
             }
             if ($attachedDoc) {
                 $metaExcerpt['attached_doc'] = $attachedDoc;
+            }
+            if ($location) {
+                $metaExcerpt['location'] = $location;
             }
 
             $fallbackTitle = 'Bài viết Threads';
@@ -173,6 +179,8 @@ class ThreadController extends Controller
                 $fallbackTitle = $cleanOptions[0];
             } elseif ($attachedDoc) {
                 $fallbackTitle = strip_tags($attachedDoc);
+            } elseif ($location) {
+                $fallbackTitle = '📍 '.$location;
             }
 
             $post = Post::create([

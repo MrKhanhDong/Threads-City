@@ -871,6 +871,7 @@
     @include('threads.partials.composer_modal')
     @include('threads.partials.quote_picker_modal')
     @include('threads.partials.text_document_modal')
+    @include('threads.partials.location_picker_modal')
     @endauth
 
     <!-- Repost / Quote Modal -->
