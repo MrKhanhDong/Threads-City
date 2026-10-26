@@ -122,6 +122,24 @@ class Post extends Model
         return static::where('user_id', $user->id)->where('repost_of_id', $this->id)->where('type', 'repost')->exists();
     }
 
+    public function isMutedBy(?User $user): bool
+    {
+        if (! $user) {
+            return false;
+        }
+
+        return DB::table('muted_posts')->where('post_id', $this->id)->where('user_id', $user->id)->exists();
+    }
+
+    public function isHiddenBy(?User $user): bool
+    {
+        if (! $user) {
+            return false;
+        }
+
+        return DB::table('hidden_posts')->where('post_id', $this->id)->where('user_id', $user->id)->exists();
+    }
+
     public function dailyViews(): HasMany
     {
         return $this->hasMany(PostDailyView::class);

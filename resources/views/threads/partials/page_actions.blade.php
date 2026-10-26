@@ -275,12 +275,13 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // 4.4 Not interested (fade out and remove card)
+    // 4.4 Not interested (fade out, remove card, save to DB)
     document.addEventListener('click', function(e) {
         const notIntBtn = e.target.closest('.btn-not-interested');
         if (!notIntBtn) return;
         e.preventDefault();
 
+        const threadId = notIntBtn.getAttribute('data-thread-id');
         const card = notIntBtn.closest('.thread-card-wrapper');
         if (card) {
             card.style.transition = 'all 0.35s cubic-bezier(0.4, 0, 0.2, 1)';
@@ -289,7 +290,24 @@ document.addEventListener('DOMContentLoaded', function() {
             setTimeout(() => {
                 card.remove();
             }, 350);
-            showToast('Đã ẩn bài viết. Bạn sẽ ít thấy bài viết tương tự hơn.');
+        }
+
+        if (threadId) {
+            fetch(`/threads/${threadId}/not-interested`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                    'Accept': 'application/json'
+                }
+            })
+            .then(res => res.json())
+            .then(data => {
+                showToast(data.message || 'Đã ẩn bài viết. Bạn sẽ ít thấy bài viết tương tự hơn.');
+            })
+            .catch(() => {
+                showToast('Đã ẩn bài viết');
+            });
         }
     });
 
@@ -298,7 +316,34 @@ document.addEventListener('DOMContentLoaded', function() {
         const feedBtn = e.target.closest('.btn-add-to-custom-feed');
         if (!feedBtn) return;
         e.preventDefault();
-        showToast('Đã thêm bài viết vào Bảng Feed tùy chỉnh');
+
+        const threadId = feedBtn.getAttribute('data-thread-id');
+        if (!threadId) return;
+
+        fetch(`/threads/${threadId}/add-to-feed`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfToken,
+                'Accept': 'application/json'
+            }
+        })
+        .then(res => {
+            if (res.status === 401) {
+                window.location.href = '{{ route("login") }}';
+                return;
+            }
+            return res.json();
+        })
+        .then(data => {
+            if (data && data.success) {
+                showToast(data.message || 'Đã thêm bài viết vào Bảng Feed tùy chỉnh');
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            showToast('Không thể thêm vào bảng feed');
+        });
     });
 
     // 4.6 Mute notifications
@@ -306,7 +351,36 @@ document.addEventListener('DOMContentLoaded', function() {
         const muteBtn = e.target.closest('.btn-mute-thread');
         if (!muteBtn) return;
         e.preventDefault();
-        showToast('Đã tắt thông báo cho bài viết này');
+
+        const threadId = muteBtn.getAttribute('data-thread-id');
+        const labelEl = muteBtn.querySelector('.mute-label');
+
+        fetch(`/threads/${threadId}/mute`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfToken,
+                'Accept': 'application/json'
+            }
+        })
+        .then(res => {
+            if (res.status === 401) {
+                window.location.href = '{{ route("login") }}';
+                return;
+            }
+            return res.json();
+        })
+        .then(data => {
+            if (data && data.success) {
+                muteBtn.setAttribute('data-muted', data.muted ? '1' : '0');
+                if (labelEl) labelEl.textContent = data.muted ? 'Bật thông báo' : 'Tắt thông báo';
+                showToast(data.message);
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            showToast('Lỗi khi thao tác tắt thông báo');
+        });
     });
 
     // 4.7 Restrict user
@@ -314,8 +388,37 @@ document.addEventListener('DOMContentLoaded', function() {
         const resBtn = e.target.closest('.btn-restrict-user');
         if (!resBtn) return;
         e.preventDefault();
-        const userName = resBtn.getAttribute('data-user-name') || 'người dùng';
-        showToast(`Đã đưa ${userName} vào danh sách hạn chế`);
+
+        const userId = resBtn.getAttribute('data-user-id');
+        const labelEl = resBtn.querySelector('.restrict-label');
+        if (!userId) return;
+
+        fetch(`/users/${userId}/restrict`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfToken,
+                'Accept': 'application/json'
+            }
+        })
+        .then(res => {
+            if (res.status === 401) {
+                window.location.href = '{{ route("login") }}';
+                return;
+            }
+            return res.json();
+        })
+        .then(data => {
+            if (data && data.success) {
+                resBtn.setAttribute('data-restricted', data.restricted ? '1' : '0');
+                if (labelEl) labelEl.textContent = data.restricted ? 'Bỏ hạn chế' : 'Hạn chế';
+                showToast(data.message);
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            showToast('Lỗi khi thao tác hạn chế người dùng');
+        });
     });
 
     // 4.8 Block user
@@ -323,22 +426,51 @@ document.addEventListener('DOMContentLoaded', function() {
         const blockBtn = e.target.closest('.btn-block-user');
         if (!blockBtn) return;
         e.preventDefault();
+
         const userName = blockBtn.getAttribute('data-user-name') || 'người dùng';
         const userId = blockBtn.getAttribute('data-user-id');
+        const isBlocked = blockBtn.getAttribute('data-blocked') === '1';
 
-        if (confirm(`Bạn có chắc chắn muốn chặn ${userName}? Bạn sẽ không thấy bài viết hoặc thông báo từ người này nữa.`)) {
-            if (userId) {
-                document.querySelectorAll(`.btn-block-user[data-user-id="${userId}"]`).forEach(btn => {
-                    const card = btn.closest('.thread-card-wrapper');
-                    if (card) {
-                        card.style.transition = 'opacity 0.3s ease';
-                        card.style.opacity = '0';
-                        setTimeout(() => card.remove(), 300);
-                    }
-                });
+        const confirmMsg = isBlocked 
+            ? `Bạn có chắc chắn muốn bỏ chặn ${userName}?`
+            : `Bạn có chắc chắn muốn chặn ${userName}? Bạn sẽ không thấy bài viết hoặc thông báo từ người này nữa.`;
+
+        if (!confirm(confirmMsg)) return;
+
+        fetch(`/users/${userId}/block`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfToken,
+                'Accept': 'application/json'
             }
-            showToast(`Đã chặn tài khoản ${userName}`);
-        }
+        })
+        .then(res => {
+            if (res.status === 401) {
+                window.location.href = '{{ route("login") }}';
+                return;
+            }
+            return res.json();
+        })
+        .then(data => {
+            if (data && data.success) {
+                if (data.blocked) {
+                    document.querySelectorAll(`.btn-block-user[data-user-id="${userId}"]`).forEach(btn => {
+                        const card = btn.closest('.thread-card-wrapper');
+                        if (card) {
+                            card.style.transition = 'opacity 0.3s ease';
+                            card.style.opacity = '0';
+                            setTimeout(() => card.remove(), 300);
+                        }
+                    });
+                }
+                showToast(data.message);
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            showToast('Lỗi khi thao tác chặn người dùng');
+        });
     });
 
     // 4.9 Report thread modal trigger
@@ -366,11 +498,40 @@ document.addEventListener('DOMContentLoaded', function() {
     const btnSubmitReport = document.getElementById('btnSubmitReport');
     if (btnSubmitReport) {
         btnSubmitReport.addEventListener('click', function() {
+            const threadId = document.getElementById('reportModalThreadId')?.value;
+            const selectedRadio = document.querySelector('input[name="reportReason"]:checked');
+            const reason = selectedRadio ? selectedRadio.value : 'spam';
+
+            if (!threadId) return;
+
             const modalEl = document.getElementById('reportThreadModal');
             if (modalEl && window.bootstrap) {
                 bootstrap.Modal.getInstance(modalEl)?.hide();
             }
-            showToast('Cảm ơn bạn đã báo cáo. Chúng tôi sẽ xem xét bài viết này để bảo vệ cộng đồng.');
+
+            fetch(`/threads/${threadId}/report`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({ reason: reason })
+            })
+            .then(res => {
+                if (res.status === 401) {
+                    window.location.href = '{{ route("login") }}';
+                    return;
+                }
+                return res.json();
+            })
+            .then(data => {
+                showToast(data?.message || 'Cảm ơn bạn đã báo cáo. Chúng tôi đã tiếp nhận thông tin.');
+            })
+            .catch(err => {
+                console.error(err);
+                showToast('Lỗi gửi báo cáo');
+            });
         });
     }
 

@@ -20,6 +20,7 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', [ThreadController::class, 'index'])->name('home');
 Route::get('/threads', [ThreadController::class, 'index'])->name('threads.index');
 Route::get('/t/{thread}', [ThreadController::class, 'show'])->whereNumber('thread')->name('threads.show');
+Route::get('/threads/{thread}/embed', [ThreadActionController::class, 'embed'])->whereNumber('thread')->name('threads.embed');
 Route::redirect('/blog-cu', '/', 301)->name('blog.legacy_home');
 
 Route::redirect('/bai-viet', '/', 301)->name('posts.index');
@@ -90,6 +91,13 @@ Route::middleware('auth')->group(function (): void {
     Route::post('/threads/{thread}/like', [ThreadActionController::class, 'like'])->whereNumber('thread')->name('threads.like');
     Route::post('/threads/{thread}/bookmark', [ThreadActionController::class, 'bookmark'])->whereNumber('thread')->name('threads.bookmark');
     Route::post('/threads/{thread}/repost', [ThreadActionController::class, 'repost'])->whereNumber('thread')->name('threads.repost');
+    Route::post('/threads/{thread}/not-interested', [ThreadActionController::class, 'notInterested'])->whereNumber('thread')->name('threads.not-interested');
+    Route::post('/threads/{thread}/mute', [ThreadActionController::class, 'toggleMute'])->whereNumber('thread')->name('threads.mute');
+    Route::post('/threads/{thread}/report', [ThreadActionController::class, 'report'])->whereNumber('thread')->name('threads.report');
+    Route::post('/users/{user}/block', [ThreadActionController::class, 'toggleBlock'])->whereNumber('user')->name('users.block');
+    Route::post('/users/{user}/restrict', [ThreadActionController::class, 'toggleRestrict'])->whereNumber('user')->name('users.restrict');
+    Route::post('/threads/{thread}/add-to-feed', [ThreadActionController::class, 'addToCustomFeed'])->whereNumber('thread')->name('threads.add-to-feed');
+    Route::get('/api/custom-feeds', [ThreadActionController::class, 'getCustomFeeds'])->name('threads.custom-feeds');
     Route::post('/users/{user}/follow', [ThreadActionController::class, 'follow'])->whereNumber('user')->name('users.follow');
     Route::post('/threads/{thread}/vote', [ThreadController::class, 'votePoll'])->whereNumber('thread')->name('threads.vote');
     Route::get('/api/quote-picker-threads', [ThreadController::class, 'quotePickerThreads'])->name('api.quote-picker');

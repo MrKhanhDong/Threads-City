@@ -153,7 +153,7 @@
                                 </svg>
                             </span>
                         </button>
-                        <button type="button" class="thread-option-item btn-embed-thread" data-url="{{ route('threads.show', $displayThread->id) }}">
+                        <button type="button" class="thread-option-item btn-embed-thread" data-url="{{ route('threads.embed', $displayThread->id) }}">
                             <span class="thread-option-label">Lấy mã nhúng</span>
                             <span class="thread-option-icon">
                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -202,8 +202,13 @@
                         <div class="thread-option-divider"></div>
 
                         <!-- Group 5: Tắt thông báo, Hạn chế, Chặn, Báo cáo -->
-                        <button type="button" class="thread-option-item btn-mute-thread" data-thread-id="{{ $displayThread->id }}">
-                            <span class="thread-option-label">Tắt thông báo</span>
+                        @php
+                            $isMuted = $currentUser && $displayThread->isMutedBy($currentUser);
+                            $isRestricted = $currentUser && $currentUser->isRestricting($author);
+                            $isBlocked = $currentUser && $currentUser->isBlocking($author);
+                        @endphp
+                        <button type="button" class="thread-option-item btn-mute-thread" data-thread-id="{{ $displayThread->id }}" data-muted="{{ $isMuted ? '1' : '0' }}">
+                            <span class="thread-option-label mute-label">{{ $isMuted ? 'Bật thông báo' : 'Tắt thông báo' }}</span>
                             <span class="thread-option-icon">
                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
@@ -213,8 +218,8 @@
                                 </svg>
                             </span>
                         </button>
-                        <button type="button" class="thread-option-item btn-restrict-user" data-user-id="{{ $author->id }}" data-user-name="{{ e($author->name) }}">
-                            <span class="thread-option-label">Hạn chế</span>
+                        <button type="button" class="thread-option-item btn-restrict-user" data-user-id="{{ $author->id }}" data-user-name="{{ e($author->name) }}" data-restricted="{{ $isRestricted ? '1' : '0' }}">
+                            <span class="thread-option-label restrict-label">{{ $isRestricted ? 'Bỏ hạn chế' : 'Hạn chế' }}</span>
                             <span class="thread-option-icon">
                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
@@ -223,8 +228,8 @@
                                 </svg>
                             </span>
                         </button>
-                        <button type="button" class="thread-option-item thread-option-danger btn-block-user" data-user-id="{{ $author->id }}" data-user-name="{{ e($author->name) }}">
-                            <span class="thread-option-label">Chặn</span>
+                        <button type="button" class="thread-option-item thread-option-danger btn-block-user" data-user-id="{{ $author->id }}" data-user-name="{{ e($author->name) }}" data-blocked="{{ $isBlocked ? '1' : '0' }}">
+                            <span class="thread-option-label block-label">{{ $isBlocked ? 'Bỏ chặn' : 'Chặn' }}</span>
                             <span class="thread-option-icon">
                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <circle cx="12" cy="12" r="10"></circle>

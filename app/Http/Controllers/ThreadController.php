@@ -63,6 +63,24 @@ class ThreadController extends Controller
             $query->whereIn('user_id', $followingIds);
         }
 
+        if ($user = $request->user()) {
+            $hiddenIds = DB::table('hidden_posts')->where('user_id', $user->id)->pluck('post_id');
+            if ($hiddenIds->isNotEmpty()) {
+                $query->whereNotIn('id', $hiddenIds);
+            }
+
+            $blockedUserIds = DB::table('user_blocks')
+                ->where('user_id', $user->id)
+                ->pluck('blocked_user_id');
+            $blockedByUserIds = DB::table('user_blocks')
+                ->where('blocked_user_id', $user->id)
+                ->pluck('user_id');
+            $allBlocked = $blockedUserIds->merge($blockedByUserIds)->unique();
+            if ($allBlocked->isNotEmpty()) {
+                $query->whereNotIn('user_id', $allBlocked);
+            }
+        }
+
         $threads = $query->paginate(15)->withQueryString();
 
         if ($request->ajax() && $request->wantsJson()) {

@@ -70,4 +70,43 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         return $this->following()->where('following_id', $user->id)->exists();
     }
+
+    public function blockedUsers(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'user_blocks', 'user_id', 'blocked_user_id')->withPivot('created_at');
+    }
+
+    public function isBlocking(User|int $user): bool
+    {
+        $targetId = $user instanceof User ? $user->id : (int) $user;
+
+        return $this->blockedUsers()->where('blocked_user_id', $targetId)->exists();
+    }
+
+    public function restrictedUsers(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'user_restrictions', 'user_id', 'restricted_user_id')->withPivot('created_at');
+    }
+
+    public function isRestricting(User|int $user): bool
+    {
+        $targetId = $user instanceof User ? $user->id : (int) $user;
+
+        return $this->restrictedUsers()->where('restricted_user_id', $targetId)->exists();
+    }
+
+    public function hiddenPosts(): BelongsToMany
+    {
+        return $this->belongsToMany(Post::class, 'hidden_posts')->withPivot('created_at');
+    }
+
+    public function mutedPosts(): BelongsToMany
+    {
+        return $this->belongsToMany(Post::class, 'muted_posts')->withPivot('created_at');
+    }
+
+    public function customFeeds(): HasMany
+    {
+        return $this->hasMany(CustomFeed::class);
+    }
 }
