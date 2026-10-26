@@ -32,11 +32,11 @@ class AppServiceProvider extends ServiceProvider
         }
 
         Paginator::useBootstrapFive();
-        View::composer(['layouts.*', 'blog.*', 'auth.*', 'account.*', 'admin.*', 'components.*'], function (\Illuminate\View\View $view): void {
+        View::composer(['layouts.admin', 'admin.*'], function (\Illuminate\View\View $view): void {
             $view->with(app('blog.context'))->with('savedIds', app('blog.saved'));
         });
 
-        View::composer(['layouts.threads', 'threads.*', 'profile.*'], function (\Illuminate\View\View $view): void {
+        View::composer('layouts.threads', function (\Illuminate\View\View $view): void {
             $currentUserId = auth()->id();
             $suggestedUsers = User::query()
                 ->when($currentUserId, fn ($q) => $q->where('id', '!=', $currentUserId))
