@@ -1225,7 +1225,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 repost_of_id: repostOfId,
                 type: postType,
                 media_ids: uploadedMedia.map(m => m.id),
-                poll_options: isPollActive ? pollOptions : []
+                ...(isPollActive ? { poll_options: pollOptions } : {})
             })
         })
         .then(res => {

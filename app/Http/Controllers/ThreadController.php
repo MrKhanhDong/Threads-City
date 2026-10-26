@@ -95,6 +95,10 @@ class ThreadController extends Controller
 
     public function store(Request $request): RedirectResponse|JsonResponse
     {
+        if ($request->input('poll_options') === []) {
+            $request->merge(['poll_options' => null]);
+        }
+
         $data = $request->validate([
             'content' => 'required_without_all:media_ids,images,poll_options|nullable|string|max:2000',
             'parent_id' => 'nullable|exists:posts,id',
@@ -105,7 +109,7 @@ class ThreadController extends Controller
             'images' => 'nullable|array|max:4',
             'images.*' => 'image|mimes:jpeg,png,jpg,webp,gif|max:5120',
             'poll_options' => 'nullable|array|min:2|max:4',
-            'poll_options.*' => 'nullable|string|max:100',
+            'poll_options.*' => 'required|string|max:100',
         ]);
 
         $type = $data['type'] ?? 'post';
@@ -121,9 +125,9 @@ class ThreadController extends Controller
             $content = trim($data['content'] ?? '');
 
             $pollData = null;
-            $rawPoll = $request->input('poll_options', []);
+            $rawPoll = $data['poll_options'] ?? [];
             if (is_array($rawPoll)) {
-                $cleanOptions = array_values(array_filter(array_map('trim', $rawPoll)));
+                $cleanOptions = array_values(array_filter(array_map('trim', $rawPoll), fn (string $option): bool => $option !== ''));
                 if (count($cleanOptions) >= 2) {
                     $optionsList = [];
                     foreach ($cleanOptions as $idx => $optText) {
