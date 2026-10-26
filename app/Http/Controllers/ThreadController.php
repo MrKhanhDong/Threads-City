@@ -69,29 +69,34 @@ class ThreadController extends Controller
                 $query->whereNotIn('id', $hiddenIds);
             }
 
-            $blockedUserIds = DB::table('user_blocks')
+            $blocks = DB::table('user_blocks')
                 ->where('user_id', $user->id)
-                ->pluck('blocked_user_id');
-            $blockedByUserIds = DB::table('user_blocks')
-                ->where('blocked_user_id', $user->id)
-                ->pluck('user_id');
-            $allBlocked = $blockedUserIds->merge($blockedByUserIds)->unique();
-            if ($allBlocked->isNotEmpty()) {
-                $query->whereNotIn('user_id', $allBlocked);
+                ->orWhere('blocked_user_id', $user->id)
+                ->get(['user_id', 'blocked_user_id']);
+
+            if ($blocks->isNotEmpty()) {
+                $allBlocked = $blocks->flatMap(fn ($b) => [$b->user_id, $b->blocked_user_id])
+                    ->reject(fn ($id) => (int) $id === (int) $user->id)
+                    ->unique();
+
+                if ($allBlocked->isNotEmpty()) {
+                    $query->whereNotIn('user_id', $allBlocked);
+                }
             }
         }
 
         $threads = $query->paginate(15)->withQueryString();
+        $userInteractions = $this->batchPreloadInteractions($request->user(), $threads->items());
 
         if ($request->ajax() && $request->wantsJson()) {
             return response()->json([
-                'html' => view('threads.partials.thread_list', ['threads' => $threads])->render(),
+                'html' => view('threads.partials.thread_list', ['threads' => $threads, 'userInteractions' => $userInteractions])->render(),
                 'hasMore' => $threads->hasMorePages(),
                 'nextPageUrl' => $threads->nextPageUrl(),
             ]);
         }
 
-        return view('threads.index', compact('threads', 'tab'));
+        return view('threads.index', compact('threads', 'tab', 'userInteractions'));
     }
 
     public function show(Request $request, Post $thread): View
@@ -110,7 +115,106 @@ class ThreadController extends Controller
             $thread->increment('views_count');
         }
 
-        return view('threads.show', compact('thread', 'replies'));
+        $allCards = collect([$thread])->merge($replies);
+        $userInteractions = $this->batchPreloadInteractions($request->user(), $allCards);
+
+        return view('threads.show', compact('thread', 'replies', 'userInteractions'));
+    }
+
+    /**
+     * Batch preload user interactions to eliminate N+1 database queries.
+     *
+     * @param  iterable<Post>  $posts
+     * @return array<string, array<int, int>>
+     */
+    protected function batchPreloadInteractions(?User $user, iterable $posts): array
+    {
+        $interactions = [
+            'liked' => [],
+            'bookmarked' => [],
+            'reposted' => [],
+            'muted' => [],
+            'following' => [],
+            'restricted' => [],
+            'blocked' => [],
+        ];
+
+        if (! $user) {
+            return $interactions;
+        }
+
+        $postIds = [];
+        $authorIds = [];
+
+        foreach ($posts as $post) {
+            $postIds[] = $post->id;
+            $authorIds[] = $post->user_id;
+            if ($post->repost_of_id) {
+                $postIds[] = $post->repost_of_id;
+            }
+            if ($post->repostOf) {
+                $authorIds[] = $post->repostOf->user_id;
+            }
+        }
+
+        $postIds = array_values(array_unique(array_filter($postIds)));
+        $authorIds = array_values(array_unique(array_filter($authorIds)));
+
+        if (! empty($postIds)) {
+            $interactions['liked'] = DB::table('post_likes')
+                ->where('user_id', $user->id)
+                ->whereIn('post_id', $postIds)
+                ->pluck('post_id')
+                ->flip()
+                ->toArray();
+
+            $interactions['bookmarked'] = DB::table('bookmarks')
+                ->where('user_id', $user->id)
+                ->whereIn('post_id', $postIds)
+                ->pluck('post_id')
+                ->flip()
+                ->toArray();
+
+            $interactions['reposted'] = DB::table('posts')
+                ->where('user_id', $user->id)
+                ->whereIn('repost_of_id', $postIds)
+                ->where('type', 'repost')
+                ->pluck('repost_of_id')
+                ->flip()
+                ->toArray();
+
+            $interactions['muted'] = DB::table('muted_posts')
+                ->where('user_id', $user->id)
+                ->whereIn('post_id', $postIds)
+                ->pluck('post_id')
+                ->flip()
+                ->toArray();
+        }
+
+        if (! empty($authorIds)) {
+            $interactions['following'] = DB::table('follows')
+                ->where('follower_id', $user->id)
+                ->whereIn('following_id', $authorIds)
+                ->pluck('following_id')
+                ->flip()
+                ->toArray();
+
+            $interactions['restricted'] = DB::table('user_restrictions')
+                ->where('user_id', $user->id)
+                ->whereIn('restricted_user_id', $authorIds)
+                ->pluck('restricted_user_id')
+                ->flip()
+                ->toArray();
+
+            $interactions['blocked'] = DB::table('user_blocks')
+                ->where('user_id', $user->id)
+                ->whereIn('blocked_user_id', $authorIds)
+                ->pluck('blocked_user_id')
+                ->flip()
+                ->toArray();
+        }
+
+        return $interactions;
     }
 
     public function store(Request $request): RedirectResponse|JsonResponse

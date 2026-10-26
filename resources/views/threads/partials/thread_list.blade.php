@@ -1,5 +1,5 @@
 @forelse($threads as $thread)
-    @include('threads.partials.thread_card', ['thread' => $thread])
+    @include('threads.partials.thread_card', ['thread' => $thread, 'userInteractions' => $userInteractions ?? []])
 @empty
     <div class="text-center py-5">
         <div class="mb-3 text-secondary" style="font-size: 40px;">💬</div>

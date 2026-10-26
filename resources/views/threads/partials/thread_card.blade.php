@@ -3,10 +3,37 @@
     $displayThread = $isRepost ? $thread->repostOf : $thread;
     $repostedBy = $isRepost ? $thread->author : null;
     $currentUser = auth()->user();
-    $isLiked = $displayThread->isLikedBy($currentUser);
-    $isBookmarked = $displayThread->isBookmarkedBy($currentUser);
-    $isReposted = $displayThread->isRepostedBy($currentUser);
     $author = $displayThread->author;
+
+    // Fast O(1) in-memory lookup if preloaded, fallback to DB query if not passed
+    $isLiked = isset($userInteractions['liked']) 
+        ? isset($userInteractions['liked'][$displayThread->id]) 
+        : $displayThread->isLikedBy($currentUser);
+
+    $isBookmarked = isset($userInteractions['bookmarked']) 
+        ? isset($userInteractions['bookmarked'][$displayThread->id]) 
+        : $displayThread->isBookmarkedBy($currentUser);
+
+    $isReposted = isset($userInteractions['reposted']) 
+        ? isset($userInteractions['reposted'][$displayThread->id]) 
+        : $displayThread->isRepostedBy($currentUser);
+
+    $isMuted = isset($userInteractions['muted']) 
+        ? isset($userInteractions['muted'][$displayThread->id]) 
+        : ($currentUser && $displayThread->isMutedBy($currentUser));
+
+    $isFollowing = isset($userInteractions['following']) 
+        ? isset($userInteractions['following'][$author->id]) 
+        : ($currentUser && $currentUser->isFollowing($author));
+
+    $isRestricted = isset($userInteractions['restricted']) 
+        ? isset($userInteractions['restricted'][$author->id]) 
+        : ($currentUser && $currentUser->isRestricting($author));
+
+    $isBlocked = isset($userInteractions['blocked']) 
+        ? isset($userInteractions['blocked'][$author->id]) 
+        : ($currentUser && $currentUser->isBlocking($author));
+
     $hasReplies = !empty($hasReplies) ? $hasReplies : false;
     $isReplyItem = !empty($isReplyItem) ? $isReplyItem : false;
     $firstTag = $displayThread->tags->first();
@@ -53,7 +80,7 @@
                         <div class="user-avatar-letter" style="width: 38px; height: 38px;">{{ mb_substr($author->name, 0, 1) }}</div>
                     @endif
                 </a>
-                @if(!auth()->check() || (auth()->id() !== $author->id && !auth()->user()->isFollowing($author)))
+                @if(!auth()->check() || (auth()->id() !== $author->id && !$isFollowing))
                     <button type="button" class="avatar-follow-plus-btn btn-ajax-avatar-follow" data-user-id="{{ $author->id }}" title="Theo dõi {{ $author->name }}">
                         <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5">
                             <line x1="12" y1="5" x2="12" y2="19"></line>
@@ -202,11 +229,6 @@
                         <div class="thread-option-divider"></div>
 
                         <!-- Group 5: Tắt thông báo, Hạn chế, Chặn, Báo cáo -->
-                        @php
-                            $isMuted = $currentUser && $displayThread->isMutedBy($currentUser);
-                            $isRestricted = $currentUser && $currentUser->isRestricting($author);
-                            $isBlocked = $currentUser && $currentUser->isBlocking($author);
-                        @endphp
                         <button type="button" class="thread-option-item btn-mute-thread" data-thread-id="{{ $displayThread->id }}" data-muted="{{ $isMuted ? '1' : '0' }}">
                             <span class="thread-option-label mute-label">{{ $isMuted ? 'Bật thông báo' : 'Tắt thông báo' }}</span>
                             <span class="thread-option-icon">

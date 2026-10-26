@@ -65,6 +65,9 @@ class AccountController extends Controller
         abort_unless($user->avatar_path && preg_match('~^avatars/[A-Za-z0-9]+\.(jpg|jpeg|png|webp)$~', $user->avatar_path), 404);
         abort_unless(Storage::disk('local')->exists($user->avatar_path), 404);
 
-        return response()->file(Storage::disk('local')->path($user->avatar_path), ['X-Content-Type-Options' => 'nosniff']);
+        return response()->file(Storage::disk('local')->path($user->avatar_path), [
+            'X-Content-Type-Options' => 'nosniff',
+            'Cache-Control' => 'public, max-age=86400, stale-while-revalidate=604800',
+        ]);
     }
 }

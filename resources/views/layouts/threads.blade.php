@@ -827,10 +827,17 @@
                 @if(!empty($trendingTopics) && (is_countable($trendingTopics) ? count($trendingTopics) > 0 : true))
                     @foreach($trendingTopics as $tTopic)
                         @php
-                            $topicTag = is_array($tTopic) ? ($tTopic['tag'] ?? $tTopic['title']) : ($tTopic->tag ?? $tTopic->title);
-                            $topicTitle = is_array($tTopic) ? $tTopic['title'] : $tTopic->title;
-                            $topicDesc = is_array($tTopic) ? ($tTopic['desc'] ?? '') : ($tTopic->desc ?? '');
-                            $topicCount = is_array($tTopic) ? ($tTopic['count'] ?? '') : ($tTopic->display_count ?? $tTopic->count ?? '');
+                            if (is_string($tTopic)) {
+                                $topicTag = $tTopic;
+                                $topicTitle = $tTopic;
+                                $topicDesc = '';
+                                $topicCount = '';
+                            } else {
+                                $topicTag = is_array($tTopic) ? ($tTopic['tag'] ?? $tTopic['title'] ?? '') : ($tTopic->tag ?? $tTopic->title ?? '');
+                                $topicTitle = is_array($tTopic) ? ($tTopic['title'] ?? '') : ($tTopic->title ?? '');
+                                $topicDesc = is_array($tTopic) ? ($tTopic['desc'] ?? '') : ($tTopic->desc ?? '');
+                                $topicCount = is_array($tTopic) ? ($tTopic['count'] ?? '') : ($tTopic->display_count ?? $tTopic->count ?? '');
+                            }
                         @endphp
                         <a href="{{ route('threads.index', ['q' => $topicTag]) }}" class="trending-item">
                             <div class="trending-item-title">{{ $topicTitle }}</div>
@@ -853,29 +860,37 @@
 
                 @if(!empty($suggestedUsers))
                     @foreach($suggestedUsers as $sUser)
-                        @php $isFollowing = auth()->check() && auth()->user()->isFollowing($sUser); @endphp
+                        @php
+                            $sUserId = (int) data_get($sUser, 'id');
+                            $sUserName = (string) (data_get($sUser, 'name') ?? '');
+                            $sUserUsername = (string) (data_get($sUser, 'username') ?? $sUserName);
+                            $sUserBio = (string) (data_get($sUser, 'bio') ?? '');
+                            $sUserAvatar = (string) (data_get($sUser, 'avatar_path') ?? '');
+                            $sUserIsAdmin = (bool) (data_get($sUser, 'is_admin') ?? false);
+                            $isFollowing = isset($sidebarFollowingIds[$sUserId]);
+                        @endphp
                         <div class="suggested-user-item">
-                            <a href="{{ route('profile.show', $sUser->username ?? $sUser->id) }}" class="suggested-user-info">
-                                @if($sUser->avatar_path)
-                                    <img src="{{ route('avatar.show', $sUser->id) }}" class="user-avatar-round" style="width: 36px; height: 36px;" alt="{{ $sUser->name }}">
+                            <a href="{{ route('profile.show', $sUserUsername ?: $sUserId) }}" class="suggested-user-info">
+                                @if($sUserAvatar)
+                                    <img src="{{ route('avatar.show', $sUserId) }}" class="user-avatar-round" style="width: 36px; height: 36px;" alt="{{ $sUserName }}">
                                 @else
-                                    <div class="user-avatar-letter" style="width: 36px; height: 36px; font-size: 14px;">{{ mb_substr($sUser->name, 0, 1) }}</div>
+                                    <div class="user-avatar-letter" style="width: 36px; height: 36px; font-size: 14px;">{{ mb_substr($sUserName, 0, 1) }}</div>
                                 @endif
                                 <div class="suggested-user-names">
                                     <div class="suggested-user-name">
-                                        {{ $sUser->username ?? $sUser->name }}
-                                        @if($sUser->isAdmin() || in_array($sUser->username, ['binhphatlien', 'dieu_nhiii']))
+                                        {{ $sUserUsername }}
+                                        @if($sUserIsAdmin || in_array($sUserUsername, ['binhphatlien', 'dieu_nhiii']))
                                             <svg width="13" height="13" viewBox="0 0 24 24" fill="#0095f6"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
                                         @endif
                                     </div>
-                                    <div class="suggested-user-subname">{{ $sUser->name }}</div>
-                                    @if($sUser->bio)
-                                        <div class="suggested-user-bio">{{ $sUser->bio }}</div>
+                                    <div class="suggested-user-subname">{{ $sUserName }}</div>
+                                    @if($sUserBio)
+                                        <div class="suggested-user-bio">{{ $sUserBio }}</div>
                                     @endif
                                 </div>
                             </a>
                             @auth
-                                <button type="button" class="btn-follow-pill {{ $isFollowing ? 'following' : '' }} btn-ajax-sidebar-follow" data-user-id="{{ $sUser->id }}">
+                                <button type="button" class="btn-follow-pill {{ $isFollowing ? 'following' : '' }} btn-ajax-sidebar-follow" data-user-id="{{ $sUserId }}">
                                     {{ $isFollowing ? 'Đang theo dõi' : 'Theo dõi' }}
                                 </button>
                             @else

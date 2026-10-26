@@ -39,7 +39,7 @@
 
     <!-- Threads Feed Container -->
     <div id="threadsFeedContainer" data-live-region="feed" data-live-list>
-        @include('threads.partials.thread_list', ['threads' => $threads])
+        @include('threads.partials.thread_list', ['threads' => $threads, 'userInteractions' => $userInteractions ?? []])
     </div>
 
     <!-- Pagination / Load more -->

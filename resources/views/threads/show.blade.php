@@ -16,13 +16,13 @@
     <!-- Parent Thread (if this thread is a reply) -->
     @if($thread->parent)
         <div class="mb-0">
-            @include('threads.partials.thread_card', ['thread' => $thread->parent, 'hasReplies' => true])
+            @include('threads.partials.thread_card', ['thread' => $thread->parent, 'hasReplies' => true, 'userInteractions' => $userInteractions ?? []])
         </div>
     @endif
 
     <!-- Main Active Thread -->
     <div class="main-thread-focus-area" data-live-region="thread">
-        @include('threads.partials.thread_card', ['thread' => $thread, 'isReplyItem' => (bool)$thread->parent])
+        @include('threads.partials.thread_card', ['thread' => $thread, 'isReplyItem' => (bool)$thread->parent, 'userInteractions' => $userInteractions ?? []])
     </div>
 
     <!-- Quick Reply Box for this Thread -->
@@ -86,7 +86,7 @@
     <div class="replies-chain-container" data-live-region="replies" data-live-list>
         <h6 class="text-secondary fw-semibold mb-3 px-1">Tất cả câu trả lời ({{ $replies->count() }})</h6>
         @forelse($replies as $reply)
-            @include('threads.partials.thread_card', ['thread' => $reply, 'isReplyItem' => true])
+            @include('threads.partials.thread_card', ['thread' => $reply, 'isReplyItem' => true, 'userInteractions' => $userInteractions ?? []])
         @empty
             <div class="text-center py-4 text-secondary small">
                 Chưa có câu trả lời nào. Hãy là người đầu tiên trả lời!
