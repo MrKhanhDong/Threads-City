@@ -1,4 +1,5 @@
 import 'bootstrap';
+import { setupLiveUpdates } from './live-updates';
 import { setupCommentThreads, setupReplyNotifications } from './comment-threads';
 import { setupSeoPreview } from './seo-preview';
 import { setupCoverPicker } from './cover-picker';
@@ -168,6 +169,7 @@ function setupEditor() {
 }
 
 function init() {
+    setupLiveUpdates();
     setupVietnameseValidation();
     setupCommentThreads();
     setupReplyNotifications();

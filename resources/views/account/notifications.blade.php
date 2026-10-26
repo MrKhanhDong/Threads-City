@@ -7,13 +7,13 @@
 @section('content')
 <div class="py-3">
     <!-- Header -->
-    <div class="d-flex justify-content-between align-items-center mb-3">
+    <div class="d-flex justify-content-between align-items-center mb-3" data-live-region="notification-header">
         <div>
             <h4 class="text-white fs-5 fw-bold mb-0">Hoạt động</h4>
             <small class="text-secondary">{{ $unread > 0 ? $unread . ' thông báo chưa đọc' : 'Tất cả thông báo đã xem' }}</small>
         </div>
         @if($unread > 0)
-            <form method="post" action="{{ route('notifications.read-all') }}">
+            <form data-live-submit method="post" action="{{ route('notifications.read-all') }}">
                 @csrf
                 <button type="submit" class="btn-threads-outline px-3 py-1 small rounded-pill">
                     Đánh dấu tất cả đã đọc
@@ -45,7 +45,7 @@
     </div>
 
     <!-- Notifications List -->
-    <div class="notifications-threads-list">
+    <div class="notifications-threads-list" data-live-region="notifications" data-live-list>
         @forelse($notifications as $notification)
             @php
                 $data = $notification->data ?? [];
@@ -58,7 +58,7 @@
                 $targetUrl = route('notifications.open', $notification->id);
             @endphp
 
-            <div class="notification-item-card {{ $notification->read_at ? '' : 'unread' }}">
+            <div data-live-key="notification-{{ $notification->id }}" class="notification-item-card {{ $notification->read_at ? '' : 'unread' }}">
                 <a href="{{ $targetUrl }}" class="notification-item-link">
                     <!-- Left: Avatar with Action Badge -->
                     <div class="notification-avatar-wrap">

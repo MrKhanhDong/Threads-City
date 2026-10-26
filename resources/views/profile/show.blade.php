@@ -13,7 +13,7 @@
                 @endif
                 <div class="d-flex gap-3 text-secondary small align-items-center">
                     <button type="button" class="btn-stat-link" id="btnOpenFollowersModal" data-initial-tab="followers">
-                        <strong class="text-white" id="profileFollowersCount">{{ $followersCount }}</strong> người theo dõi
+                        <strong class="text-white" id="profileFollowersCount" data-live-region="followers-count">{{ $followersCount }}</strong> người theo dõi
                     </button>
                     <span>·</span>
                     <button type="button" class="btn-stat-link" id="btnOpenFollowingModal" data-initial-tab="following">
@@ -74,7 +74,7 @@
     </div>
 
     <!-- User's Threads Feed -->
-    <div id="profileThreadsContainer">
+    <div id="profileThreadsContainer" data-live-region="profile" data-live-list>
         @include('threads.partials.thread_list', ['threads' => $threads])
     </div>
 
@@ -90,10 +90,10 @@
                 <div class="modal-header border-bottom border-dark px-4 py-3">
                     <div class="d-flex w-100 gap-2">
                         <button type="button" class="followers-modal-tab flex-grow-1 active" id="tabFollowersBtn" data-tab="followers">
-                            Người theo dõi (<span id="modalFollowersCount">{{ $followersCount }}</span>)
+                            Người theo dõi (<span id="modalFollowersCount" data-live-region="modal-followers-count">{{ $followersCount }}</span>)
                         </button>
                         <button type="button" class="followers-modal-tab flex-grow-1" id="tabFollowingBtn" data-tab="following">
-                            Đang theo dõi (<span id="modalFollowingCount">{{ $followingCount }}</span>)
+                            Đang theo dõi (<span id="modalFollowingCount" data-live-region="modal-following-count">{{ $followingCount }}</span>)
                         </button>
                     </div>
                     <button type="button" class="btn-close btn-close-white ms-2" data-bs-dismiss="modal" aria-label="Close"></button>

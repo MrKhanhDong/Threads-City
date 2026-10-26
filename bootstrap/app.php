@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\EnsureActiveAccount;
 use App\Http\Middleware\EnsureAdmin;
+use App\Http\Middleware\LivePageUpdates;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -15,7 +16,7 @@ $app = Application::configure(basePath: dirname(__DIR__))
     ->withRouting(web: __DIR__.'/../routes/web.php', commands: __DIR__.'/../routes/console.php', health: '/up')
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->trustProxies(at: '*');
-        $middleware->web(append: [EnsureActiveAccount::class, 'auth.session']);
+        $middleware->web(append: [EnsureActiveAccount::class, 'auth.session', LivePageUpdates::class]);
         $middleware->alias(['admin' => EnsureAdmin::class]);
         $middleware->redirectGuestsTo(fn (): string => route('login'));
     })

@@ -1283,9 +1283,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     bootstrap.Modal.getInstance(modalEl)?.hide();
                 }
                 resetModal();
-                setTimeout(() => {
-                    location.reload();
-                }, 600);
+                window.dispatchEvent(new Event('threads:refresh'));
             } else {
                 toast(data.message || 'Đăng bài thất bại');
                 if (modalSubmitBtn) modalSubmitBtn.disabled = false;

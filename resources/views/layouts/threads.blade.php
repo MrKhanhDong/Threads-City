@@ -612,7 +612,7 @@
     </style>
     @stack('threads-styles')
 </head>
-<body class="threads-body">
+<body class="threads-body" data-live-enabled="{{ request()->routeIs('home', 'threads.index', 'threads.show', 'profile.show', 'saved', 'notifications.index') ? '1' : '0' }}">
 
     <div class="threads-app-shell">
 
@@ -693,7 +693,7 @@
                             <svg viewBox="0 0 24 24" fill="{{ request()->routeIs('notifications.*') ? 'currentColor' : 'none' }}" stroke="currentColor" stroke-width="2">
                                 <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
                             </svg>
-                            <span id="sidebarNotificationBadge" class="sidebar-badge-count" style="{{ $unreadNavCount > 0 ? '' : 'display: none;' }}">
+                            <span id="sidebarNotificationBadge" data-live-region="badge" class="sidebar-badge-count" style="{{ $unreadNavCount > 0 ? '' : 'display: none;' }}">
                                 {{ $unreadNavCount > 99 ? '99+' : $unreadNavCount }}
                             </span>
                         </div>
@@ -879,6 +879,8 @@
     @include('threads.partials.repost_modal')
     @endauth
 
+    @include('threads.partials.page_actions')
+    @include('threads.partials.poll_actions')
     @stack('threads-scripts')
 
     <script>
@@ -972,7 +974,9 @@
             })
             .catch(() => {});
         }
+        @unless(request()->routeIs('home', 'threads.index', 'threads.show', 'profile.show', 'saved', 'notifications.index'))
         setInterval(pollUnreadNotifications, 30000);
+        @endunless
         @endauth
     });
 
