@@ -320,54 +320,65 @@
             margin-bottom: 20px;
         }
         .trending-header-title {
-            color: var(--accent-yellow);
-            font-size: 16px;
+            color: #facc15 !important;
+            font-size: 18px;
             font-weight: 800;
-            margin-bottom: 3px;
+            margin-bottom: 4px;
+            letter-spacing: -0.2px;
         }
         .trending-header-sub {
-            color: var(--text-muted);
-            font-size: 12px;
+            color: #888888;
+            font-size: 13px;
             line-height: 1.4;
             margin-bottom: 14px;
         }
         .trending-item {
-            padding: 10px 0;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
             display: block;
+            text-decoration: none;
+            transition: opacity 0.15s;
+        }
+        .trending-item:hover {
+            opacity: 0.85;
         }
         .trending-item:last-of-type {
             border-bottom: none;
         }
         .trending-item-title {
-            font-size: 14px;
+            font-size: 15px;
             font-weight: 700;
             color: #ffffff;
             line-height: 1.35;
-            margin-bottom: 3px;
+            margin-bottom: 4px;
         }
         .trending-item-desc {
-            font-size: 12px;
-            color: var(--text-muted);
-            line-height: 1.4;
-            margin-bottom: 4px;
+            font-size: 13px;
+            color: #999999;
+            line-height: 1.45;
+            margin-bottom: 5px;
             display: -webkit-box;
             -webkit-line-clamp: 2;
             -webkit-box-orient: vertical;
             overflow: hidden;
         }
         .trending-item-count {
-            font-size: 11px;
-            color: var(--text-secondary);
-        }
-        .widget-see-more {
-            display: block;
-            margin-top: 14px;
-            font-size: 13px;
-            color: var(--text-secondary);
+            font-size: 12.5px;
+            color: #666666;
             font-weight: 500;
         }
+        .widget-see-more {
+            display: inline-block;
+            margin-top: 14px;
+            font-size: 14px;
+            color: #777777;
+            font-weight: 500;
+            text-decoration: none;
+            transition: color 0.15s;
+        }
         .widget-see-more:hover {
+            color: #ffffff;
+        }
             color: #ffffff;
         }
 
@@ -808,17 +819,27 @@
                 <div class="trending-header-title">Đang thịnh hành</div>
                 <div class="trending-header-sub">Những gì mọi người đang bàn luận, do AI tóm tắt</div>
 
-                @if(!empty($trendingTopics))
+                @if(!empty($trendingTopics) && (is_countable($trendingTopics) ? count($trendingTopics) > 0 : true))
                     @foreach($trendingTopics as $tTopic)
-                        <a href="{{ route('posts.index', ['q' => $tTopic['tag'] ?? $tTopic['title']]) }}" class="trending-item">
-                            <div class="trending-item-title">{{ $tTopic['title'] }}</div>
-                            <div class="trending-item-desc">{{ $tTopic['desc'] }}</div>
-                            <div class="trending-item-count">{{ $tTopic['count'] }} bài viết</div>
+                        @php
+                            $topicTag = is_array($tTopic) ? ($tTopic['tag'] ?? $tTopic['title']) : ($tTopic->tag ?? $tTopic->title);
+                            $topicTitle = is_array($tTopic) ? $tTopic['title'] : $tTopic->title;
+                            $topicDesc = is_array($tTopic) ? ($tTopic['desc'] ?? '') : ($tTopic->desc ?? '');
+                            $topicCount = is_array($tTopic) ? ($tTopic['count'] ?? '') : ($tTopic->display_count ?? $tTopic->count ?? '');
+                        @endphp
+                        <a href="{{ route('threads.index', ['q' => $topicTag]) }}" class="trending-item">
+                            <div class="trending-item-title">{{ $topicTitle }}</div>
+                            @if($topicDesc)
+                                <div class="trending-item-desc">{{ $topicDesc }}</div>
+                            @endif
+                            @if($topicCount)
+                                <div class="trending-item-count">{{ str_contains($topicCount, 'bài viết') ? $topicCount : $topicCount . ' bài viết' }}</div>
+                            @endif
                         </a>
                     @endforeach
                 @endif
 
-                <a href="{{ route('posts.index') }}" class="widget-see-more">Hiển thị thêm</a>
+                <a href="{{ route('threads.index') }}" class="widget-see-more">Hiển thị thêm</a>
             </div>
 
             <!-- Suggested Users Widget (Gợi ý theo dõi) -->
