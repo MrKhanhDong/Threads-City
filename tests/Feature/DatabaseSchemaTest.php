@@ -29,7 +29,7 @@ class DatabaseSchemaTest extends TestCase
     public function test_uses_dedicated_mysql_database_on_laragon(): void
     {
         $this->assertSame('mysql', DB::connection()->getDriverName());
-        $this->assertSame('moc_blog_test', DB::connection()->getDatabaseName());
+        $this->assertContains(DB::connection()->getDatabaseName(), ['threads_test', 'moc_blog_test']);
         $server = DB::selectOne('SELECT @@port AS port, @@basedir AS basedir');
         $this->assertSame(3307, (int) $server->port);
         $this->assertStringContainsString('laragon', strtolower($server->basedir));

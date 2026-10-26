@@ -28,7 +28,7 @@
 .admin-main h1,
 .admin-main h2,
 .stat-card > strong {
-    font-family: "Moc Lora", "Times New Roman", serif;
+    font-family: "Threads Lora", "Moc Lora", "Times New Roman", serif;
 }
 
 @media (min-width: 1101px) { .stats-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }

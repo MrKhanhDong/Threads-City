@@ -23,8 +23,8 @@
 <a href="#main" class="skip-link">Đến nội dung chính</a>
 <header class="site-header">
 <div class="container header-inner">
-<a class="brand" href="{{ route('home') }}"><span class="brand-mark">m.</span><span>{{ $site['site_name'] }}<small>GHI CHÉP & CÂU CHUYỆN</small></span></a>
-<nav aria-label="Điều hướng chính"><a @class(['active'=>request()->routeIs('home')]) href="{{ route('home') }}">Trang chủ</a><a @class(['active'=>request()->routeIs('posts.*')]) href="{{ route('posts.index') }}">Bài viết</a><a href="{{ route('about') }}">Về Mộc</a><a href="{{ route('contact') }}">Liên hệ</a></nav>
+<a class="brand" href="{{ route('home') }}"><span class="brand-mark">@</span><span>{{ $site['site_name'] }}<small>THREADS & KẾT NỐI</small></span></a>
+<nav aria-label="Điều hướng chính"><a @class(['active'=>request()->routeIs('home')]) href="{{ route('home') }}">Trang chủ</a><a @class(['active'=>request()->routeIs('posts.*')]) href="{{ route('posts.index') }}">Bài viết</a><a href="{{ route('about') }}">Giới thiệu</a><a href="{{ route('contact') }}">Liên hệ</a></nav>
 <div class="header-actions"><a href="{{ route('posts.index') }}" aria-label="Tìm bài viết" class="search-link">⌕</a>
 @auth
 <x-notification-bell />
@@ -32,6 +32,6 @@
 @else<a class="btn btn-outline-forest btn-sm" href="{{ route('login') }}">Đăng nhập ↗</a>@endauth
 </div></div></header>
 <main id="main"><div class="container"><x-flash /></div>@yield('content')</main>
-<footer class="site-footer"><div class="container footer-top"><div><a class="brand" href="{{ route('home') }}"><span class="brand-mark">m.</span>{{ $site['site_name'] }}</a><p>{{ $site['site_tagline'] }}</p></div><div class="footer-links"><a href="{{ route('author') }}">Tác giả</a><a href="{{ route('privacy') }}">Quyền riêng tư</a><a href="{{ route('terms') }}">Điều khoản</a></div></div><div class="container footer-bottom"><span>© {{ date('Y') }} {{ $site['site_name'] }}.</span><span>Viết từ những điều giản dị. Đọc theo nhịp của bạn.</span></div></footer>
+<footer class="site-footer"><div class="container footer-top"><div><a class="brand" href="{{ route('home') }}"><span class="brand-mark">@</span>{{ $site['site_name'] }}</a><p>{{ $site['site_tagline'] }}</p></div><div class="footer-links"><a href="{{ route('author') }}">Tác giả</a><a href="{{ route('privacy') }}">Quyền riêng tư</a><a href="{{ route('terms') }}">Điều khoản</a></div></div><div class="container footer-bottom"><span>© {{ date('Y') }} {{ $site['site_name'] }}.</span><span>Kết nối cộng đồng. Chia sẻ theo nhịp của bạn.</span></div></footer>
 @stack('scripts')
 </body></html>

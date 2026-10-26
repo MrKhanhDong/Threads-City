@@ -1,5 +1,21 @@
 /* Lora by Cyreal / The Lora Project Authors. SIL OFL 1.1: ./OFL.txt. */
 @font-face {
+    font-family: "Threads Lora";
+    font-style: normal;
+    font-weight: 400 700;
+    font-display: swap;
+    src: url("./Lora-Regular.ttf") format("truetype");
+}
+
+@font-face {
+    font-family: "Threads Lora";
+    font-style: italic;
+    font-weight: 400 700;
+    font-display: swap;
+    src: url("./Lora-Italic.ttf") format("truetype");
+}
+
+@font-face {
     font-family: "Moc Lora";
     font-style: normal;
     font-weight: 400 700;

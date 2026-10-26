@@ -30,6 +30,7 @@
         <env name="DB_PASSWORD" value="" force="true"/>
         <env name="DB_DATABASE" value="moc_blog_test" force="true"/>
         <env name="DB_URL" value="" force="true"/>
+        <env name="MYSQL_ATTR_SSL_CA" value="none" force="true"/>
         <env name="MAIL_MAILER" value="array"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>

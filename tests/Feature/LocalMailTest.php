@@ -32,7 +32,7 @@ class LocalMailTest extends TestCase
             'mail.mailers.smtp.username' => null,
             'mail.mailers.smtp.password' => null,
             'mail.mailers.smtp.timeout' => 3,
-            'mail.from.address' => 'moc-journal@example.test',
+            'mail.from.address' => 'threads@example.test',
         ]);
     }
 
