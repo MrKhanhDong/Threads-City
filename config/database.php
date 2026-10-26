@@ -3,6 +3,30 @@
 use Illuminate\Support\Str;
 use Pdo\Mysql;
 
+$mysqlSslCa = env('MYSQL_ATTR_SSL_CA');
+if (str_ends_with(strtolower((string) env('DB_HOST', '')), '.tidbcloud.com')) {
+    if (! $mysqlSslCa || $mysqlSslCa === 'none') {
+        $certificateLocations = openssl_get_cert_locations();
+        foreach (array_filter([
+            ini_get('openssl.cafile'),
+            ini_get('curl.cainfo'),
+            $certificateLocations['default_cert_file'] ?? null,
+            '/etc/pki/tls/certs/ca-bundle.crt',
+            '/etc/ssl/certs/ca-certificates.crt',
+            '/etc/ssl/cert.pem',
+        ]) as $certificatePath) {
+            if (is_file($certificatePath) && is_readable($certificatePath)) {
+                $mysqlSslCa = $certificatePath;
+                break;
+            }
+        }
+    }
+
+    if (! $mysqlSslCa || ! is_file($mysqlSslCa) || ! is_readable($mysqlSslCa)) {
+        throw new RuntimeException('TiDB requires TLS. Set MYSQL_ATTR_SSL_CA to a readable CA certificate bundle on this server.');
+    }
+}
+
 return [
 
     /*
@@ -60,7 +84,7 @@ return [
             'strict' => true,
             'engine' => null,
             'options' => extension_loaded('pdo_mysql') ? array_filter([
-                Mysql::ATTR_SSL_CA => (env('MYSQL_ATTR_SSL_CA') && env('MYSQL_ATTR_SSL_CA') !== 'none') ? env('MYSQL_ATTR_SSL_CA') : null,
+                Mysql::ATTR_SSL_CA => $mysqlSslCa && $mysqlSslCa !== 'none' ? $mysqlSslCa : null,
             ]) : [],
         ],
 
