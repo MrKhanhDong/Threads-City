@@ -220,4 +220,28 @@ class ThreadSocialInteractionsTest extends TestCase
             ->assertJsonCount(1)
             ->assertJsonFragment(['id' => $myThread->id]);
     }
+
+    public function test_user_can_create_thread_with_attached_text_document(): void
+    {
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user)
+            ->postJson(route('threads.store'), [
+                'content' => 'Xem văn bản đính kèm này nhé #tailieu',
+                'attached_document_html' => '<p><b>Nội dung in đậm</b> và <i>in nghiêng</i></p>',
+            ]);
+
+        $response->assertOk()
+            ->assertJson(['success' => true]);
+
+        $thread = Post::where('user_id', $user->id)->latest('id')->first();
+        $this->assertNotNull($thread);
+        $this->assertStringContainsString('Nội dung in đậm', $thread->excerpt);
+
+        // Verify thread page renders the attached document
+        $showResponse = $this->actingAs($user)->get(route('threads.show', $thread->id));
+        $showResponse->assertOk()
+            ->assertSee('Văn bản đính kèm')
+            ->assertSee('Nội dung in đậm');
+    }
 }

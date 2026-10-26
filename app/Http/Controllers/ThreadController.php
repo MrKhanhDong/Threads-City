@@ -100,7 +100,7 @@ class ThreadController extends Controller
         }
 
         $data = $request->validate([
-            'content' => 'required_without_all:media_ids,images,poll_options|nullable|string|max:2000',
+            'content' => 'required_without_all:media_ids,images,poll_options,attached_document_html|nullable|string|max:2000',
             'parent_id' => 'nullable|exists:posts,id',
             'repost_of_id' => 'nullable|exists:posts,id',
             'type' => 'nullable|in:post,reply,repost,quote',
@@ -110,6 +110,7 @@ class ThreadController extends Controller
             'images.*' => 'image|mimes:jpeg,png,jpg,webp,gif|max:5120',
             'poll_options' => 'nullable|array|min:2|max:4',
             'poll_options.*' => 'required|string|max:100',
+            'attached_document_html' => 'nullable|string|max:50000',
         ]);
 
         $type = $data['type'] ?? 'post';
@@ -148,14 +149,40 @@ class ThreadController extends Controller
                 }
             }
 
+            $attachedDoc = null;
+            if (! empty($data['attached_document_html'])) {
+                $rawDoc = trim($data['attached_document_html']);
+                $cleanDoc = strip_tags($rawDoc, '<b><strong><i><em><u><s><strike><code><pre><p><div><br><mark>');
+                if (! empty(trim(strip_tags($cleanDoc)))) {
+                    $attachedDoc = $cleanDoc;
+                }
+            }
+
+            $metaExcerpt = [];
+            if ($pollData) {
+                $metaExcerpt = $pollData;
+            }
+            if ($attachedDoc) {
+                $metaExcerpt['attached_doc'] = $attachedDoc;
+            }
+
+            $fallbackTitle = 'Bài viết Threads';
+            if ($content) {
+                $fallbackTitle = $content;
+            } elseif (! empty($cleanOptions[0])) {
+                $fallbackTitle = $cleanOptions[0];
+            } elseif ($attachedDoc) {
+                $fallbackTitle = strip_tags($attachedDoc);
+            }
+
             $post = Post::create([
                 'user_id' => $request->user()->id,
                 'parent_id' => $data['parent_id'] ?? null,
                 'repost_of_id' => $data['repost_of_id'] ?? null,
                 'type' => $type,
-                'title' => Str::limit(strip_tags($content ?: ($cleanOptions[0] ?? 'Cuộc thăm dò ý kiến')), 60, ''),
+                'title' => Str::limit(strip_tags($fallbackTitle), 60, ''),
                 'slug' => 'thread-'.Str::lower(Str::random(10)).'-'.time(),
-                'excerpt' => $pollData ? json_encode($pollData, JSON_UNESCAPED_UNICODE) : null,
+                'excerpt' => ! empty($metaExcerpt) ? json_encode($metaExcerpt, JSON_UNESCAPED_UNICODE) : null,
                 'content' => $content,
                 'status' => 'published',
                 'published_at' => now(),

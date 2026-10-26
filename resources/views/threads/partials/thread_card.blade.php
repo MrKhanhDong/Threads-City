@@ -135,9 +135,41 @@
                 $formattedContent = preg_replace('/#([\p{L}\p{N}_]+)/u', '<a href="' . route('threads.index') . '?q=%23$1" class="thread-hashtag" onclick="event.stopPropagation();">#$1</a>', $formattedContent);
                 $formattedContent = preg_replace('/@([A-Za-z0-9_]{3,30})/u', '<a href="/@$1" class="thread-mention" onclick="event.stopPropagation();">@$1</a>', $formattedContent);
             @endphp
-            <div class="thread-content-text">
-                {!! nl2br($formattedContent) !!}
-            </div>
+            @if(trim($cleanContent) !== '')
+                <div class="thread-content-text">
+                    {!! nl2br($formattedContent) !!}
+                </div>
+            @endif
+
+            <!-- Attached Document Display (if thread has attached text doc) -->
+            @php
+                $attachedDoc = null;
+                if (!empty($displayThread->excerpt)) {
+                    $parsedExcerpt = json_decode($displayThread->excerpt, true);
+                    if (is_array($parsedExcerpt) && !empty($parsedExcerpt['attached_doc'])) {
+                        $attachedDoc = $parsedExcerpt['attached_doc'];
+                    }
+                }
+            @endphp
+
+            @if($attachedDoc)
+                <div class="thread-attached-doc-display">
+                    <div class="attached-doc-display-header">
+                        <div class="attached-doc-display-badge">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                <polyline points="14 2 14 8 20 8"></polyline>
+                                <line x1="16" y1="13" x2="8" y2="13"></line>
+                                <line x1="16" y1="17" x2="8" y2="17"></line>
+                            </svg>
+                            <span>Văn bản đính kèm</span>
+                        </div>
+                    </div>
+                    <div class="attached-doc-display-body">
+                        {!! $attachedDoc !!}
+                    </div>
+                </div>
+            @endif
 
             <!-- Interactive Poll Display (if thread has a poll) -->
             @php
@@ -680,6 +712,68 @@
         0% { transform: scale(1); }
         50% { transform: scale(1.35); }
         100% { transform: scale(1); }
+    }
+
+    /* Attached Document Display Card Styling */
+    .thread-attached-doc-display {
+        background: #141414;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 14px;
+        padding: 14px 18px;
+        margin-top: 10px;
+        margin-bottom: 12px;
+        max-width: 540px;
+        transition: border-color 0.15s;
+    }
+    .thread-attached-doc-display:hover {
+        border-color: rgba(255, 255, 255, 0.2);
+    }
+    .attached-doc-display-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 8px;
+        padding-bottom: 6px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    .attached-doc-display-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        color: #0095f6;
+        font-size: 13px;
+        font-weight: 600;
+    }
+    .attached-doc-display-body {
+        color: #e5e5e5;
+        font-size: 15px;
+        line-height: 1.6;
+        word-break: break-word;
+    }
+    .attached-doc-display-body b, 
+    .attached-doc-display-body strong {
+        font-weight: 700;
+        color: #ffffff;
+    }
+    .attached-doc-display-body i, 
+    .attached-doc-display-body em {
+        font-style: italic;
+    }
+    .attached-doc-display-body u {
+        text-decoration: underline;
+    }
+    .attached-doc-display-body s, 
+    .attached-doc-display-body strike {
+        text-decoration: line-through;
+    }
+    .attached-doc-display-body code, 
+    .attached-doc-display-body pre {
+        background: #202020;
+        padding: 2px 6px;
+        border-radius: 4px;
+        color: #00d26a;
+        font-family: monospace;
+        font-size: 13.5px;
     }
 
     /* Thread Poll Display Card Styling */

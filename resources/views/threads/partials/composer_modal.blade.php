@@ -216,8 +216,8 @@
                                     </svg>
                                 </button>
 
-                                <!-- 7. List / Bullets -->
-                                <button type="button" class="composer-tool-icon-btn tool-standard-only" id="modalAddListBtn" title="Danh sách">
+                                <!-- 7. Text Document (Đính kèm văn bản) -->
+                                <button type="button" class="composer-tool-icon-btn tool-standard-only" id="modalAddListBtn" title="Đính kèm văn bản">
                                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
                                         <rect x="3" y="4" width="18" height="16" rx="3"></rect>
                                         <line x1="7" y1="9" x2="17" y2="9"></line>
@@ -985,13 +985,15 @@ document.addEventListener('DOMContentLoaded', function() {
             .map(i => i.value.trim())
             .filter(v => v.length > 0);
         const pollValid = isPollActive && pollInputs.length >= 2;
+        const attachedDocInput = document.getElementById('modalAttachedDocHtml');
+        const hasAttachedDoc = !!(attachedDocInput && attachedDocInput.value && attachedDocInput.value.trim().length > 0);
 
         if (modalCharCount) {
             modalCharCount.textContent = `${textLen}/2000`;
             modalCharCount.style.display = textLen > 1500 ? 'inline-block' : 'none';
         }
 
-        const canSubmit = ((textLen > 0 || mediaCount > 0 || pollValid)) && isUploadingCount === 0;
+        const canSubmit = ((textLen > 0 || mediaCount > 0 || pollValid || hasAttachedDoc)) && isUploadingCount === 0;
         if (modalSubmitBtn) {
             modalSubmitBtn.disabled = !canSubmit;
             if (canSubmit) {
@@ -1198,9 +1200,11 @@ document.addEventListener('DOMContentLoaded', function() {
         const pollOptions = isPollActive 
             ? Array.from(document.querySelectorAll('.poll-option-input')).map(i => i.value.trim()).filter(v => v.length > 0)
             : [];
+        const attachedDocInput = document.getElementById('modalAttachedDocHtml');
+        const attachedDocHtml = attachedDocInput ? decodeURIComponent(attachedDocInput.value || '') : '';
 
-        if (!content && uploadedMedia.length === 0 && pollOptions.length === 0) {
-            toast('Vui lòng nhập nội dung, đính kèm ảnh hoặc cuộc thăm dò');
+        if (!content && uploadedMedia.length === 0 && pollOptions.length === 0 && !attachedDocHtml) {
+            toast('Vui lòng nhập nội dung, đính kèm ảnh hoặc văn bản');
             return;
         }
 
@@ -1225,7 +1229,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 repost_of_id: repostOfId,
                 type: postType,
                 media_ids: uploadedMedia.map(m => m.id),
-                ...(isPollActive ? { poll_options: pollOptions } : {})
+                ...(isPollActive ? { poll_options: pollOptions } : {}),
+                attached_document_html: attachedDocHtml
             })
         })
         .then(res => {
@@ -1306,6 +1311,15 @@ document.addEventListener('DOMContentLoaded', function() {
         if (quoteContainer) {
             quoteContainer.style.display = 'none';
             quoteContainer.innerHTML = '';
+        }
+        const attachedDocCard = document.getElementById('composerAttachedDocCard');
+        if (attachedDocCard) {
+            attachedDocCard.style.display = 'none';
+            attachedDocCard.innerHTML = '';
+        }
+        const textDocEditor = document.getElementById('textDocEditor');
+        if (textDocEditor) {
+            textDocEditor.innerHTML = '';
         }
         if (modalSubmitBtn) {
             modalSubmitBtn.disabled = true;
