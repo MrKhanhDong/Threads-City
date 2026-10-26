@@ -17,7 +17,7 @@
     </div>
 
     <!-- Saved Threads Feed -->
-    <div id="savedThreadsContainer">
+    <div id="savedThreadsContainer" data-live-region="saved" data-live-list>
         @include('threads.partials.thread_list', ['threads' => $threads])
     </div>
 

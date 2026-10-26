@@ -88,7 +88,9 @@ class ThreadController extends Controller
             ->oldest('published_at')
             ->get();
 
-        $thread->increment('views_count');
+        if ($request->header('X-Threads-Live') !== '1') {
+            $thread->increment('views_count');
+        }
 
         return view('threads.show', compact('thread', 'replies'));
     }

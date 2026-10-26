@@ -37,6 +37,12 @@ class AppServiceProvider extends ServiceProvider
         });
 
         View::composer('layouts.threads', function (\Illuminate\View\View $view): void {
+            if (request()->header('X-Threads-Live') === '1') {
+                $view->with(['suggestedUsers' => collect(), 'trendingTopics' => collect()]);
+
+                return;
+            }
+
             $currentUserId = auth()->id();
             $suggestedUsers = User::query()
                 ->when($currentUserId, fn ($q) => $q->where('id', '!=', $currentUserId))
