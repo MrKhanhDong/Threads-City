@@ -1,5 +1,6 @@
 <?php
 
+use Monolog\Formatter\LineFormatter;
 use Monolog\Handler\NullHandler;
 use Monolog\Handler\StreamHandler;
 use Monolog\Handler\SyslogUdpHandler;
@@ -109,7 +110,12 @@ return [
             'handler_with' => [
                 'stream' => 'php://stderr',
             ],
-            'formatter' => env('LOG_STDERR_FORMATTER'),
+            'formatter' => env('LOG_STDERR_FORMATTER', LineFormatter::class),
+            'formatter_with' => env('VERCEL') ? [
+                'format' => "[%datetime%] %channel%.%level_name%: %message%\n",
+                'allowInlineLineBreaks' => false,
+                'includeStacktraces' => false,
+            ] : [],
             'processors' => [PsrLogMessageProcessor::class],
         ],
 
