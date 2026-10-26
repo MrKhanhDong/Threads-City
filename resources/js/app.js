@@ -1,10 +1,17 @@
-import 'bootstrap';
+import { Dropdown, Offcanvas, Modal } from 'bootstrap';
+import { setupJournalTheme } from './journal-theme';
+import { setupDesktopColumns } from './desktop-columns';
+import { setupSidebarFeeds } from './sidebar-feeds';
+import { setupSidebarDrawer } from './sidebar-drawer';
+import { setupPhuongComposerBridge } from './phuong-interface';
 import { setupLiveUpdates } from './live-updates';
 import { setupCommentThreads, setupReplyNotifications } from './comment-threads';
 import { setupSeoPreview } from './seo-preview';
 import { setupCoverPicker } from './cover-picker';
 import { setupSeoChecks } from './seo-checks';
 import { setupVietnameseValidation, requestErrorMessage } from './validation-messages';
+
+window.bootstrap = { ...window.bootstrap, Dropdown, Offcanvas, Modal };
 
 const showState = (element, text, error = false) => {
     if (!element) return;
@@ -169,6 +176,11 @@ function setupEditor() {
 }
 
 function init() {
+    setupJournalTheme();
+    setupDesktopColumns(document, window, Dropdown);
+    setupSidebarFeeds();
+    setupSidebarDrawer(Offcanvas);
+    setupPhuongComposerBridge(Modal);
     setupLiveUpdates();
     setupVietnameseValidation();
     setupCommentThreads();
