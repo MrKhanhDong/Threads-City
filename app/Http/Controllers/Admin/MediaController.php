@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\MediaRequest;
 use App\Models\Media;
 use App\Models\Post;
+use App\Services\ImageStorage;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -30,11 +31,11 @@ class MediaController extends Controller
     {
         $file = $request->file('file');
         $dimensions = getimagesize($file->getRealPath());
-        $path = $file->store('media', 'local');
+        $path = app(ImageStorage::class)->store($file, 'media');
         try {
             $media = Media::create(['user_id' => $request->user()->id, 'path' => $path, 'original_name' => mb_substr(basename($file->getClientOriginalName()), 0, 255), 'mime_type' => $file->getMimeType(), 'size' => $file->getSize(), 'width' => $dimensions[0], 'height' => $dimensions[1], 'alt' => $request->validated('alt')]);
         } catch (\Throwable $error) {
-            Storage::disk('local')->delete($path);
+            app(ImageStorage::class)->delete($path);
             throw $error;
         }
         if ($request->expectsJson()) {
@@ -44,12 +45,16 @@ class MediaController extends Controller
         return back()->with('success', 'Đã tải ảnh lên thư viện.');
     }
 
-    public function show(Request $request, Media $media): BinaryFileResponse
+    public function show(Request $request, Media $media): BinaryFileResponse|RedirectResponse
     {
         if (! $request->user()?->isAdmin()) {
             $isAuthor = $request->user() && $media->user_id === $request->user()->id;
             abort_unless($isAuthor || $this->references($media)->published()->exists(), 404);
         }
+        if ($url = app(ImageStorage::class)->remoteUrl($media->path)) {
+            return redirect()->away($url)->header('Cache-Control', 'private, no-store');
+        }
+
         abort_unless(preg_match('~^media/[A-Za-z0-9_\-]+\.(jpg|jpeg|png|webp|gif)$~i', $media->path) && Storage::disk('local')->exists($media->path), 404);
 
         return response()->file(Storage::disk('local')->path($media->path), ['Content-Type' => $media->mime_type, 'X-Content-Type-Options' => 'nosniff', 'Cache-Control' => 'private, no-store', 'Vary' => 'Cookie']);
@@ -74,7 +79,7 @@ class MediaController extends Controller
 
             return $path;
         });
-        if (! Storage::disk('local')->delete($path)) {
+        if (! app(ImageStorage::class)->delete($path)) {
             return back()->withErrors(['media' => 'Đã xóa metadata nhưng chưa xóa được file. Kiểm tra quyền thư mục storage.']);
         }
 
