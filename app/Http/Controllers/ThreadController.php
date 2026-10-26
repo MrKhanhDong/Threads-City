@@ -7,6 +7,7 @@ use App\Models\Post;
 use App\Models\Tag;
 use App\Models\User;
 use App\Notifications\ThreadInteractionNotification;
+use App\Services\ImageStorage;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -134,7 +135,7 @@ class ThreadController extends Controller
             if ($request->hasFile('images')) {
                 foreach ($request->file('images') as $imgFile) {
                     $dimensions = @getimagesize($imgFile->getRealPath()) ?: [null, null];
-                    $path = $imgFile->store('media', 'local');
+                    $path = app(ImageStorage::class)->store($imgFile, 'media');
                     $m = Media::create([
                         'user_id' => $request->user()->id,
                         'path' => $path,
@@ -270,7 +271,7 @@ class ThreadController extends Controller
         $uploaded = [];
         foreach ($files as $file) {
             $dimensions = @getimagesize($file->getRealPath()) ?: [null, null];
-            $path = $file->store('media', 'local');
+            $path = app(ImageStorage::class)->store($file, 'media');
 
             $media = Media::create([
                 'user_id' => $request->user()->id,
