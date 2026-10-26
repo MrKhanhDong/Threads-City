@@ -48,9 +48,9 @@
                     </button>
                 @endif
             @else
-                <a href="{{ route('login') }}" class="btn-threads-primary w-100 text-center py-2">
+                <button type="button" class="btn-threads-primary w-100 text-center py-2" onclick="window.checkAuth('theo dõi {{ e($user->name) }}')">
                     Theo dõi
-                </a>
+                </button>
             @endauth
         </div>
     </div>

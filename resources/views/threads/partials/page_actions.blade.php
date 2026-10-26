@@ -20,6 +20,10 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!likeBtn) return;
         e.preventDefault();
 
+        if (typeof window.checkAuth === 'function' && !window.checkAuth('thích bài viết này')) {
+            return;
+        }
+
         const threadId = likeBtn.getAttribute('data-thread-id');
         const heartSvg = likeBtn.querySelector('.heart-icon');
         const countSpan = likeBtn.querySelector('.like-count-span');
@@ -40,7 +44,7 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .then(res => {
             if (res.status === 401) {
-                window.location.href = '{{ route("login") }}';
+                if (typeof window.checkAuth === 'function') window.checkAuth('thích bài viết này');
                 return;
             }
             return res.json();
@@ -65,6 +69,10 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!bookmarkBtn) return;
         e.preventDefault();
 
+        if (typeof window.checkAuth === 'function' && !window.checkAuth('lưu bài viết này')) {
+            return;
+        }
+
         const threadId = bookmarkBtn.getAttribute('data-thread-id');
         const bookmarkSvg = bookmarkBtn.querySelector('.bookmark-icon');
         const isBookmarked = bookmarkBtn.classList.contains('bookmarked');
@@ -82,7 +90,7 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .then(res => {
             if (res.status === 401) {
-                window.location.href = '{{ route("login") }}';
+                if (typeof window.checkAuth === 'function') window.checkAuth('lưu bài viết này');
                 return;
             }
             return res.json();
@@ -107,6 +115,10 @@ document.addEventListener('DOMContentLoaded', function() {
         const repostBtn = e.target.closest('.action-repost-btn');
         if (!repostBtn) return;
         e.preventDefault();
+
+        if (typeof window.checkAuth === 'function' && !window.checkAuth('đăng lại hoặc trích dẫn bài viết')) {
+            return;
+        }
 
         activeRepostThreadId = repostBtn.getAttribute('data-thread-id');
         activeRepostMeta = {
@@ -222,6 +234,10 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!bookmarkOpt) return;
         e.preventDefault();
 
+        if (typeof window.checkAuth === 'function' && !window.checkAuth('lưu bài viết này')) {
+            return;
+        }
+
         const threadId = bookmarkOpt.getAttribute('data-thread-id');
         const labelEl = bookmarkOpt.querySelector('.bookmark-label');
         const svgEl = bookmarkOpt.querySelector('.bookmark-svg-icon');
@@ -251,7 +267,7 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .then(res => {
             if (res.status === 401) {
-                window.location.href = '{{ route("login") }}';
+                if (typeof window.checkAuth === 'function') window.checkAuth('lưu bài viết này');
                 return;
             }
             return res.json();
@@ -280,6 +296,10 @@ document.addEventListener('DOMContentLoaded', function() {
         const notIntBtn = e.target.closest('.btn-not-interested');
         if (!notIntBtn) return;
         e.preventDefault();
+
+        if (typeof window.checkAuth === 'function' && !window.checkAuth('tùy chỉnh gợi ý bài viết')) {
+            return;
+        }
 
         const threadId = notIntBtn.getAttribute('data-thread-id');
         const card = notIntBtn.closest('.thread-card-wrapper');
@@ -317,6 +337,10 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!feedBtn) return;
         e.preventDefault();
 
+        if (typeof window.checkAuth === 'function' && !window.checkAuth('thêm bài viết vào Bảng Feed cá nhân')) {
+            return;
+        }
+
         const threadId = feedBtn.getAttribute('data-thread-id');
         if (!threadId) return;
 
@@ -351,6 +375,10 @@ document.addEventListener('DOMContentLoaded', function() {
         const muteBtn = e.target.closest('.btn-mute-thread');
         if (!muteBtn) return;
         e.preventDefault();
+
+        if (typeof window.checkAuth === 'function' && !window.checkAuth('cài đặt thông báo bài viết')) {
+            return;
+        }
 
         const threadId = muteBtn.getAttribute('data-thread-id');
         const labelEl = muteBtn.querySelector('.mute-label');
@@ -389,6 +417,10 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!resBtn) return;
         e.preventDefault();
 
+        if (typeof window.checkAuth === 'function' && !window.checkAuth('hạn chế người dùng này')) {
+            return;
+        }
+
         const userId = resBtn.getAttribute('data-user-id');
         const labelEl = resBtn.querySelector('.restrict-label');
         if (!userId) return;
@@ -426,6 +458,10 @@ document.addEventListener('DOMContentLoaded', function() {
         const blockBtn = e.target.closest('.btn-block-user');
         if (!blockBtn) return;
         e.preventDefault();
+
+        if (typeof window.checkAuth === 'function' && !window.checkAuth('chặn người dùng này')) {
+            return;
+        }
 
         const userName = blockBtn.getAttribute('data-user-name') || 'người dùng';
         const userId = blockBtn.getAttribute('data-user-id');
@@ -478,6 +514,10 @@ document.addEventListener('DOMContentLoaded', function() {
         const reportBtn = e.target.closest('.btn-report-thread');
         if (!reportBtn) return;
         e.preventDefault();
+
+        if (typeof window.checkAuth === 'function' && !window.checkAuth('gửi báo cáo bài viết')) {
+            return;
+        }
 
         const threadId = reportBtn.getAttribute('data-thread-id');
         const authorName = reportBtn.getAttribute('data-author-name') || 'tác giả';

@@ -7,6 +7,10 @@ if (!window.__pollVoteHandlerBound) {
         e.preventDefault();
         e.stopPropagation();
 
+        if (typeof window.checkAuth === 'function' && !window.checkAuth('tham gia bình chọn thăm dò ý kiến')) {
+            return;
+        }
+
         const threadId = voteBtn.getAttribute('data-thread-id');
         const optionId = voteBtn.getAttribute('data-option-id');
         const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
@@ -24,7 +28,8 @@ if (!window.__pollVoteHandlerBound) {
         })
         .then(res => {
             if (res.status === 401) {
-                window.location.href = '{{ route("login") }}';
+                voteBtn.disabled = false;
+                window.checkAuth('tham gia bình chọn thăm dò ý kiến');
                 return;
             }
             return res.json();

@@ -22,6 +22,9 @@
 
         <form action="{{ route('login.store') }}" method="post">
             @csrf
+            @if(request('redirect'))
+                <input type="hidden" name="redirect" value="{{ request('redirect') }}">
+            @endif
             
             <div class="mb-3">
                 <input 

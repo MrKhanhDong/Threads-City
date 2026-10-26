@@ -2,7 +2,7 @@
     $currentUser = auth()->user();
 @endphp
 
-<div class="threads-composer-bar" @auth data-bs-toggle="modal" data-bs-target="#newThreadModal" @else onclick="window.location='{{ route('login') }}'" @endauth>
+<div class="threads-composer-bar" @auth data-bs-toggle="modal" data-bs-target="#newThreadModal" @else onclick="window.checkAuth('tạo bài viết mới')" @endauth>
     <div class="composer-bar-left">
         @auth
             @if($currentUser->avatar_path)
@@ -29,8 +29,16 @@
                     <polyline points="21 15 16 10 5 21"></polyline>
                 </svg>
             </button>
+        @else
+            <button type="button" class="btn-composer-icon-pill" onclick="event.stopPropagation(); window.checkAuth('đính kèm hình ảnh');" title="Đính kèm ảnh">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                    <rect x="3" y="3" width="18" height="18" rx="3" ry="3"></rect>
+                    <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                    <polyline points="21 15 16 10 5 21"></polyline>
+                </svg>
+            </button>
         @endauth
-        <button type="button" class="btn-composer-post-pill">
+        <button type="button" class="btn-composer-post-pill" @guest onclick="event.stopPropagation(); window.checkAuth('đăng bài viết mới');" @endguest>
             Đăng
         </button>
     </div>

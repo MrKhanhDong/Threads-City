@@ -629,6 +629,10 @@
     @stack('threads-styles')
 </head>
 <body class="threads-body" data-live-enabled="{{ request()->routeIs('home', 'threads.index', 'threads.show', 'profile.show', 'saved', 'notifications.index') ? '1' : '0' }}">
+    <script>
+        window.THREAD_AUTH_USER_ID = {{ auth()->id() ? auth()->id() : 'null' }};
+        window.IS_AUTHENTICATED = {{ auth()->check() ? 'true' : 'false' }};
+    </script>
 
     <div class="threads-app-shell">
 
@@ -678,6 +682,14 @@
 
                     @auth
                     <a href="javascript:void(0)" class="sidebar-nav-item" data-bs-toggle="modal" data-bs-target="#newThreadModal">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                        <span>Thread mới</span>
+                    </a>
+                    @else
+                    <a href="javascript:void(0)" class="sidebar-nav-item" onclick="window.checkAuth('tạo bài viết mới')">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                             <line x1="12" y1="5" x2="12" y2="19"></line>
                             <line x1="5" y1="12" x2="19" y2="12"></line>
@@ -745,10 +757,17 @@
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
                         <span>Đang theo dõi</span>
                     </a>
+                    @auth
                     <a href="{{ route('saved') }}" class="sub-nav-item {{ request()->routeIs('saved') ? 'active' : '' }}">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>
                         <span>Đã lưu</span>
                     </a>
+                    @else
+                    <a href="javascript:void(0)" class="sub-nav-item" onclick="window.checkAuth('xem bài viết đã lưu')">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>
+                        <span>Đã lưu</span>
+                    </a>
+                    @endauth
                     @auth
                     <a href="{{ route('profile.show', ['username' => auth()->user()->username ?? auth()->user()->id, 'tab' => 'likes']) }}" class="sub-nav-item">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
@@ -894,7 +913,7 @@
                                     {{ $isFollowing ? 'Đang theo dõi' : 'Theo dõi' }}
                                 </button>
                             @else
-                                <a href="{{ route('login') }}" class="btn-follow-pill">Theo dõi</a>
+                                <button type="button" class="btn-follow-pill" onclick="window.checkAuth('theo dõi {{ e($sUserName ?: 'người dùng này') }}')">Theo dõi</button>
                             @endauth
                         </div>
                     @endforeach
@@ -922,6 +941,7 @@
 
     @include('threads.partials.meta_ai_modal')
     @include('threads.partials.report_modal')
+    @include('threads.partials.auth_prompt_modal')
 
     @include('threads.partials.page_actions')
     @include('threads.partials.poll_actions')
@@ -945,7 +965,7 @@
                 })
                 .then(res => {
                     if (res.status === 401) {
-                        window.location.href = '{{ route("login") }}';
+                        if (typeof window.checkAuth === 'function') window.checkAuth('theo dõi người dùng này');
                         return;
                     }
                     return res.json();
@@ -972,6 +992,10 @@
             e.preventDefault();
             e.stopPropagation();
 
+            if (typeof window.checkAuth === 'function' && !window.checkAuth('theo dõi tác giả này')) {
+                return;
+            }
+
             const userId = avatarFollowBtn.getAttribute('data-user-id');
             fetch(`/users/${userId}/follow`, {
                 method: 'POST',
@@ -983,7 +1007,7 @@
             })
             .then(res => {
                 if (res.status === 401) {
-                    window.location.href = '{{ route("login") }}';
+                    if (typeof window.checkAuth === 'function') window.checkAuth('theo dõi tác giả này');
                     return;
                 }
                 return res.json();

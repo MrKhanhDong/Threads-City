@@ -76,8 +76,8 @@
                 </div>
             </form>
         @else
-            <div class="text-center py-2">
-                <span class="text-secondary small">Vui lòng <a href="{{ route('login') }}" class="text-white text-decoration-underline">đăng nhập</a> để tham gia trả lời cuộc trò chuyện này.</span>
+            <div class="text-center py-3 cursor-pointer" onclick="window.checkAuth('tham gia trả lời cuộc trò chuyện')">
+                <span class="text-secondary small">Vui lòng <a href="javascript:void(0)" onclick="window.checkAuth('tham gia trả lời cuộc trò chuyện')" class="text-white text-decoration-underline fw-semibold">đăng nhập</a> để tham gia trả lời cuộc trò chuyện này.</span>
             </div>
         @endauth
     </div>
