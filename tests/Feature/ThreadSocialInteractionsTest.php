@@ -151,4 +151,39 @@ class ThreadSocialInteractionsTest extends TestCase
             ->assertJson(['count' => 1])
             ->assertJsonFragment(['username' => 'friend']);
     }
+
+    public function test_creating_thread_with_poll_and_voting_updates_percentages(): void
+    {
+        $author = User::factory()->create();
+        $voter = User::factory()->create();
+
+        $createResponse = $this->actingAs($author)
+            ->postJson(route('threads.store'), [
+                'content' => 'Bạn có thích đá bóng không?',
+                'poll_options' => ['Có', 'Không'],
+            ]);
+
+        $createResponse->assertOk()
+            ->assertJson(['success' => true]);
+
+        $thread = Post::where('user_id', $author->id)->latest('id')->first();
+        $this->assertNotNull($thread);
+        $this->assertNotNull($thread->excerpt);
+
+        $pollData = json_decode($thread->excerpt, true);
+        $this->assertTrue($pollData['is_poll']);
+        $this->assertCount(2, $pollData['options']);
+
+        // Voter casts vote for Option 1 ("Có")
+        $voteResponse = $this->actingAs($voter)
+            ->postJson(route('threads.vote', $thread->id), [
+                'option_id' => 1,
+            ]);
+
+        $voteResponse->assertOk()
+            ->assertJson(['success' => true])
+            ->assertJsonPath('poll.total_votes', 1)
+            ->assertJsonPath('poll.options.0.percentage', 100)
+            ->assertJsonPath('poll.options.1.percentage', 0);
+    }
 }

@@ -91,6 +91,7 @@ Route::middleware('auth')->group(function (): void {
     Route::post('/threads/{thread}/bookmark', [ThreadActionController::class, 'bookmark'])->whereNumber('thread')->name('threads.bookmark');
     Route::post('/threads/{thread}/repost', [ThreadActionController::class, 'repost'])->whereNumber('thread')->name('threads.repost');
     Route::post('/users/{user}/follow', [ThreadActionController::class, 'follow'])->whereNumber('user')->name('users.follow');
+    Route::post('/threads/{thread}/vote', [ThreadController::class, 'votePoll'])->whereNumber('thread')->name('threads.vote');
     Route::get('/api/users/mention-suggestions', [ThreadController::class, 'mentionSuggestions'])->name('users.mention-suggestions');
 
     Route::middleware('verified')->group(function (): void {

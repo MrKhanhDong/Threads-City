@@ -96,7 +96,7 @@ class ThreadController extends Controller
     public function store(Request $request): RedirectResponse|JsonResponse
     {
         $data = $request->validate([
-            'content' => 'required_without_all:media_ids,images|nullable|string|max:2000',
+            'content' => 'required_without_all:media_ids,images,poll_options|nullable|string|max:2000',
             'parent_id' => 'nullable|exists:posts,id',
             'repost_of_id' => 'nullable|exists:posts,id',
             'type' => 'nullable|in:post,reply,repost,quote',
@@ -104,6 +104,8 @@ class ThreadController extends Controller
             'media_ids.*' => 'exists:media,id',
             'images' => 'nullable|array|max:4',
             'images.*' => 'image|mimes:jpeg,png,jpg,webp,gif|max:5120',
+            'poll_options' => 'nullable|array|min:2|max:4',
+            'poll_options.*' => 'nullable|string|max:100',
         ]);
 
         $type = $data['type'] ?? 'post';
@@ -118,13 +120,38 @@ class ThreadController extends Controller
         $post = DB::transaction(function () use ($request, $data, $type): Post {
             $content = trim($data['content'] ?? '');
 
+            $pollData = null;
+            $rawPoll = $request->input('poll_options', []);
+            if (is_array($rawPoll)) {
+                $cleanOptions = array_values(array_filter(array_map('trim', $rawPoll)));
+                if (count($cleanOptions) >= 2) {
+                    $optionsList = [];
+                    foreach ($cleanOptions as $idx => $optText) {
+                        $optionsList[] = [
+                            'id' => $idx + 1,
+                            'text' => $optText,
+                            'votes' => 0,
+                        ];
+                    }
+                    $pollData = [
+                        'is_poll' => true,
+                        'options' => $optionsList,
+                        'voters' => (object) [],
+                        'total_votes' => 0,
+                        'duration_hours' => 24,
+                        'expires_at' => now()->addHours(24)->toIso8601String(),
+                    ];
+                }
+            }
+
             $post = Post::create([
                 'user_id' => $request->user()->id,
                 'parent_id' => $data['parent_id'] ?? null,
                 'repost_of_id' => $data['repost_of_id'] ?? null,
                 'type' => $type,
-                'title' => Str::limit(strip_tags($content), 60, ''),
+                'title' => Str::limit(strip_tags($content ?: ($cleanOptions[0] ?? 'Cuộc thăm dò ý kiến')), 60, ''),
                 'slug' => 'thread-'.Str::lower(Str::random(10)).'-'.time(),
+                'excerpt' => $pollData ? json_encode($pollData, JSON_UNESCAPED_UNICODE) : null,
                 'content' => $content,
                 'status' => 'published',
                 'published_at' => now(),
@@ -298,5 +325,101 @@ class ThreadController extends Controller
             'id' => $uploaded[0]['id'],
             'url' => $uploaded[0]['url'],
         ]);
+    }
+
+    public function votePoll(Request $request, Post $thread): JsonResponse
+    {
+        $user = $request->user();
+        if (! $user) {
+            return response()->json(['message' => 'Vui lòng đăng nhập để bình chọn.'], 401);
+        }
+
+        $validated = $request->validate([
+            'option_id' => 'required|integer',
+        ]);
+
+        $poll = json_decode($thread->excerpt ?? '', true);
+        if (! is_array($poll) || empty($poll['is_poll']) || empty($poll['options'])) {
+            return response()->json(['message' => 'Bài viết này không có cuộc thăm dò ý kiến.'], 400);
+        }
+
+        $userId = (string) $user->id;
+        $voters = $poll['voters'] ?? [];
+        if (! is_array($voters)) {
+            $voters = (array) $voters;
+        }
+
+        $chosenOptionId = (int) $validated['option_id'];
+
+        $validOption = false;
+        foreach ($poll['options'] as $opt) {
+            if ($opt['id'] === $chosenOptionId) {
+                $validOption = true;
+                break;
+            }
+        }
+        if (! $validOption) {
+            return response()->json(['message' => 'Lựa chọn không hợp lệ.'], 400);
+        }
+
+        $previousVote = $voters[$userId] ?? null;
+        if ($previousVote === $chosenOptionId) {
+            return response()->json(['success' => true, 'poll' => $this->formatPollResponse($poll, $userId)]);
+        }
+
+        if ($previousVote !== null) {
+            foreach ($poll['options'] as &$opt) {
+                if ($opt['id'] === $previousVote && $opt['votes'] > 0) {
+                    $opt['votes']--;
+                    $poll['total_votes'] = max(0, ($poll['total_votes'] ?? 1) - 1);
+                }
+            }
+            unset($opt);
+        }
+
+        foreach ($poll['options'] as &$opt) {
+            if ($opt['id'] === $chosenOptionId) {
+                $opt['votes']++;
+                $poll['total_votes'] = ($poll['total_votes'] ?? 0) + 1;
+            }
+        }
+        unset($opt);
+
+        $voters[$userId] = $chosenOptionId;
+        $poll['voters'] = $voters;
+
+        $thread->update(['excerpt' => json_encode($poll, JSON_UNESCAPED_UNICODE)]);
+
+        return response()->json([
+            'success' => true,
+            'poll' => $this->formatPollResponse($poll, $userId),
+        ]);
+    }
+
+    private function formatPollResponse(array $poll, string $userId): array
+    {
+        $total = max(1, $poll['total_votes'] ?? 0);
+        $options = [];
+        foreach ($poll['options'] as $opt) {
+            $votes = $opt['votes'] ?? 0;
+            $percent = ($poll['total_votes'] ?? 0) > 0 ? round(($votes / $total) * 100) : 0;
+            $options[] = [
+                'id' => $opt['id'],
+                'text' => $opt['text'],
+                'votes' => $votes,
+                'percentage' => $percent,
+            ];
+        }
+
+        $voters = $poll['voters'] ?? [];
+        if (! is_array($voters)) {
+            $voters = (array) $voters;
+        }
+
+        return [
+            'options' => $options,
+            'total_votes' => $poll['total_votes'] ?? 0,
+            'user_voted_option' => $voters[$userId] ?? null,
+        ];
     }
 }

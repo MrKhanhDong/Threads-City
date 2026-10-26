@@ -139,6 +139,62 @@
                 {!! nl2br($formattedContent) !!}
             </div>
 
+            <!-- Interactive Poll Display (if thread has a poll) -->
+            @php
+                $pollData = null;
+                if (!empty($displayThread->excerpt)) {
+                    $parsedExcerpt = json_decode($displayThread->excerpt, true);
+                    if (is_array($parsedExcerpt) && !empty($parsedExcerpt['is_poll']) && !empty($parsedExcerpt['options'])) {
+                        $pollData = $parsedExcerpt;
+                    }
+                }
+            @endphp
+
+            @if($pollData)
+                @php
+                    $currentUserId = (string) (auth()->id() ?? '');
+                    $votersList = is_array($pollData['voters']) ? $pollData['voters'] : (array) $pollData['voters'];
+                    $userVoted = isset($votersList[$currentUserId]);
+                    $userPick = $votersList[$currentUserId] ?? null;
+                    $totalVotes = $pollData['total_votes'] ?? 0;
+                    $maxVotes = max(1, $totalVotes);
+                @endphp
+                <div class="thread-poll-display-card" id="pollCard-{{ $displayThread->id }}" data-thread-id="{{ $displayThread->id }}">
+                    <div class="poll-items-wrap">
+                        @foreach($pollData['options'] as $opt)
+                            @php
+                                $optVotes = $opt['votes'] ?? 0;
+                                $percent = $totalVotes > 0 ? round(($optVotes / $maxVotes) * 100) : 0;
+                                $isPicked = ($userPick === $opt['id']);
+                            @endphp
+                            @if($userVoted)
+                                <div class="poll-display-result-row {{ $isPicked ? 'user-picked' : '' }}">
+                                    <div class="poll-result-bar-bg" style="width: {{ $percent }}%;"></div>
+                                    <div class="poll-result-label-row">
+                                        <span class="poll-result-opt-name">
+                                            {{ $opt['text'] }}
+                                            @if($isPicked)
+                                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" class="ms-1 text-white"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                            @endif
+                                        </span>
+                                        <span class="poll-result-percent">{{ $percent }}%</span>
+                                    </div>
+                                </div>
+                            @else
+                                <button type="button" class="poll-display-vote-btn btn-ajax-poll-vote" data-thread-id="{{ $displayThread->id }}" data-option-id="{{ $opt['id'] }}">
+                                    {{ $opt['text'] }}
+                                </button>
+                            @endif
+                        @endforeach
+                    </div>
+                    <div class="poll-display-footer">
+                        <span class="poll-total-votes-count">{{ $totalVotes }} phiếu bầu</span>
+                        <span>·</span>
+                        <span>Kết thúc sau 24 giờ</span>
+                    </div>
+                </div>
+            @endif
+
             <!-- Media Gallery (Images) -->
             @if($displayThread->media && $displayThread->media->count() > 0)
                 <div class="thread-media-gallery gallery-count-{{ min(4, $displayThread->media->count()) }}">
@@ -625,4 +681,154 @@
         50% { transform: scale(1.35); }
         100% { transform: scale(1); }
     }
+
+    /* Thread Poll Display Card Styling */
+    .thread-poll-display-card {
+        margin: 10px 0 12px;
+        max-width: 520px;
+    }
+    .poll-items-wrap {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+    .poll-display-vote-btn {
+        width: 100%;
+        background: #141414;
+        border: 1px solid #2e2e2e;
+        border-radius: 12px;
+        padding: 12px 18px;
+        color: #ffffff;
+        font-size: 14.5px;
+        font-weight: 500;
+        text-align: left;
+        cursor: pointer;
+        transition: background 0.15s, border-color 0.15s, transform 0.05s;
+    }
+    .poll-display-vote-btn:hover {
+        background: #1c1c1c;
+        border-color: #444444;
+    }
+    .poll-display-vote-btn:active {
+        transform: scale(0.99);
+    }
+    .poll-display-result-row {
+        position: relative;
+        width: 100%;
+        background: #141414;
+        border: 1px solid #2a2a2a;
+        border-radius: 12px;
+        overflow: hidden;
+        height: 44px;
+    }
+    .poll-display-result-row.user-picked {
+        border-color: #444444;
+    }
+    .poll-result-bar-bg {
+        position: absolute;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        background: rgba(255, 255, 255, 0.12);
+        border-radius: 10px;
+        transition: width 0.4s ease;
+    }
+    .poll-display-result-row.user-picked .poll-result-bar-bg {
+        background: rgba(255, 255, 255, 0.22);
+    }
+    .poll-result-label-row {
+        position: relative;
+        z-index: 2;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        height: 100%;
+        padding: 0 18px;
+        font-size: 14.5px;
+        font-weight: 500;
+        color: #ffffff;
+    }
+    .poll-result-percent {
+        color: #aaaaaa;
+        font-size: 13.5px;
+        font-weight: 600;
+    }
+    .poll-display-footer {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        color: #777777;
+        font-size: 13px;
+        margin-top: 8px;
+        padding-left: 2px;
+    }
 </style>
+
+<script>
+if (!window.__pollVoteHandlerBound) {
+    window.__pollVoteHandlerBound = true;
+    document.addEventListener('click', function(e) {
+        const voteBtn = e.target.closest('.btn-ajax-poll-vote');
+        if (!voteBtn) return;
+        e.preventDefault();
+        e.stopPropagation();
+
+        const threadId = voteBtn.getAttribute('data-thread-id');
+        const optionId = voteBtn.getAttribute('data-option-id');
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+
+        voteBtn.disabled = true;
+
+        fetch(`/threads/${threadId}/vote`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfToken,
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({ option_id: optionId })
+        })
+        .then(res => {
+            if (res.status === 401) {
+                window.location.href = '{{ route("login") }}';
+                return;
+            }
+            return res.json();
+        })
+        .then(data => {
+            if (data && data.success && data.poll) {
+                const card = document.getElementById(`pollCard-${threadId}`);
+                if (card) {
+                    const wrap = card.querySelector('.poll-items-wrap');
+                    const userPickId = data.poll.user_voted_option;
+                    if (wrap) {
+                        wrap.innerHTML = data.poll.options.map(opt => {
+                            const isPicked = (opt.id === userPickId);
+                            const checkSvg = isPicked ? `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" class="ms-1 text-white"><polyline points="20 6 9 17 4 12"></polyline></svg>` : '';
+                            return `
+                                <div class="poll-display-result-row ${isPicked ? 'user-picked' : ''}">
+                                    <div class="poll-result-bar-bg" style="width: ${opt.percentage}%;"></div>
+                                    <div class="poll-result-label-row">
+                                        <span class="poll-result-opt-name">${opt.text} ${checkSvg}</span>
+                                        <span class="poll-result-percent">${opt.percentage}%</span>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('');
+                    }
+                    const countSpan = card.querySelector('.poll-total-votes-count');
+                    if (countSpan) {
+                        countSpan.textContent = `${data.poll.total_votes} phiếu bầu`;
+                    }
+                }
+            } else {
+                voteBtn.disabled = false;
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            voteBtn.disabled = false;
+        });
+    });
+}
+</script>

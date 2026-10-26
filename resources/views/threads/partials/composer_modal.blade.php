@@ -46,7 +46,7 @@
                     <input type="hidden" name="type" id="modalPostType" value="post">
                     <div id="modalMediaIdsContainer"></div>
 
-                    <!-- Main Flow: Left (Avatar + Thread line) | Right (User, Textarea, Toolbar, Add Thread) -->
+                    <!-- Main Flow: Left (Avatar + Thread line) | Right (User, Textarea, Poll, Toolbar, Add Thread) -->
                     <div class="composer-flow-wrapper">
                         
                         <!-- Left: Avatar, Thread Line, Sub-Avatar -->
@@ -72,7 +72,7 @@
                             </div>
                         </div>
 
-                        <!-- Right: Main Content & Tools -->
+                        <!-- Right: Main Content, Poll & Tools -->
                         <div class="composer-right-col">
                             
                             <!-- User header: khanhdongisme > Cộng đồng hoặc chủ đề -->
@@ -107,6 +107,27 @@
                                 <div id="modalMentionDropdown" class="mention-autocomplete-dropdown" style="display: none;"></div>
                             </div>
 
+                            <!-- Poll Creation Box (Matches screenshot exactly) -->
+                            <div id="composerPollContainer" class="composer-poll-container" style="display: none;">
+                                <div class="poll-options-list" id="pollOptionsList">
+                                    <div class="poll-option-row">
+                                        <input type="text" class="poll-option-input" name="poll_options[]" value="Có" placeholder="Có" maxlength="80">
+                                    </div>
+                                    <div class="poll-option-row">
+                                        <input type="text" class="poll-option-input" name="poll_options[]" value="Không" placeholder="Không" maxlength="80">
+                                    </div>
+                                </div>
+                                
+                                <div class="poll-add-option-row" id="pollAddOptionBtn" role="button">
+                                    <span class="poll-add-option-text">Thêm lựa chọn khác</span>
+                                </div>
+
+                                <div class="poll-meta-row">
+                                    <span class="poll-duration-label">Kết thúc sau 24 giờ</span>
+                                    <button type="button" class="poll-remove-action-btn" id="btnRemovePoll">Gỡ cuộc thăm dò ý kiến</button>
+                                </div>
+                            </div>
+
                             <!-- Quoted preview container (when quoting another thread) -->
                             <div id="modalQuotedThreadContainer" class="p-3 mb-2 rounded-3" style="display: none; background: #202020; border: 1px solid #333;"></div>
 
@@ -123,10 +144,10 @@
                                 <div class="text-white small fw-semibold">Thả ảnh vào đây để tải lên</div>
                             </div>
 
-                            <!-- Toolbar of 9 icons under textarea (Exactly matches screenshot) -->
-                            <div class="composer-toolbar-strip">
+                            <!-- Toolbar of icons (Shows 9 icons normally, reduces to 3 when Poll is active) -->
+                            <div class="composer-toolbar-strip" id="composerToolbarStrip">
                                 <!-- 1. Image / Gallery -->
-                                <button type="button" class="composer-tool-icon-btn" id="modalAddImageBtn" title="Đính kèm ảnh">
+                                <button type="button" class="composer-tool-icon-btn tool-standard-only" id="modalAddImageBtn" title="Đính kèm ảnh">
                                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
                                         <rect x="3" y="3" width="18" height="18" rx="3" ry="3"></rect>
                                         <circle cx="8.5" cy="8.5" r="1.5"></circle>
@@ -136,13 +157,13 @@
                                 <input type="file" id="modalComposerFileInput" accept="image/jpeg,image/png,image/jpg,image/webp,image/gif" multiple hidden>
 
                                 <!-- 2. GIF -->
-                                <button type="button" class="composer-tool-icon-btn" id="modalAddGifBtn" title="Đính kèm GIF">
+                                <button type="button" class="composer-tool-icon-btn tool-standard-only" id="modalAddGifBtn" title="Đính kèm GIF">
                                     <span class="tool-badge-gif">GIF</span>
                                 </button>
 
-                                <!-- 3. Emoji -->
+                                <!-- 3. Emoji (Always available) -->
                                 <div class="dropdown d-inline-block">
-                                    <button type="button" class="composer-tool-icon-btn" data-bs-toggle="dropdown" aria-expanded="false" title="Biểu tượng cảm xúc">
+                                    <button type="button" class="composer-tool-icon-btn tool-always-visible" id="modalAddEmojiBtn" data-bs-toggle="dropdown" aria-expanded="false" title="Biểu tượng cảm xúc">
                                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
                                             <circle cx="12" cy="12" r="10"></circle>
                                             <path d="M8 14s1.5 2 4 2 4-2 4-2"></path>
@@ -166,8 +187,8 @@
                                     </div>
                                 </div>
 
-                                <!-- 4. Sticker -->
-                                <button type="button" class="composer-tool-icon-btn" id="modalAddStickerBtn" title="Nhãn dán">
+                                <!-- 4. Sticker (Always available) -->
+                                <button type="button" class="composer-tool-icon-btn tool-always-visible" id="modalAddStickerBtn" title="Nhãn dán">
                                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
                                         <path d="M15.5 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-10.5L15.5 3z"></path>
                                         <path d="M15 3v6h6"></path>
@@ -177,8 +198,8 @@
                                     </svg>
                                 </button>
 
-                                <!-- 5. Poll / Lines -->
-                                <button type="button" class="composer-tool-icon-btn" id="modalAddPollBtn" title="Thăm dò ý kiến">
+                                <!-- 5. Poll / Lines (Triggers poll view) -->
+                                <button type="button" class="composer-tool-icon-btn tool-standard-only" id="modalAddPollBtn" title="Thăm dò ý kiến">
                                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
                                         <line x1="4" y1="6" x2="20" y2="6"></line>
                                         <line x1="4" y1="12" x2="14" y2="12"></line>
@@ -187,7 +208,7 @@
                                 </button>
 
                                 <!-- 6. Quote / Speech bubble -->
-                                <button type="button" class="composer-tool-icon-btn" id="modalAddQuoteBtn" title="Trích dẫn">
+                                <button type="button" class="composer-tool-icon-btn tool-standard-only" id="modalAddQuoteBtn" title="Trích dẫn">
                                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
                                         <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
                                         <circle cx="9" cy="10" r="1" fill="currentColor"></circle>
@@ -196,7 +217,7 @@
                                 </button>
 
                                 <!-- 7. List / Bullets -->
-                                <button type="button" class="composer-tool-icon-btn" id="modalAddListBtn" title="Danh sách">
+                                <button type="button" class="composer-tool-icon-btn tool-standard-only" id="modalAddListBtn" title="Danh sách">
                                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
                                         <rect x="3" y="4" width="18" height="16" rx="3"></rect>
                                         <line x1="7" y1="9" x2="17" y2="9"></line>
@@ -205,8 +226,8 @@
                                     </svg>
                                 </button>
 
-                                <!-- 8. Location pin -->
-                                <button type="button" class="composer-tool-icon-btn" id="modalAddLocationBtn" title="Gắn vị trí">
+                                <!-- 8. Location pin (Always available) -->
+                                <button type="button" class="composer-tool-icon-btn tool-always-visible" id="modalAddLocationBtn" title="Gắn vị trí">
                                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
                                         <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
                                         <circle cx="12" cy="10" r="3"></circle>
@@ -214,7 +235,7 @@
                                 </button>
 
                                 <!-- 9. Audio note -->
-                                <button type="button" class="composer-tool-icon-btn" id="modalAddAudioBtn" title="Đính kèm âm thanh">
+                                <button type="button" class="composer-tool-icon-btn tool-standard-only" id="modalAddAudioBtn" title="Đính kèm âm thanh">
                                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
                                         <path d="M9 18V5l12-2v13"></path>
                                         <circle cx="6" cy="18" r="3"></circle>
@@ -399,7 +420,7 @@
     opacity: 0.6;
 }
 
-/* Right Column: User Meta, Textarea, Toolbar, Add Thread */
+/* Right Column: User Meta, Textarea, Poll, Toolbar, Add Thread */
 .composer-right-col {
     flex: 1;
     min-width: 0;
@@ -445,7 +466,7 @@
     font-size: 15px;
     line-height: 1.5;
     resize: none;
-    min-height: 46px;
+    min-height: 40px;
     padding: 2px 0 6px;
 }
 .composer-textarea::placeholder {
@@ -453,7 +474,83 @@
     font-weight: 400;
 }
 
-/* Toolbar Icons Strip (9 icons exactly like screenshot) */
+/* Poll Creation Component (Matches screenshot exactly) */
+.composer-poll-container {
+    margin-top: 4px;
+    margin-bottom: 12px;
+}
+.poll-option-row {
+    margin-bottom: 10px;
+}
+.poll-option-input {
+    width: 100%;
+    background: #141414;
+    border: 1px solid #282828;
+    border-radius: 14px;
+    padding: 13px 18px;
+    color: #ffffff;
+    font-size: 15px;
+    font-weight: 500;
+    outline: none;
+    transition: border-color 0.15s, background 0.15s;
+}
+.poll-option-input:focus {
+    border-color: #444444;
+    background: #181818;
+}
+.poll-option-input::placeholder {
+    color: #666666;
+}
+.poll-add-option-row {
+    background: #141414;
+    border: 1px dashed #282828;
+    border-radius: 14px;
+    padding: 13px 18px;
+    margin-bottom: 12px;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+}
+.poll-add-option-row:hover {
+    border-color: #383838;
+    background: #181818;
+}
+.poll-add-option-text {
+    color: #666666;
+    font-size: 15px;
+    font-weight: 500;
+    user-select: none;
+    transition: color 0.15s;
+}
+.poll-add-option-row:hover .poll-add-option-text {
+    color: #888888;
+}
+.poll-meta-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 2px 2px;
+    margin-bottom: 6px;
+}
+.poll-duration-label {
+    color: #666666;
+    font-size: 13.5px;
+    font-weight: 400;
+}
+.poll-remove-action-btn {
+    background: transparent;
+    border: none;
+    color: #888888;
+    font-size: 13.5px;
+    font-weight: 500;
+    cursor: pointer;
+    padding: 0;
+    transition: color 0.15s;
+}
+.poll-remove-action-btn:hover {
+    color: #ffffff;
+}
+
+/* Toolbar Icons Strip */
 .composer-toolbar-strip {
     display: flex;
     align-items: center;
@@ -461,6 +558,12 @@
     margin-top: 4px;
     margin-bottom: 16px;
 }
+
+/* When poll mode is active, hide 6 icons and show only Emoji, Sticker, Location */
+.composer-toolbar-strip.poll-mode-active .tool-standard-only {
+    display: none !important;
+}
+
 .composer-tool-icon-btn {
     background: transparent;
     border: none;
@@ -639,6 +742,14 @@ document.addEventListener('DOMContentLoaded', function() {
     const dropZone = document.getElementById('modalDropZone');
     const topicLabel = document.getElementById('composerTopicLabel');
 
+    // Poll Elements
+    const pollContainer = document.getElementById('composerPollContainer');
+    const pollOptionsList = document.getElementById('pollOptionsList');
+    const pollAddOptionBtn = document.getElementById('pollAddOptionBtn');
+    const btnRemovePoll = document.getElementById('btnRemovePoll');
+    const modalAddPollBtn = document.getElementById('modalAddPollBtn');
+    const toolbarStrip = document.getElementById('composerToolbarStrip');
+
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
     const MAX_IMAGES = 4;
     let uploadedMedia = []; // Array of { id, url }
@@ -654,6 +765,93 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log(msg);
         }
     }
+
+    // 1. Activate Poll Mode (Matches Screenshot)
+    if (modalAddPollBtn) {
+        modalAddPollBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            // Clear any media if attaching poll
+            if (uploadedMedia.length > 0) {
+                uploadedMedia = [];
+                renderPreviews();
+                toast('Chuyển sang chế độ thăm dò ý kiến');
+            }
+            if (pollContainer) {
+                pollContainer.style.display = 'block';
+            }
+            if (toolbarStrip) {
+                toolbarStrip.classList.add('poll-mode-active');
+            }
+            const firstInput = pollOptionsList?.querySelector('.poll-option-input');
+            if (firstInput) {
+                firstInput.focus();
+            }
+            updateSubmitState();
+        });
+    }
+
+    // 2. Remove Poll Mode
+    if (btnRemovePoll) {
+        btnRemovePoll.addEventListener('click', function(e) {
+            e.preventDefault();
+            if (pollContainer) {
+                pollContainer.style.display = 'none';
+            }
+            if (toolbarStrip) {
+                toolbarStrip.classList.remove('poll-mode-active');
+            }
+            // Reset poll options back to 2 default inputs
+            if (pollOptionsList) {
+                pollOptionsList.innerHTML = `
+                    <div class="poll-option-row">
+                        <input type="text" class="poll-option-input" name="poll_options[]" value="Có" placeholder="Có" maxlength="80">
+                    </div>
+                    <div class="poll-option-row">
+                        <input type="text" class="poll-option-input" name="poll_options[]" value="Không" placeholder="Không" maxlength="80">
+                    </div>
+                `;
+            }
+            if (pollAddOptionBtn) {
+                pollAddOptionBtn.style.display = 'block';
+            }
+            bindPollInputListeners();
+            updateSubmitState();
+        });
+    }
+
+    // 3. Add more poll options (up to 4)
+    if (pollAddOptionBtn) {
+        pollAddOptionBtn.addEventListener('click', function() {
+            const inputs = pollOptionsList.querySelectorAll('.poll-option-input');
+            const count = inputs.length;
+            if (count >= 4) {
+                toast('Tối đa 4 lựa chọn cho cuộc thăm dò ý kiến');
+                return;
+            }
+
+            const newRow = document.createElement('div');
+            newRow.className = 'poll-option-row';
+            newRow.innerHTML = `<input type="text" class="poll-option-input" name="poll_options[]" placeholder="Lựa chọn ${count + 1}" maxlength="80">`;
+            pollOptionsList.appendChild(newRow);
+
+            const newInput = newRow.querySelector('input');
+            newInput.focus();
+            bindPollInputListeners();
+
+            if (count + 1 >= 4) {
+                pollAddOptionBtn.style.display = 'none';
+            }
+            updateSubmitState();
+        });
+    }
+
+    function bindPollInputListeners() {
+        document.querySelectorAll('.poll-option-input').forEach(input => {
+            input.removeEventListener('input', updateSubmitState);
+            input.addEventListener('input', updateSubmitState);
+        });
+    }
+    bindPollInputListeners();
 
     // Interactive topic selector
     document.querySelectorAll('.topic-item').forEach(item => {
@@ -705,7 +903,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 modalText.value = modalText.value.trim() + '\n\n---\n';
                 modalText.focus();
                 modalText.style.height = 'auto';
-                modalText.style.height = Math.max(60, modalText.scrollHeight) + 'px';
+                modalText.style.height = Math.max(46, modalText.scrollHeight) + 'px';
                 updateSubmitState();
                 toast('Đã thêm dòng nối tiếp vào thread');
             }
@@ -731,13 +929,9 @@ document.addEventListener('DOMContentLoaded', function() {
         toast('Tính năng chọn GIF đang chuẩn bị ra mắt!');
     });
 
-    // Interactive Poll button
-    document.getElementById('modalAddPollBtn')?.addEventListener('click', function() {
-        if (modalText) {
-            modalText.value = (modalText.value.trim() + '\n📊 Thăm dò:\n1. Có\n2. Không').trim() + '\n';
-            modalText.focus();
-            updateSubmitState();
-        }
+    // Interactive Sticker button
+    document.getElementById('modalAddStickerBtn')?.addEventListener('click', function() {
+        toast('Bộ sưu tập nhãn dán đang chuẩn bị ra mắt!');
     });
 
     // Interactive Quote button
@@ -786,12 +980,18 @@ document.addEventListener('DOMContentLoaded', function() {
         const textLen = (modalText?.value || '').trim().length;
         const mediaCount = uploadedMedia.length;
         
+        const isPollActive = pollContainer && pollContainer.style.display !== 'none';
+        const pollInputs = Array.from(document.querySelectorAll('.poll-option-input'))
+            .map(i => i.value.trim())
+            .filter(v => v.length > 0);
+        const pollValid = isPollActive && pollInputs.length >= 2;
+
         if (modalCharCount) {
             modalCharCount.textContent = `${textLen}/2000`;
             modalCharCount.style.display = textLen > 1500 ? 'inline-block' : 'none';
         }
 
-        const canSubmit = (textLen > 0 || mediaCount > 0) && isUploadingCount === 0;
+        const canSubmit = ((textLen > 0 || mediaCount > 0 || pollValid)) && isUploadingCount === 0;
         if (modalSubmitBtn) {
             modalSubmitBtn.disabled = !canSubmit;
             if (canSubmit) {
@@ -802,8 +1002,8 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         if (modalAddImageBtn) {
-            modalAddImageBtn.style.opacity = (mediaCount >= MAX_IMAGES || isUploadingCount > 0) ? '0.4' : '1';
-            modalAddImageBtn.disabled = (mediaCount >= MAX_IMAGES || isUploadingCount > 0);
+            modalAddImageBtn.style.opacity = (mediaCount >= MAX_IMAGES || isUploadingCount > 0 || isPollActive) ? '0.4' : '1';
+            modalAddImageBtn.disabled = (mediaCount >= MAX_IMAGES || isUploadingCount > 0 || isPollActive);
         }
     }
 
@@ -811,11 +1011,10 @@ document.addEventListener('DOMContentLoaded', function() {
     if (modalText) {
         modalText.addEventListener('input', function() {
             this.style.height = 'auto';
-            this.style.height = Math.max(46, this.scrollHeight) + 'px';
+            this.style.height = Math.max(40, this.scrollHeight) + 'px';
             updateSubmitState();
         });
 
-        // Clipboard Paste Image support (Ctrl+V)
         modalText.addEventListener('paste', function(e) {
             const items = (e.clipboardData || e.originalEvent.clipboardData).items;
             const files = [];
@@ -830,7 +1029,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
 
-        // Initialize mention autocomplete
         if (window.setupMentionAutocomplete) {
             window.setupMentionAutocomplete(modalText, document.getElementById('modalMentionDropdown'));
         }
@@ -996,8 +1194,13 @@ document.addEventListener('DOMContentLoaded', function() {
     modalForm?.addEventListener('submit', function(e) {
         e.preventDefault();
         const content = (modalText?.value || '').trim();
-        if (!content && uploadedMedia.length === 0) {
-            toast('Vui lòng nhập nội dung hoặc đính kèm ảnh');
+        const isPollActive = pollContainer && pollContainer.style.display !== 'none';
+        const pollOptions = isPollActive 
+            ? Array.from(document.querySelectorAll('.poll-option-input')).map(i => i.value.trim()).filter(v => v.length > 0)
+            : [];
+
+        if (!content && uploadedMedia.length === 0 && pollOptions.length === 0) {
+            toast('Vui lòng nhập nội dung, đính kèm ảnh hoặc cuộc thăm dò');
             return;
         }
 
@@ -1021,7 +1224,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 parent_id: parentId,
                 repost_of_id: repostOfId,
                 type: postType,
-                media_ids: uploadedMedia.map(m => m.id)
+                media_ids: uploadedMedia.map(m => m.id),
+                poll_options: isPollActive ? pollOptions : []
             })
         })
         .then(res => {
@@ -1044,7 +1248,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 toast(data.message || 'Đăng bài thất bại');
                 if (modalSubmitBtn) modalSubmitBtn.disabled = false;
                 if (modalSubmitSpinner) modalSubmitSpinner.style.display = 'none';
-                if (modalSubmitText) modalSubmitText.textContent = 'Đăng';
+                if (modalSubmitText) modalSubmitText.textContent = 'Đang đăng...';
             }
         })
         .catch(err => {
@@ -1067,8 +1271,29 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         if (modalText) {
             modalText.value = '';
-            modalText.style.height = '46px';
+            modalText.style.height = '40px';
         }
+        if (pollContainer) {
+            pollContainer.style.display = 'none';
+        }
+        if (toolbarStrip) {
+            toolbarStrip.classList.remove('poll-mode-active');
+        }
+        if (pollOptionsList) {
+            pollOptionsList.innerHTML = `
+                <div class="poll-option-row">
+                    <input type="text" class="poll-option-input" name="poll_options[]" value="Có" placeholder="Có" maxlength="80">
+                </div>
+                <div class="poll-option-row">
+                    <input type="text" class="poll-option-input" name="poll_options[]" value="Không" placeholder="Không" maxlength="80">
+                </div>
+            `;
+        }
+        if (pollAddOptionBtn) {
+            pollAddOptionBtn.style.display = 'block';
+        }
+        bindPollInputListeners();
+
         document.getElementById('modalParentId').value = '';
         document.getElementById('modalRepostOfId').value = '';
         document.getElementById('modalPostType').value = 'post';
