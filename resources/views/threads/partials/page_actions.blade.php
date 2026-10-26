@@ -182,7 +182,8 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // 4. Copy thread link to clipboard
+    // 4. Thread 3-Dots Post Menu Actions
+    // 4.1 Copy thread link to clipboard
     document.addEventListener('click', function(e) {
         const copyBtn = e.target.closest('.btn-copy-thread-link');
         if (!copyBtn) return;
@@ -197,6 +198,285 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
     });
+
+    // 4.2 Embed Thread Code
+    document.addEventListener('click', function(e) {
+        const embedBtn = e.target.closest('.btn-embed-thread');
+        if (!embedBtn) return;
+        e.preventDefault();
+
+        const url = embedBtn.getAttribute('data-url');
+        if (url) {
+            const embedCode = `<iframe src="${url}" width="500" height="300" frameborder="0" allowfullscreen></iframe>`;
+            navigator.clipboard.writeText(embedCode).then(() => {
+                showToast('Đã sao chép mã nhúng bài viết vào clipboard');
+            }).catch(() => {
+                showToast('Không thể sao chép mã nhúng');
+            });
+        }
+    });
+
+    // 4.3 AJAX Dropdown Bookmark action
+    document.addEventListener('click', function(e) {
+        const bookmarkOpt = e.target.closest('.btn-ajax-thread-bookmark');
+        if (!bookmarkOpt) return;
+        e.preventDefault();
+
+        const threadId = bookmarkOpt.getAttribute('data-thread-id');
+        const labelEl = bookmarkOpt.querySelector('.bookmark-label');
+        const svgEl = bookmarkOpt.querySelector('.bookmark-svg-icon');
+        const isBookmarked = bookmarkOpt.getAttribute('data-bookmarked') === '1';
+
+        // Optimistic toggle
+        const nextState = !isBookmarked;
+        bookmarkOpt.setAttribute('data-bookmarked', nextState ? '1' : '0');
+        if (labelEl) labelEl.textContent = nextState ? 'Bỏ lưu' : 'Lưu';
+        if (svgEl) svgEl.setAttribute('fill', nextState ? 'currentColor' : 'none');
+
+        // Sync with any bottom action bar bookmark button for this thread
+        const bottomBtn = document.querySelector(`.action-bookmark-btn[data-thread-id="${threadId}"]`);
+        if (bottomBtn) {
+            bottomBtn.classList.toggle('bookmarked', nextState);
+            const bSvg = bottomBtn.querySelector('.bookmark-icon');
+            if (bSvg) bSvg.setAttribute('fill', nextState ? 'currentColor' : 'none');
+        }
+
+        fetch(`/threads/${threadId}/bookmark`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfToken,
+                'Accept': 'application/json'
+            }
+        })
+        .then(res => {
+            if (res.status === 401) {
+                window.location.href = '{{ route("login") }}';
+                return;
+            }
+            return res.json();
+        })
+        .then(data => {
+            if (data && data.success) {
+                showToast(data.bookmarked ? 'Đã lưu vào danh sách bài viết' : 'Đã bỏ lưu bài viết');
+            }
+        })
+        .catch(err => {
+            console.error('Bookmark error:', err);
+            // Revert
+            bookmarkOpt.setAttribute('data-bookmarked', isBookmarked ? '1' : '0');
+            if (labelEl) labelEl.textContent = isBookmarked ? 'Bỏ lưu' : 'Lưu';
+            if (svgEl) svgEl.setAttribute('fill', isBookmarked ? 'currentColor' : 'none');
+            if (bottomBtn) {
+                bottomBtn.classList.toggle('bookmarked', isBookmarked);
+                const bSvg = bottomBtn.querySelector('.bookmark-icon');
+                if (bSvg) bSvg.setAttribute('fill', isBookmarked ? 'currentColor' : 'none');
+            }
+        });
+    });
+
+    // 4.4 Not interested (fade out and remove card)
+    document.addEventListener('click', function(e) {
+        const notIntBtn = e.target.closest('.btn-not-interested');
+        if (!notIntBtn) return;
+        e.preventDefault();
+
+        const card = notIntBtn.closest('.thread-card-wrapper');
+        if (card) {
+            card.style.transition = 'all 0.35s cubic-bezier(0.4, 0, 0.2, 1)';
+            card.style.opacity = '0';
+            card.style.transform = 'scale(0.96)';
+            setTimeout(() => {
+                card.remove();
+            }, 350);
+            showToast('Đã ẩn bài viết. Bạn sẽ ít thấy bài viết tương tự hơn.');
+        }
+    });
+
+    // 4.5 Add to custom feed
+    document.addEventListener('click', function(e) {
+        const feedBtn = e.target.closest('.btn-add-to-custom-feed');
+        if (!feedBtn) return;
+        e.preventDefault();
+        showToast('Đã thêm bài viết vào Bảng Feed tùy chỉnh');
+    });
+
+    // 4.6 Mute notifications
+    document.addEventListener('click', function(e) {
+        const muteBtn = e.target.closest('.btn-mute-thread');
+        if (!muteBtn) return;
+        e.preventDefault();
+        showToast('Đã tắt thông báo cho bài viết này');
+    });
+
+    // 4.7 Restrict user
+    document.addEventListener('click', function(e) {
+        const resBtn = e.target.closest('.btn-restrict-user');
+        if (!resBtn) return;
+        e.preventDefault();
+        const userName = resBtn.getAttribute('data-user-name') || 'người dùng';
+        showToast(`Đã đưa ${userName} vào danh sách hạn chế`);
+    });
+
+    // 4.8 Block user
+    document.addEventListener('click', function(e) {
+        const blockBtn = e.target.closest('.btn-block-user');
+        if (!blockBtn) return;
+        e.preventDefault();
+        const userName = blockBtn.getAttribute('data-user-name') || 'người dùng';
+        const userId = blockBtn.getAttribute('data-user-id');
+
+        if (confirm(`Bạn có chắc chắn muốn chặn ${userName}? Bạn sẽ không thấy bài viết hoặc thông báo từ người này nữa.`)) {
+            if (userId) {
+                document.querySelectorAll(`.btn-block-user[data-user-id="${userId}"]`).forEach(btn => {
+                    const card = btn.closest('.thread-card-wrapper');
+                    if (card) {
+                        card.style.transition = 'opacity 0.3s ease';
+                        card.style.opacity = '0';
+                        setTimeout(() => card.remove(), 300);
+                    }
+                });
+            }
+            showToast(`Đã chặn tài khoản ${userName}`);
+        }
+    });
+
+    // 4.9 Report thread modal trigger
+    document.addEventListener('click', function(e) {
+        const reportBtn = e.target.closest('.btn-report-thread');
+        if (!reportBtn) return;
+        e.preventDefault();
+
+        const threadId = reportBtn.getAttribute('data-thread-id');
+        const authorName = reportBtn.getAttribute('data-author-name') || 'tác giả';
+
+        const authorSpan = document.getElementById('reportModalAuthorName');
+        const inputId = document.getElementById('reportModalThreadId');
+        if (authorSpan) authorSpan.textContent = authorName;
+        if (inputId) inputId.value = threadId;
+
+        const modalEl = document.getElementById('reportThreadModal');
+        if (modalEl && window.bootstrap) {
+            const modal = new bootstrap.Modal(modalEl);
+            modal.show();
+        }
+    });
+
+    // Report modal submit
+    const btnSubmitReport = document.getElementById('btnSubmitReport');
+    if (btnSubmitReport) {
+        btnSubmitReport.addEventListener('click', function() {
+            const modalEl = document.getElementById('reportThreadModal');
+            if (modalEl && window.bootstrap) {
+                bootstrap.Modal.getInstance(modalEl)?.hide();
+            }
+            showToast('Cảm ơn bạn đã báo cáo. Chúng tôi sẽ xem xét bài viết này để bảo vệ cộng đồng.');
+        });
+    }
+
+    // 4.10 Meta AI Modal Interaction
+    let currentMetaAiContext = { threadId: null, author: '', content: '' };
+
+    document.addEventListener('click', function(e) {
+        const aiBtn = e.target.closest('.btn-ask-meta-ai');
+        if (!aiBtn) return;
+        e.preventDefault();
+
+        currentMetaAiContext = {
+            threadId: aiBtn.getAttribute('data-thread-id'),
+            author: aiBtn.getAttribute('data-author-name') || 'người dùng',
+            content: aiBtn.getAttribute('data-thread-content') || ''
+        };
+
+        const authorEl = document.getElementById('metaAiThreadAuthor');
+        const snippetEl = document.getElementById('metaAiThreadSnippet');
+        const chatBody = document.getElementById('metaAiChatBody');
+        const inputEl = document.getElementById('metaAiInput');
+
+        if (authorEl) authorEl.textContent = '@' + currentMetaAiContext.author;
+        if (snippetEl) snippetEl.textContent = currentMetaAiContext.content || '(Bài viết không có văn bản)';
+        if (inputEl) inputEl.value = '';
+
+        if (chatBody) {
+            chatBody.innerHTML = `
+                <div class="meta-ai-welcome-msg">
+                    <p class="text-secondary small mb-0">Chào bạn! Tôi có thể tóm tắt, giải thích ngữ cảnh hoặc dịch nội dung bài viết này. Hãy chọn gợi ý bên trên hoặc đặt câu hỏi bên dưới.</p>
+                </div>
+            `;
+        }
+
+        const modalEl = document.getElementById('metaAiModal');
+        if (modalEl && window.bootstrap) {
+            const modal = new bootstrap.Modal(modalEl);
+            modal.show();
+        }
+    });
+
+    function sendMetaAiQuery(queryText) {
+        if (!queryText || !queryText.trim()) return;
+        const chatBody = document.getElementById('metaAiChatBody');
+        const inputEl = document.getElementById('metaAiInput');
+        if (!chatBody) return;
+
+        // Append User Message
+        const userMsg = document.createElement('div');
+        userMsg.className = 'meta-ai-msg-bubble meta-ai-msg-user';
+        userMsg.textContent = queryText;
+        chatBody.appendChild(userMsg);
+        chatBody.scrollTop = chatBody.scrollHeight;
+
+        if (inputEl) inputEl.value = '';
+
+        // Append Typing Indicator
+        const typingEl = document.createElement('div');
+        typingEl.className = 'meta-ai-typing-indicator';
+        typingEl.innerHTML = '<div class="meta-ai-typing-dot"></div><div class="meta-ai-typing-dot"></div><div class="meta-ai-typing-dot"></div>';
+        chatBody.appendChild(typingEl);
+        chatBody.scrollTop = chatBody.scrollHeight;
+
+        // Generate Contextual Response after 600ms
+        setTimeout(() => {
+            typingEl.remove();
+            const botMsg = document.createElement('div');
+            botMsg.className = 'meta-ai-msg-bubble meta-ai-msg-bot';
+
+            const rawContent = currentMetaAiContext.content;
+            const author = currentMetaAiContext.author;
+            const q = queryText.toLowerCase();
+
+            if (q.includes('tóm tắt') || q.includes('tom tat') || q.includes('summary')) {
+                botMsg.innerHTML = `<strong>📌 Tóm tắt chính:</strong><br>${rawContent ? rawContent : 'Bài viết ngắn gọn, tập trung truyền tải thông điệp nhanh.'}<br><br><span class="text-secondary small">💡 Bài viết của @${author} đang nhận được sự tương tác của cộng đồng Threads.</span>`;
+            } else if (q.includes('bối cảnh') || q.includes('giải thích') || q.includes('context')) {
+                botMsg.innerHTML = `<strong>🔍 Phân tích bối cảnh:</strong><br>Bài viết này được tác giả @${author} chia sẻ nhằm thảo luận về quan điểm đời sống hoặc các vấn đề thịnh hành. Giọng điệu chân thật, tạo không gian để người đọc cùng bình luận và trao đổi.`;
+            } else if (q.includes('dịch') || q.includes('tiếng anh') || q.includes('english')) {
+                botMsg.innerHTML = `<strong>🌐 English translation:</strong><br><em>"${rawContent}"</em><br><br><span class="text-secondary small">*(Bản dịch tự động được tạo bởi Meta AI)*</span>`;
+            } else {
+                botMsg.innerHTML = `<strong>🤖 Meta AI:</strong><br>Về câu hỏi của bạn đối với bài đăng của @${author}: Bài viết mang thông điệp thảo luận cởi mở. Bạn có thể nhấn theo dõi tác giả hoặc để lại một câu trả lời để đóng góp thêm góc nhìn nhé!`;
+            }
+
+            chatBody.appendChild(botMsg);
+            chatBody.scrollTop = chatBody.scrollHeight;
+        }, 650);
+    }
+
+    // Meta AI Prompt chips click
+    document.addEventListener('click', function(e) {
+        const chip = e.target.closest('.meta-ai-chip-btn');
+        if (!chip) return;
+        e.preventDefault();
+        const query = chip.getAttribute('data-query');
+        sendMetaAiQuery(query);
+    });
+
+    // Meta AI Form submit
+    const metaAiForm = document.getElementById('metaAiChatForm');
+    if (metaAiForm) {
+        metaAiForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const input = document.getElementById('metaAiInput');
+            sendMetaAiQuery(input ? input.value : '');
+        });
+    }
 
     // 5. Inline Composer Logic
     const inlineText = document.getElementById('inlineComposerText');

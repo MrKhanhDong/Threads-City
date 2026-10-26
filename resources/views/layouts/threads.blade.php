@@ -905,6 +905,9 @@
     @include('threads.partials.repost_modal')
     @endauth
 
+    @include('threads.partials.meta_ai_modal')
+    @include('threads.partials.report_modal')
+
     @include('threads.partials.page_actions')
     @include('threads.partials.poll_actions')
     @stack('threads-scripts')

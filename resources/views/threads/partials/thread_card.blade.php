@@ -11,6 +11,7 @@
     $isReplyItem = !empty($isReplyItem) ? $isReplyItem : false;
     $firstTag = $displayThread->tags->first();
     $isTrendingTag = ($firstTag && in_array(mb_strtolower($firstTag->name), ['biểu tình', 'bieu tinh'])) || ($displayThread->slug === 'thread-badat3927-bieu-tinh');
+    $cleanContent = preg_replace('/<br\s*\/?>/i', "\n", $displayThread->content ?? '');
 @endphp
 
 <article class="thread-card-wrapper {{ $hasReplies ? 'has-replies-line' : '' }} {{ $isReplyItem ? 'is-reply-item' : '' }}" id="thread-{{ $thread->id }}" data-live-key="thread-{{ $thread->id }}" data-thread-id="{{ $displayThread->id }}">
@@ -109,41 +110,159 @@
 
                 <!-- More Options (3 dots) -->
                 <div class="dropdown">
-                    <button class="thread-more-btn" data-bs-toggle="dropdown" aria-expanded="false" title="Thêm tùy chọn">
+                    <button class="thread-more-btn" data-bs-toggle="dropdown" aria-expanded="false" title="Thêm tùy chọn" aria-label="Tùy chọn bài viết">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <circle cx="12" cy="12" r="1.5" fill="currentColor"></circle>
                             <circle cx="19" cy="12" r="1.5" fill="currentColor"></circle>
                             <circle cx="5" cy="12" r="1.5" fill="currentColor"></circle>
                         </svg>
                     </button>
-                    <ul class="dropdown-menu dropdown-menu-end threads-dropdown-menu">
-                        <li>
-                            <button type="button" class="threads-dropdown-item w-100 text-start btn-copy-thread-link" data-url="{{ route('threads.show', $displayThread->id) }}">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <div class="dropdown-menu dropdown-menu-end thread-options-dropdown-menu">
+                        <!-- Group 1: Hỏi Meta AI -->
+                        <button type="button" class="thread-option-item btn-ask-meta-ai" 
+                            data-thread-id="{{ $displayThread->id }}" 
+                            data-author-name="{{ e($author->name) }}"
+                            data-thread-content="{{ e(Str::limit(strip_tags($cleanContent), 280)) }}">
+                            <span class="thread-option-label">Hỏi Meta AI</span>
+                            <span class="thread-option-icon">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                                    <g transform="translate(12,12)">
+                                        <ellipse cx="0" cy="-7.5" rx="1.2" ry="2.2" transform="rotate(0) rotate(18, 0, -7.5)" fill="currentColor"/>
+                                        <ellipse cx="0" cy="-7.5" rx="1.2" ry="2.2" transform="rotate(40) rotate(18, 0, -7.5)" fill="currentColor"/>
+                                        <ellipse cx="0" cy="-7.5" rx="1.2" ry="2.2" transform="rotate(80) rotate(18, 0, -7.5)" fill="currentColor"/>
+                                        <ellipse cx="0" cy="-7.5" rx="1.2" ry="2.2" transform="rotate(120) rotate(18, 0, -7.5)" fill="currentColor"/>
+                                        <ellipse cx="0" cy="-7.5" rx="1.2" ry="2.2" transform="rotate(160) rotate(18, 0, -7.5)" fill="currentColor"/>
+                                        <ellipse cx="0" cy="-7.5" rx="1.2" ry="2.2" transform="rotate(200) rotate(18, 0, -7.5)" fill="currentColor"/>
+                                        <ellipse cx="0" cy="-7.5" rx="1.2" ry="2.2" transform="rotate(240) rotate(18, 0, -7.5)" fill="currentColor"/>
+                                        <ellipse cx="0" cy="-7.5" rx="1.2" ry="2.2" transform="rotate(280) rotate(18, 0, -7.5)" fill="currentColor"/>
+                                        <ellipse cx="0" cy="-7.5" rx="1.2" ry="2.2" transform="rotate(320) rotate(18, 0, -7.5)" fill="currentColor"/>
+                                    </g>
+                                </svg>
+                            </span>
+                        </button>
+
+                        <div class="thread-option-divider"></div>
+
+                        <!-- Group 2: Sao chép liên kết & Lấy mã nhúng -->
+                        <button type="button" class="thread-option-item btn-copy-thread-link" data-url="{{ route('threads.show', $displayThread->id) }}">
+                            <span class="thread-option-label">Sao chép liên kết</span>
+                            <span class="thread-option-icon">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
                                     <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
                                 </svg>
-                                <span>Sao chép liên kết</span>
-                            </button>
-                        </li>
+                            </span>
+                        </button>
+                        <button type="button" class="thread-option-item btn-embed-thread" data-url="{{ route('threads.show', $displayThread->id) }}">
+                            <span class="thread-option-label">Lấy mã nhúng</span>
+                            <span class="thread-option-icon">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M7 4a3 3 0 0 0-3 3v2a3 3 0 0 1-3 3 3 3 0 0 1 3 3v2a3 3 0 0 0 3 3"></path>
+                                    <path d="M17 4a3 3 0 0 1 3 3v2a3 3 0 0 0 3 3 3 3 0 0 0-3 3v2a3 3 0 0 1-3 3"></path>
+                                    <circle cx="9.5" cy="12" r="0.9" fill="currentColor"></circle>
+                                    <circle cx="12" cy="12" r="0.9" fill="currentColor"></circle>
+                                    <circle cx="14.5" cy="12" r="0.9" fill="currentColor"></circle>
+                                </svg>
+                            </span>
+                        </button>
+
+                        <div class="thread-option-divider"></div>
+
+                        <!-- Group 3: Lưu / Bỏ lưu & Không quan tâm -->
+                        <button type="button" class="thread-option-item btn-ajax-thread-bookmark" data-thread-id="{{ $displayThread->id }}" data-bookmarked="{{ $isBookmarked ? '1' : '0' }}">
+                            <span class="thread-option-label bookmark-label">{{ $isBookmarked ? 'Bỏ lưu' : 'Lưu' }}</span>
+                            <span class="thread-option-icon">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="{{ $isBookmarked ? 'currentColor' : 'none' }}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="bookmark-svg-icon">
+                                    <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+                                </svg>
+                            </span>
+                        </button>
+                        <button type="button" class="thread-option-item btn-not-interested" data-thread-id="{{ $displayThread->id }}">
+                            <span class="thread-option-label">Không quan tâm</span>
+                            <span class="thread-option-icon">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                                    <line x1="1" y1="1" x2="23" y2="23"></line>
+                                </svg>
+                            </span>
+                        </button>
+
+                        <div class="thread-option-divider"></div>
+
+                        <!-- Group 4: Thêm vào bảng feed -->
+                        <button type="button" class="thread-option-item btn-add-to-custom-feed" data-thread-id="{{ $displayThread->id }}">
+                            <span class="thread-option-label">Thêm vào bảng feed</span>
+                            <span class="thread-option-icon">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="9 18 15 12 9 6"></polyline>
+                                </svg>
+                            </span>
+                        </button>
+
+                        <div class="thread-option-divider"></div>
+
+                        <!-- Group 5: Tắt thông báo, Hạn chế, Chặn, Báo cáo -->
+                        <button type="button" class="thread-option-item btn-mute-thread" data-thread-id="{{ $displayThread->id }}">
+                            <span class="thread-option-label">Tắt thông báo</span>
+                            <span class="thread-option-icon">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+                                    <circle cx="9" cy="7" r="4"></circle>
+                                    <line x1="17" y1="11" x2="22" y2="16"></line>
+                                    <line x1="22" y1="11" x2="17" y2="16"></line>
+                                </svg>
+                            </span>
+                        </button>
+                        <button type="button" class="thread-option-item btn-restrict-user" data-user-id="{{ $author->id }}" data-user-name="{{ e($author->name) }}">
+                            <span class="thread-option-label">Hạn chế</span>
+                            <span class="thread-option-icon">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                                    <circle cx="8.5" cy="7" r="4"></circle>
+                                    <path d="M17.5 12.5l3.5 1.5v3.2c0 2.2-3.5 3.8-3.5 3.8s-3.5-1.6-3.5-3.8V14l3.5-1.5z"></path>
+                                </svg>
+                            </span>
+                        </button>
+                        <button type="button" class="thread-option-item thread-option-danger btn-block-user" data-user-id="{{ $author->id }}" data-user-name="{{ e($author->name) }}">
+                            <span class="thread-option-label">Chặn</span>
+                            <span class="thread-option-icon">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line>
+                                </svg>
+                            </span>
+                        </button>
+                        <button type="button" class="thread-option-item thread-option-danger btn-report-thread" data-thread-id="{{ $displayThread->id }}" data-author-name="{{ e($author->name) }}">
+                            <span class="thread-option-label">Báo cáo</span>
+                            <span class="thread-option-icon">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
+                                    <line x1="12" y1="8" x2="12" y2="12"></line>
+                                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                                </svg>
+                            </span>
+                        </button>
+
+                        <!-- Author / Admin: Xóa bài viết -->
                         @auth
                             @if($currentUser->id === $thread->user_id || $currentUser->isAdmin())
-                                <li>
-                                    <form action="{{ route('threads.destroy', $thread->id) }}" data-live-submit method="post" onsubmit="return confirm('Bạn có chắc chắn muốn xóa bài viết này không?');">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="threads-dropdown-item w-100 text-start text-danger border-0 bg-transparent">
-                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <div class="thread-option-divider"></div>
+                                <form action="{{ route('threads.destroy', $thread->id) }}" data-live-submit method="post" onsubmit="return confirm('Bạn có chắc chắn muốn xóa bài viết này không?');">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="thread-option-item thread-option-danger w-100">
+                                        <span class="thread-option-label">Xóa bài viết</span>
+                                        <span class="thread-option-icon">
+                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                                 <polyline points="3 6 5 6 21 6"></polyline>
                                                 <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
                                             </svg>
-                                            <span>Xóa bài viết</span>
-                                        </button>
-                                    </form>
-                                </li>
+                                        </span>
+                                    </button>
+                                </form>
                             @endif
                         @endauth
-                    </ul>
+                    </div>
                 </div>
             </div>
 
@@ -927,5 +1046,68 @@
         font-size: 13px;
         margin-top: 8px;
         padding-left: 2px;
+    }
+
+    /* Threads Post 3-Dots Options Dropdown Menu (Exact match to screenshot) */
+    .thread-options-dropdown-menu {
+        min-width: 260px;
+        background: #181818 !important;
+        border: 1px solid rgba(255, 255, 255, 0.12) !important;
+        border-radius: 18px !important;
+        padding: 6px !important;
+        box-shadow: 0 16px 40px rgba(0, 0, 0, 0.8) !important;
+        z-index: 1050;
+        margin-top: 6px !important;
+    }
+    .thread-option-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+        padding: 10px 14px;
+        background: transparent;
+        border: none;
+        border-radius: 12px;
+        color: #f3f5f7;
+        font-size: 15px;
+        font-weight: 600;
+        cursor: pointer;
+        text-align: left;
+        transition: background 0.12s ease, color 0.12s ease;
+        text-decoration: none;
+        user-select: none;
+    }
+    .thread-option-item:hover,
+    .thread-option-item:focus {
+        background: rgba(255, 255, 255, 0.08);
+        color: #ffffff;
+        outline: none;
+    }
+    .thread-option-item.thread-option-danger {
+        color: #ff3b30 !important;
+    }
+    .thread-option-item.thread-option-danger .thread-option-icon svg {
+        stroke: #ff3b30 !important;
+    }
+    .thread-option-item.thread-option-danger:hover {
+        background: rgba(255, 59, 48, 0.12);
+        color: #ff3b30 !important;
+    }
+    .thread-option-label {
+        flex: 1;
+        white-space: nowrap;
+    }
+    .thread-option-icon {
+        flex-shrink: 0;
+        margin-left: 14px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .thread-option-divider {
+        height: 1px;
+        background: rgba(255, 255, 255, 0.08);
+        margin: 4px 6px;
+        border: none;
     }
 </style>
