@@ -21,7 +21,7 @@
                         @else
                             <div class="user-avatar-letter">{{ mb_substr(auth()->user()->name, 0, 1) }}</div>
                         @endif
-                        <div class="flex-grow-1">
+                        <div class="flex-grow-1 position-relative">
                             <div class="fw-semibold text-white fs-6 mb-1">{{ auth()->user()->handle() }}</div>
                             <textarea 
                                 name="content" 
@@ -31,6 +31,7 @@
                                 placeholder="Có gì mới hôm nay?..." 
                                 maxlength="2000"
                             ></textarea>
+                            <div id="modalMentionDropdown" class="mention-autocomplete-dropdown" style="display: none;"></div>
                         </div>
                     </div>
 
@@ -232,6 +233,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 handleFilesUpload(files);
             }
         });
+
+        // Initialize mention autocomplete
+        if (window.setupMentionAutocomplete) {
+            window.setupMentionAutocomplete(modalText, document.getElementById('modalMentionDropdown'));
+        }
     }
 
     // Trigger file chooser

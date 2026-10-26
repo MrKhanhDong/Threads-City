@@ -129,8 +129,13 @@
             </div>
 
             <!-- Content Area -->
+            @php
+                $formattedContent = e($displayThread->content);
+                $formattedContent = preg_replace('/#([\p{L}\p{N}_]+)/u', '<a href="' . route('threads.index') . '?q=%23$1" class="thread-hashtag" onclick="event.stopPropagation();">#$1</a>', $formattedContent);
+                $formattedContent = preg_replace('/@([A-Za-z0-9_]{3,30})/u', '<a href="/@$1" class="thread-mention" onclick="event.stopPropagation();">@$1</a>', $formattedContent);
+            @endphp
             <div class="thread-content-text">
-                {!! preg_replace('/#([\p{L}\p{N}_]+)/u', '<a href="' . route('posts.index') . '?q=$1" class="thread-hashtag">#$1</a>', nl2br(e($displayThread->content))) !!}
+                {!! nl2br($formattedContent) !!}
             </div>
 
             <!-- Media Gallery (Images) -->
@@ -420,12 +425,14 @@
         margin-bottom: 12px;
         white-space: pre-line;
     }
-    .thread-hashtag {
+    .thread-hashtag, .thread-mention {
         color: var(--accent-blue);
         font-weight: 500;
+        text-decoration: none;
     }
-    .thread-hashtag:hover {
+    .thread-hashtag:hover, .thread-mention:hover {
         text-decoration: underline;
+        color: #38bdf8;
     }
 
     /* Media Gallery Grid */

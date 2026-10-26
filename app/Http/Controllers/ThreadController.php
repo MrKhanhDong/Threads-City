@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Media;
 use App\Models\Post;
 use App\Models\Tag;
+use App\Models\User;
+use App\Notifications\ThreadInteractionNotification;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -14,6 +16,36 @@ use Illuminate\Support\Str;
 
 class ThreadController extends Controller
 {
+    public function mentionSuggestions(Request $request): JsonResponse
+    {
+        $q = trim((string) $request->query('q', ''));
+        if (mb_strlen($q) === 0) {
+            $users = User::query()
+                ->whereNotNull('username')
+                ->latest()
+                ->limit(6)
+                ->get(['id', 'name', 'username', 'avatar_path']);
+        } else {
+            $users = User::query()
+                ->where(function ($query) use ($q): void {
+                    $query->where('username', 'like', "%{$q}%")
+                        ->orWhere('name', 'like', "%{$q}%");
+                })
+                ->limit(6)
+                ->get(['id', 'name', 'username', 'avatar_path']);
+        }
+
+        $results = $users->map(fn (User $u): array => [
+            'id' => $u->id,
+            'name' => $u->name,
+            'username' => $u->username,
+            'handle' => '@'.$u->username,
+            'avatar_url' => $u->avatar_path ? route('avatar.show', $u->id) : null,
+        ]);
+
+        return response()->json($results);
+    }
+
     public function index(Request $request): View|JsonResponse
     {
         $tab = $request->query('tab', 'for-you');
@@ -143,6 +175,48 @@ class ThreadController extends Controller
 
             return $post;
         });
+
+        $author = $request->user();
+        $notifiedUserIds = [$author->id];
+
+        if ($post->parent_id) {
+            $parent = Post::with('author')->find($post->parent_id);
+            if ($parent && $parent->user_id && ! in_array($parent->user_id, $notifiedUserIds, true)) {
+                $notifiedUserIds[] = $parent->user_id;
+                $parent->author?->notify(new ThreadInteractionNotification([
+                    'action' => 'reply',
+                    'actor_id' => $author->id,
+                    'actor_name' => $author->name,
+                    'actor_handle' => $author->username ? '@'.$author->username : '@'.Str::slug($author->name, '_'),
+                    'actor_avatar' => $author->avatar_path ? route('avatar.show', $author->id) : null,
+                    'thread_id' => $post->id,
+                    'content_snippet' => Str::limit(strip_tags($data['content'] ?? ''), 80),
+                    'url' => route('threads.show', $post->id),
+                ]));
+            }
+        }
+
+        preg_match_all('/@([A-Za-z0-9_]{3,30})/', $data['content'] ?? '', $mentionMatches);
+        if (! empty($mentionMatches[1])) {
+            $mentionedUsernames = array_unique($mentionMatches[1]);
+            $mentionedUsers = User::whereIn('username', $mentionedUsernames)
+                ->whereNotIn('id', $notifiedUserIds)
+                ->get();
+
+            foreach ($mentionedUsers as $mentionedUser) {
+                $notifiedUserIds[] = $mentionedUser->id;
+                $mentionedUser->notify(new ThreadInteractionNotification([
+                    'action' => 'mention',
+                    'actor_id' => $author->id,
+                    'actor_name' => $author->name,
+                    'actor_handle' => $author->username ? '@'.$author->username : '@'.Str::slug($author->name, '_'),
+                    'actor_avatar' => $author->avatar_path ? route('avatar.show', $author->id) : null,
+                    'thread_id' => $post->id,
+                    'content_snippet' => Str::limit(strip_tags($data['content'] ?? ''), 80),
+                    'url' => route('threads.show', $post->id),
+                ]));
+            }
+        }
 
         if ($request->wantsJson()) {
             $post->load(['author', 'media', 'repostOf.author', 'repostOf.media']);

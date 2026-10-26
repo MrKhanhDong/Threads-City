@@ -40,7 +40,7 @@
                     @else
                         <div class="user-avatar-letter">{{ mb_substr(auth()->user()->name, 0, 1) }}</div>
                     @endif
-                    <div class="flex-grow-1">
+                    <div class="flex-grow-1 position-relative">
                         <div class="text-secondary small mb-1">
                             Trả lời <span class="text-white fw-bold">{{ $thread->author->handle() }}</span>
                         </div>
@@ -52,6 +52,7 @@
                             placeholder="Nhập câu trả lời của bạn..." 
                             maxlength="2000"
                         ></textarea>
+                        <div id="replyMentionDropdown" class="mention-autocomplete-dropdown" style="display: none;"></div>
                     </div>
                 </div>
 
@@ -199,6 +200,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
         if (window.location.hash === '#replyBox') {
             replyInput.focus();
+        }
+
+        if (window.setupMentionAutocomplete) {
+            window.setupMentionAutocomplete(replyInput, document.getElementById('replyMentionDropdown'));
         }
     }
 });
