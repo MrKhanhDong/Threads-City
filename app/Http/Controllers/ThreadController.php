@@ -127,7 +127,7 @@ class ThreadController extends Controller
      * @param  iterable<Post>  $posts
      * @return array<string, array<int, int>>
      */
-    protected function batchPreloadInteractions(?User $user, iterable $posts): array
+    public function batchPreloadInteractions(?User $user, iterable $posts): array
     {
         $interactions = [
             'liked' => [],
@@ -224,7 +224,7 @@ class ThreadController extends Controller
         }
 
         $data = $request->validate([
-            'content' => 'required_without_all:media_ids,images,poll_options,attached_document_html,location|nullable|string|max:2000',
+            'content' => 'required_without_all:media_ids,images,poll_options,attached_document_html,location,repost_of_id|nullable|string|max:2000',
             'parent_id' => 'nullable|exists:posts,id',
             'repost_of_id' => 'nullable|exists:posts,id',
             'type' => 'nullable|in:post,reply,repost,quote',
@@ -375,6 +375,23 @@ class ThreadController extends Controller
                 $notifiedUserIds[] = $parent->user_id;
                 $parent->author?->notify(new ThreadInteractionNotification([
                     'action' => 'reply',
+                    'actor_id' => $author->id,
+                    'actor_name' => $author->name,
+                    'actor_handle' => $author->username ? '@'.$author->username : '@'.Str::slug($author->name, '_'),
+                    'actor_avatar' => $author->avatar_path ? route('avatar.show', $author->id) : null,
+                    'thread_id' => $post->id,
+                    'content_snippet' => Str::limit(strip_tags($data['content'] ?? ''), 80),
+                    'url' => route('threads.show', $post->id),
+                ]));
+            }
+        }
+
+        if ($post->repost_of_id) {
+            $quotedTarget = Post::with('author')->find($post->repost_of_id);
+            if ($quotedTarget && $quotedTarget->user_id && ! in_array($quotedTarget->user_id, $notifiedUserIds, true)) {
+                $notifiedUserIds[] = $quotedTarget->user_id;
+                $quotedTarget->author?->notify(new ThreadInteractionNotification([
+                    'action' => $post->type === 'quote' ? 'quote' : 'repost',
                     'actor_id' => $author->id,
                     'actor_name' => $author->name,
                     'actor_handle' => $author->username ? '@'.$author->username : '@'.Str::slug($author->name, '_'),

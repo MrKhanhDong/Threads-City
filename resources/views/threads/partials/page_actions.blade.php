@@ -127,9 +127,30 @@ document.addEventListener('DOMContentLoaded', function() {
             snippet: repostBtn.getAttribute('data-content-snippet')
         };
 
+        const isCurrentlyReposted = repostBtn.classList.contains('reposted');
+        const titleEl = document.getElementById('repostOptionTitle');
+        const descEl = document.getElementById('repostOptionDesc');
+        const iconBox = document.getElementById('repostOptionIconBox');
+
+        if (titleEl && descEl) {
+            if (isCurrentlyReposted) {
+                titleEl.textContent = 'Hủy đăng lại';
+                titleEl.classList.add('text-danger');
+                titleEl.classList.remove('text-white');
+                descEl.textContent = 'Gỡ bài viết này khỏi trang cá nhân của bạn';
+                if (iconBox) iconBox.style.color = '#ff4433';
+            } else {
+                titleEl.textContent = 'Đăng lại';
+                titleEl.classList.remove('text-danger');
+                titleEl.classList.add('text-white');
+                descEl.textContent = 'Chia sẻ trực tiếp bài này đến trang cá nhân của bạn';
+                if (iconBox) iconBox.style.color = '#00ba7c';
+            }
+        }
+
         const modalEl = document.getElementById('repostActionModal');
         if (modalEl && window.bootstrap) {
-            const modal = new bootstrap.Modal(modalEl);
+            const modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
             modal.show();
         }
     });
@@ -145,7 +166,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 bootstrap.Modal.getInstance(modalEl)?.hide();
             }
 
-            fetch(`/threads/${activeRepostThreadId}/repost`, {
+            const targetThreadId = activeRepostThreadId;
+
+            fetch(`/threads/${targetThreadId}/repost`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -153,14 +176,43 @@ document.addEventListener('DOMContentLoaded', function() {
                     'Accept': 'application/json'
                 }
             })
-            .then(res => res.json())
+            .then(res => {
+                if (res.status === 401) {
+                    if (typeof window.checkAuth === 'function') window.checkAuth('đăng lại bài viết');
+                    return;
+                }
+                return res.json();
+            })
             .then(data => {
                 if (data && data.success) {
                     showToast(data.reposted ? 'Đã đăng lại lên trang cá nhân' : 'Đã hủy đăng lại');
+
+                    // Synchronize all repost buttons for this thread on the page
+                    document.querySelectorAll(`.action-repost-btn[data-thread-id="${targetThreadId}"]`).forEach(btn => {
+                        btn.classList.toggle('reposted', !!data.reposted);
+                        const icon = btn.querySelector('.repost-icon');
+                        if (icon) {
+                            icon.setAttribute('stroke', data.reposted ? '#00ba7c' : 'currentColor');
+                        }
+                        const countSpan = btn.querySelector('.repost-count-span');
+                        if (countSpan) {
+                            if (data.reposts_count > 0) {
+                                countSpan.textContent = data.reposts_count >= 1000 
+                                    ? (data.reposts_count / 1000).toFixed(1).replace('.', ',') + 'K' 
+                                    : data.reposts_count;
+                            } else {
+                                countSpan.textContent = '';
+                            }
+                        }
+                    });
+
                     window.dispatchEvent(new Event('threads:refresh'));
                 }
             })
-            .catch(err => console.error(err));
+            .catch(err => {
+                console.error(err);
+                showToast('Lỗi khi thao tác đăng lại bài viết');
+            });
         });
     }
 
@@ -177,19 +229,56 @@ document.addEventListener('DOMContentLoaded', function() {
 
             const newModalEl = document.getElementById('newThreadModal');
             if (newModalEl && window.bootstrap) {
-                document.getElementById('modalRepostOfId').value = activeRepostThreadId;
-                document.getElementById('modalPostType').value = 'quote';
-                document.getElementById('newThreadModalTitle').textContent = 'Trích dẫn bài viết';
-
+                const repostOfInput = document.getElementById('modalRepostOfId');
+                const postTypeInput = document.getElementById('modalPostType');
+                const modalTitle = document.getElementById('newThreadModalTitle');
                 const quoteContainer = document.getElementById('modalQuotedThreadContainer');
-                quoteContainer.style.display = 'block';
-                quoteContainer.innerHTML = `
-                    <div class="fw-bold fs-6 text-white">${activeRepostMeta.name} <span class="text-secondary small">${activeRepostMeta.handle}</span></div>
-                    <div class="text-secondary small mt-1">${activeRepostMeta.snippet}</div>
-                `;
+                const composerText = document.getElementById('modalComposerText');
+                const modalSubmitBtn = document.getElementById('modalSubmitBtn');
 
-                const modal = new bootstrap.Modal(newModalEl);
+                if (repostOfInput) repostOfInput.value = activeRepostThreadId;
+                if (postTypeInput) postTypeInput.value = 'quote';
+                if (modalTitle) modalTitle.textContent = 'Trích dẫn bài viết';
+
+                if (quoteContainer) {
+                    quoteContainer.style.display = 'block';
+                    quoteContainer.innerHTML = `
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <div class="d-flex align-items-center gap-2">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="text-secondary"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                                <span class="fw-bold text-white small">${activeRepostMeta.name}</span>
+                                <span class="text-secondary small">${activeRepostMeta.handle}</span>
+                            </div>
+                            <button type="button" class="btn-close-quote-preview" id="btnCancelQuoteAttachment" title="Gỡ trích dẫn">✕</button>
+                        </div>
+                        <div class="text-secondary small" style="line-height: 1.4;">${activeRepostMeta.snippet || '(Không có văn bản)'}</div>
+                    `;
+
+                    document.getElementById('btnCancelQuoteAttachment')?.addEventListener('click', function() {
+                        if (repostOfInput) repostOfInput.value = '';
+                        if (postTypeInput) postTypeInput.value = 'post';
+                        if (modalTitle) modalTitle.textContent = 'Thread mới';
+                        if (composerText) composerText.placeholder = 'Có gì mới?';
+                        quoteContainer.style.display = 'none';
+                        quoteContainer.innerHTML = '';
+                        if (typeof window.updateComposerSubmitState === 'function') {
+                            window.updateComposerSubmitState();
+                        }
+                    });
+                }
+
+                if (composerText) {
+                    composerText.placeholder = 'Thêm suy nghĩ của bạn...';
+                }
+
+                if (modalSubmitBtn) {
+                    modalSubmitBtn.disabled = false;
+                    modalSubmitBtn.classList.add('is-active');
+                }
+
+                const modal = bootstrap.Modal.getInstance(newModalEl) || new bootstrap.Modal(newModalEl);
                 modal.show();
+                setTimeout(() => composerText?.focus(), 300);
             }
         });
     }

@@ -371,6 +371,12 @@ document.addEventListener('DOMContentLoaded', function() {
         if (postTypeInput) postTypeInput.value = 'quote';
         if (titleHeading) titleHeading.textContent = 'Trích dẫn';
 
+        const submitBtn = document.getElementById('modalSubmitBtn');
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.classList.add('is-active');
+        }
+
         if (quoteContainer) {
             const avatarHtml = thread.author_avatar 
                 ? `<img src="${thread.author_avatar}" style="width: 22px; height: 22px; border-radius: 50%; object-fit: cover;" alt="${thread.author_name}">`
@@ -398,6 +404,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (repostInput) repostInput.value = '';
                 if (postTypeInput) postTypeInput.value = 'post';
                 if (titleHeading) titleHeading.textContent = 'Thread mới';
+                if (typeof window.updateComposerSubmitState === 'function') {
+                    window.updateComposerSubmitState();
+                }
             });
         }
 

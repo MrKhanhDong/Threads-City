@@ -25,7 +25,7 @@ class NotificationController extends Controller
         } elseif (in_array($tab, ['follow', 'follows'], true)) {
             $query->where('data->action', 'follow');
         } elseif (in_array($tab, ['repost', 'reposts'], true)) {
-            $query->where('data->action', 'repost');
+            $query->whereIn('data->action', ['repost', 'quote']);
         }
 
         $unread = $user->unreadNotifications()->count();

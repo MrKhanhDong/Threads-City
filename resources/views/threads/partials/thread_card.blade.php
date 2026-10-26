@@ -53,7 +53,7 @@
                 <path d="M21 13v2a4 4 0 0 1-4 4H3"></path>
             </svg>
             <a href="{{ route('profile.show', $repostedBy->username ?? $repostedBy->id) }}" class="repost-author-link">
-                <strong>{{ $repostedBy->name }}</strong> đã đăng lại
+                <strong>{{ (auth()->check() && auth()->id() === $repostedBy->id) ? 'Bạn' : $repostedBy->name }}</strong> đã đăng lại
             </a>
         </div>
     @endif

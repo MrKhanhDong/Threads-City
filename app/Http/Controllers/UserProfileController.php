@@ -54,8 +54,9 @@ class UserProfileController extends Controller
         $followersCount = $user->followers()->count();
         $followingCount = $user->following()->count();
         $threadsCount = Post::published()->where('user_id', $user->id)->count();
+        $userInteractions = app(ThreadController::class)->batchPreloadInteractions($request->user(), $threads->items());
 
-        return view('profile.show', compact('user', 'threads', 'tab', 'followersCount', 'followingCount', 'threadsCount'));
+        return view('profile.show', compact('user', 'threads', 'tab', 'followersCount', 'followingCount', 'threadsCount', 'userInteractions'));
     }
 
     public function followers(Request $request, string $username): JsonResponse

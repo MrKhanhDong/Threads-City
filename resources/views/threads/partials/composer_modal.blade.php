@@ -761,6 +761,26 @@
 .emoji-opt:hover {
     transform: scale(1.25);
 }
+.btn-close-quote-preview {
+    background: rgba(255, 255, 255, 0.1);
+    color: #a0a0a0;
+    border: none;
+    border-radius: 50%;
+    width: 22px;
+    height: 22px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    cursor: pointer;
+    line-height: 1;
+    padding: 0;
+    transition: background 0.15s, color 0.15s;
+}
+.btn-close-quote-preview:hover {
+    background: rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+}
 </style>
 
 <script>
@@ -1021,14 +1041,15 @@ document.addEventListener('DOMContentLoaded', function() {
         const attachedDocInput = document.getElementById('modalAttachedDocHtml');
         const hasAttachedDoc = !!(attachedDocInput && attachedDocInput.value && attachedDocInput.value.trim().length > 0);
         const locationVal = (document.getElementById('modalLocationInput')?.value || '').trim();
-        const hasLocation = locationVal.length > 0;
+        const repostOfId = document.getElementById('modalRepostOfId')?.value;
+        const hasRepost = !!(repostOfId && repostOfId.trim().length > 0);
 
         if (modalCharCount) {
             modalCharCount.textContent = `${textLen}/2000`;
             modalCharCount.style.display = textLen > 1500 ? 'inline-block' : 'none';
         }
 
-        const canSubmit = ((textLen > 0 || mediaCount > 0 || pollValid || hasAttachedDoc || hasLocation)) && isUploadingCount === 0;
+        const canSubmit = ((textLen > 0 || mediaCount > 0 || pollValid || hasAttachedDoc || hasLocation || hasRepost)) && isUploadingCount === 0;
         if (modalSubmitBtn) {
             modalSubmitBtn.disabled = !canSubmit;
             if (canSubmit) {
@@ -1043,6 +1064,7 @@ document.addEventListener('DOMContentLoaded', function() {
             modalAddImageBtn.disabled = (mediaCount >= MAX_IMAGES || isUploadingCount > 0 || isPollActive);
         }
     }
+    window.updateComposerSubmitState = updateSubmitState;
 
     // Auto-grow textarea
     if (modalText) {
@@ -1239,7 +1261,11 @@ document.addEventListener('DOMContentLoaded', function() {
         const attachedDocHtml = attachedDocInput ? decodeURIComponent(attachedDocInput.value || '') : '';
         const locationVal = (document.getElementById('modalLocationInput')?.value || '').trim();
 
-        if (!content && uploadedMedia.length === 0 && pollOptions.length === 0 && !attachedDocHtml && !locationVal) {
+        const parentId = document.getElementById('modalParentId')?.value || null;
+        const repostOfId = document.getElementById('modalRepostOfId')?.value || null;
+        const postType = document.getElementById('modalPostType')?.value || 'post';
+
+        if (!content && uploadedMedia.length === 0 && pollOptions.length === 0 && !attachedDocHtml && !locationVal && !repostOfId) {
             toast('Vui lòng nhập nội dung, đính kèm ảnh, cuộc thăm dò hoặc vị trí');
             return;
         }
@@ -1247,10 +1273,6 @@ document.addEventListener('DOMContentLoaded', function() {
         if (modalSubmitBtn) modalSubmitBtn.disabled = true;
         if (modalSubmitSpinner) modalSubmitSpinner.style.display = 'inline-block';
         if (modalSubmitText) modalSubmitText.textContent = 'Đang đăng...';
-
-        const parentId = document.getElementById('modalParentId')?.value || null;
-        const repostOfId = document.getElementById('modalRepostOfId')?.value || null;
-        const postType = document.getElementById('modalPostType')?.value || 'post';
 
         fetch(modalForm.action, {
             method: 'POST',

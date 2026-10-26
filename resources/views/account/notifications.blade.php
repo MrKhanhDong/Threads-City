@@ -87,7 +87,7 @@
                                 </svg>
                             @elseif($action === 'mention')
                                 <span class="notif-mention-at">@</span>
-                            @elseif($action === 'repost')
+                            @elseif($action === 'repost' || $action === 'quote')
                                 <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
                                     <path d="M17 1l4 4-4 4"></path>
                                     <path d="M3 11V9a4 4 0 0 1 4-4h14"></path>
@@ -123,6 +123,8 @@
                                 đã nhắc đến bạn trong một bài viết:
                             @elseif($action === 'repost')
                                 đã đăng lại bài viết của bạn.
+                            @elseif($action === 'quote')
+                                đã trích dẫn bài viết của bạn:
                             @else
                                 đã tương tác với bạn.
                             @endif
@@ -289,8 +291,9 @@
     .notif-action-badge.action-mention {
         background: #10b981;
     }
-    .notif-action-badge.action-repost {
-        background: #06b6d4;
+    .notif-action-badge.action-repost,
+    .notif-action-badge.action-quote {
+        background: #00ba7c;
     }
     .notif-mention-at {
         font-size: 11px;

@@ -75,7 +75,7 @@
 
     <!-- User's Threads Feed -->
     <div id="profileThreadsContainer" data-live-region="profile" data-live-list>
-        @include('threads.partials.thread_list', ['threads' => $threads])
+        @include('threads.partials.thread_list', ['threads' => $threads, 'userInteractions' => $userInteractions ?? []])
     </div>
 
     <!-- Pagination -->
