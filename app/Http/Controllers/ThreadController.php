@@ -422,4 +422,54 @@ class ThreadController extends Controller
             'user_voted_option' => $voters[$userId] ?? null,
         ];
     }
+
+    public function quotePickerThreads(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        if (! $user) {
+            return response()->json([], 401);
+        }
+
+        $tab = $request->query('tab', 'saved');
+
+        if ($tab === 'liked') {
+            $posts = $user->likedPosts()
+                ->published()
+                ->with(['author', 'media'])
+                ->latest('post_likes.created_at')
+                ->take(25)
+                ->get();
+        } elseif ($tab === 'mine') {
+            $posts = $user->posts()
+                ->published()
+                ->with(['author', 'media'])
+                ->latest('posts.created_at')
+                ->take(25)
+                ->get();
+        } else {
+            // Default: saved
+            $posts = $user->bookmarks()
+                ->published()
+                ->with(['author', 'media'])
+                ->latest('bookmarks.created_at')
+                ->take(25)
+                ->get();
+        }
+
+        $items = $posts->map(function (Post $p): array {
+            $firstMedia = $p->media->first();
+
+            return [
+                'id' => $p->id,
+                'author_name' => $p->author?->name ?? 'Người dùng',
+                'author_username' => $p->author?->username ?? ($p->author?->name ?? 'user'),
+                'author_avatar' => $p->author?->avatar_path ? route('avatar.show', $p->author->id) : null,
+                'content' => Str::limit(strip_tags(preg_replace('/<br\s*\/?>/i', ' ', $p->content ?? '')), 140),
+                'media_url' => $firstMedia ? route('media.show', $firstMedia->id) : null,
+                'time_ago' => $p->published_at ? $p->published_at->diffForHumans(null, true) : 'vừa xong',
+            ];
+        });
+
+        return response()->json($items);
+    }
 }

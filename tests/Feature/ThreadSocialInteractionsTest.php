@@ -186,4 +186,38 @@ class ThreadSocialInteractionsTest extends TestCase
             ->assertJsonPath('poll.options.0.percentage', 100)
             ->assertJsonPath('poll.options.1.percentage', 0);
     }
+
+    public function test_quote_picker_endpoint_returns_saved_liked_and_user_posts(): void
+    {
+        $user = User::factory()->create();
+        $otherAuthor = User::factory()->create();
+
+        $savedThread = Post::factory()->create(['user_id' => $otherAuthor->id, 'status' => 'published', 'published_at' => now()->subMinute(), 'type' => 'post']);
+        $likedThread = Post::factory()->create(['user_id' => $otherAuthor->id, 'status' => 'published', 'published_at' => now()->subMinute(), 'type' => 'post']);
+        $myThread = Post::factory()->create(['user_id' => $user->id, 'status' => 'published', 'published_at' => now()->subMinute(), 'type' => 'post']);
+
+        $user->bookmarks()->attach($savedThread->id, ['created_at' => now()]);
+        $user->likedPosts()->attach($likedThread->id, ['created_at' => now()]);
+
+        // Saved tab
+        $this->actingAs($user)
+            ->getJson(route('api.quote-picker', ['tab' => 'saved']))
+            ->assertOk()
+            ->assertJsonCount(1)
+            ->assertJsonFragment(['id' => $savedThread->id]);
+
+        // Liked tab
+        $this->actingAs($user)
+            ->getJson(route('api.quote-picker', ['tab' => 'liked']))
+            ->assertOk()
+            ->assertJsonCount(1)
+            ->assertJsonFragment(['id' => $likedThread->id]);
+
+        // Mine tab
+        $this->actingAs($user)
+            ->getJson(route('api.quote-picker', ['tab' => 'mine']))
+            ->assertOk()
+            ->assertJsonCount(1)
+            ->assertJsonFragment(['id' => $myThread->id]);
+    }
 }

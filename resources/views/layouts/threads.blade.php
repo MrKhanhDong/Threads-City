@@ -869,6 +869,7 @@
     <!-- Modal Create Thread -->
     @auth
     @include('threads.partials.composer_modal')
+    @include('threads.partials.quote_picker_modal')
     @endauth
 
     <!-- Repost / Quote Modal -->
