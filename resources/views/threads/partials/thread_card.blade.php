@@ -47,9 +47,9 @@
             <div class="avatar-with-badge">
                 <a href="{{ route('profile.show', $author->username ?? $author->id) }}" class="avatar-link">
                     @if($author->avatar_path)
-                        <img src="{{ route('avatar.show', $author->id) }}" alt="{{ $author->name }}" class="user-avatar-round">
+                        <img src="{{ route('avatar.show', $author->id) }}" alt="{{ $author->name }}" class="user-avatar-round" style="width: 38px; height: 38px; border-radius: 50%; object-fit: cover;">
                     @else
-                        <div class="user-avatar-letter">{{ mb_substr($author->name, 0, 1) }}</div>
+                        <div class="user-avatar-letter" style="width: 38px; height: 38px;">{{ mb_substr($author->name, 0, 1) }}</div>
                     @endif
                 </a>
                 @if(!auth()->check() || (auth()->id() !== $author->id && !auth()->user()->isFollowing($author)))
@@ -441,6 +441,44 @@
     .avatar-with-badge {
         position: relative;
         display: inline-block;
+        width: 38px;
+        height: 38px;
+        flex-shrink: 0;
+    }
+    .avatar-link {
+        display: block;
+        width: 38px;
+        height: 38px;
+        border-radius: 50%;
+        overflow: hidden;
+        flex-shrink: 0;
+    }
+    .user-avatar-round {
+        width: 38px !important;
+        height: 38px !important;
+        max-width: 38px !important;
+        max-height: 38px !important;
+        border-radius: 50% !important;
+        object-fit: cover !important;
+        background: #222 !important;
+        display: block !important;
+        flex-shrink: 0 !important;
+    }
+    .user-avatar-letter {
+        width: 38px !important;
+        height: 38px !important;
+        max-width: 38px !important;
+        max-height: 38px !important;
+        border-radius: 50% !important;
+        background: #242424 !important;
+        color: #fff !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        font-weight: 700 !important;
+        font-size: 15px !important;
+        border: 1px solid #333 !important;
+        flex-shrink: 0 !important;
     }
     .avatar-follow-plus-btn {
         position: absolute;

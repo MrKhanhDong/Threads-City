@@ -63,9 +63,9 @@
                     <!-- Left: Avatar with Action Badge -->
                     <div class="notification-avatar-wrap">
                         @if($actorAvatar)
-                            <img src="{{ $actorAvatar }}" alt="{{ $actorName }}" class="user-avatar-round notif-avatar">
+                            <img src="{{ $actorAvatar }}" alt="{{ $actorName }}" class="user-avatar-round notif-avatar" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">
                         @else
-                            <div class="user-avatar-letter notif-avatar">{{ mb_substr($actorName, 0, 1) }}</div>
+                            <div class="user-avatar-letter notif-avatar" style="width: 40px; height: 40px; border-radius: 50%;">{{ mb_substr($actorName, 0, 1) }}</div>
                         @endif
 
                         <!-- Action Badge Icon -->

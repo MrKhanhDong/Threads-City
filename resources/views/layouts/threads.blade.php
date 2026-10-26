@@ -466,17 +466,22 @@
             color: var(--text-muted);
             border-color: #222222;
         }
+        .btn-follow-pill.following:hover {
             color: #ffffff;
-            border: 1px solid #444;
+            border-color: #444444;
         }
 
         /* Buttons & Components */
         .user-avatar-round {
-            width: 38px;
-            height: 38px;
-            border-radius: 50%;
-            object-fit: cover;
-            background: #222;
+            width: 38px !important;
+            height: 38px !important;
+            max-width: 38px !important;
+            max-height: 38px !important;
+            border-radius: 50% !important;
+            object-fit: cover !important;
+            background: #222 !important;
+            display: block !important;
+            flex-shrink: 0 !important;
         }
         .user-avatar-letter {
             width: 38px;

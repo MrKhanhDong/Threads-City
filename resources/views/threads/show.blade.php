@@ -36,9 +36,9 @@
 
                 <div class="d-flex gap-3 align-items-start">
                     @if(auth()->user()->avatar_path)
-                        <img src="{{ route('avatar.show', auth()->user()->id) }}" alt="{{ auth()->user()->name }}" class="user-avatar-round">
+                        <img src="{{ route('avatar.show', auth()->user()->id) }}" alt="{{ auth()->user()->name }}" class="user-avatar-round" style="width: 38px; height: 38px; border-radius: 50%; object-fit: cover;">
                     @else
-                        <div class="user-avatar-letter">{{ mb_substr(auth()->user()->name, 0, 1) }}</div>
+                        <div class="user-avatar-letter" style="width: 38px; height: 38px;">{{ mb_substr(auth()->user()->name, 0, 1) }}</div>
                     @endif
                     <div class="flex-grow-1 position-relative">
                         <div class="text-secondary small mb-1">
