@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Media;
 use App\Models\Post;
 use App\Models\Tag;
+use App\Models\User;
+use App\Notifications\ThreadInteractionNotification;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -14,6 +16,36 @@ use Illuminate\Support\Str;
 
 class ThreadController extends Controller
 {
+    public function mentionSuggestions(Request $request): JsonResponse
+    {
+        $q = trim((string) $request->query('q', ''));
+        if (mb_strlen($q) === 0) {
+            $users = User::query()
+                ->whereNotNull('username')
+                ->latest()
+                ->limit(6)
+                ->get(['id', 'name', 'username', 'avatar_path']);
+        } else {
+            $users = User::query()
+                ->where(function ($query) use ($q): void {
+                    $query->where('username', 'like', "%{$q}%")
+                        ->orWhere('name', 'like', "%{$q}%");
+                })
+                ->limit(6)
+                ->get(['id', 'name', 'username', 'avatar_path']);
+        }
+
+        $results = $users->map(fn (User $u): array => [
+            'id' => $u->id,
+            'name' => $u->name,
+            'username' => $u->username,
+            'handle' => '@'.$u->username,
+            'avatar_url' => $u->avatar_path ? route('avatar.show', $u->id) : null,
+        ]);
+
+        return response()->json($results);
+    }
+
     public function index(Request $request): View|JsonResponse
     {
         $tab = $request->query('tab', 'for-you');
@@ -63,12 +95,14 @@ class ThreadController extends Controller
     public function store(Request $request): RedirectResponse|JsonResponse
     {
         $data = $request->validate([
-            'content' => 'required_without:media_ids|nullable|string|max:2000',
+            'content' => 'required_without_all:media_ids,images|nullable|string|max:2000',
             'parent_id' => 'nullable|exists:posts,id',
             'repost_of_id' => 'nullable|exists:posts,id',
             'type' => 'nullable|in:post,reply,repost,quote',
             'media_ids' => 'nullable|array|max:4',
             'media_ids.*' => 'exists:media,id',
+            'images' => 'nullable|array|max:4',
+            'images.*' => 'image|mimes:jpeg,png,jpg,webp,gif|max:5120',
         ]);
 
         $type = $data['type'] ?? 'post';
@@ -96,8 +130,27 @@ class ThreadController extends Controller
                 'published_at' => now(),
             ]);
 
-            if (! empty($data['media_ids'])) {
-                $post->media()->sync($data['media_ids']);
+            $mediaIds = $data['media_ids'] ?? [];
+            if ($request->hasFile('images')) {
+                foreach ($request->file('images') as $imgFile) {
+                    $dimensions = @getimagesize($imgFile->getRealPath()) ?: [null, null];
+                    $path = $imgFile->store('media', 'local');
+                    $m = Media::create([
+                        'user_id' => $request->user()->id,
+                        'path' => $path,
+                        'original_name' => mb_substr(basename($imgFile->getClientOriginalName()), 0, 255),
+                        'mime_type' => $imgFile->getMimeType(),
+                        'size' => $imgFile->getSize(),
+                        'width' => $dimensions[0] ?? null,
+                        'height' => $dimensions[1] ?? null,
+                        'alt' => 'Thread attachment',
+                    ]);
+                    $mediaIds[] = $m->id;
+                }
+            }
+
+            if (! empty($mediaIds)) {
+                $post->media()->sync(array_slice(array_unique($mediaIds), 0, 4));
             }
 
             preg_match_all('/#([\p{L}\p{N}_]+)/u', $content, $matches);
@@ -122,6 +175,48 @@ class ThreadController extends Controller
 
             return $post;
         });
+
+        $author = $request->user();
+        $notifiedUserIds = [$author->id];
+
+        if ($post->parent_id) {
+            $parent = Post::with('author')->find($post->parent_id);
+            if ($parent && $parent->user_id && ! in_array($parent->user_id, $notifiedUserIds, true)) {
+                $notifiedUserIds[] = $parent->user_id;
+                $parent->author?->notify(new ThreadInteractionNotification([
+                    'action' => 'reply',
+                    'actor_id' => $author->id,
+                    'actor_name' => $author->name,
+                    'actor_handle' => $author->username ? '@'.$author->username : '@'.Str::slug($author->name, '_'),
+                    'actor_avatar' => $author->avatar_path ? route('avatar.show', $author->id) : null,
+                    'thread_id' => $post->id,
+                    'content_snippet' => Str::limit(strip_tags($data['content'] ?? ''), 80),
+                    'url' => route('threads.show', $post->id),
+                ]));
+            }
+        }
+
+        preg_match_all('/@([A-Za-z0-9_]{3,30})/', $data['content'] ?? '', $mentionMatches);
+        if (! empty($mentionMatches[1])) {
+            $mentionedUsernames = array_unique($mentionMatches[1]);
+            $mentionedUsers = User::whereIn('username', $mentionedUsernames)
+                ->whereNotIn('id', $notifiedUserIds)
+                ->get();
+
+            foreach ($mentionedUsers as $mentionedUser) {
+                $notifiedUserIds[] = $mentionedUser->id;
+                $mentionedUser->notify(new ThreadInteractionNotification([
+                    'action' => 'mention',
+                    'actor_id' => $author->id,
+                    'actor_name' => $author->name,
+                    'actor_handle' => $author->username ? '@'.$author->username : '@'.Str::slug($author->name, '_'),
+                    'actor_avatar' => $author->avatar_path ? route('avatar.show', $author->id) : null,
+                    'thread_id' => $post->id,
+                    'content_snippet' => Str::limit(strip_tags($data['content'] ?? ''), 80),
+                    'url' => route('threads.show', $post->id),
+                ]));
+            }
+        }
 
         if ($request->wantsJson()) {
             $post->load(['author', 'media', 'repostOf.author', 'repostOf.media']);
@@ -161,28 +256,47 @@ class ThreadController extends Controller
 
     public function uploadMedia(Request $request): JsonResponse
     {
+        $files = $request->file('images') ?? ($request->file('image') ? [$request->file('image')] : []);
+
+        if (empty($files)) {
+            return response()->json(['message' => 'Không tìm thấy file ảnh hợp lệ.'], 422);
+        }
+
         $request->validate([
-            'image' => 'required|image|mimes:jpeg,png,jpg,webp,gif|max:5120',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,webp,gif|max:5120',
+            'images.*' => 'image|mimes:jpeg,png,jpg,webp,gif|max:5120',
         ]);
 
-        $file = $request->file('image');
-        $dimensions = @getimagesize($file->getRealPath()) ?: [null, null];
-        $path = $file->store('media', 'local');
+        $uploaded = [];
+        foreach ($files as $file) {
+            $dimensions = @getimagesize($file->getRealPath()) ?: [null, null];
+            $path = $file->store('media', 'local');
 
-        $media = Media::create([
-            'user_id' => $request->user()->id,
-            'path' => $path,
-            'original_name' => mb_substr(basename($file->getClientOriginalName()), 0, 255),
-            'mime_type' => $file->getMimeType(),
-            'size' => $file->getSize(),
-            'width' => $dimensions[0],
-            'height' => $dimensions[1],
-            'alt' => 'Thread attachment',
-        ]);
+            $media = Media::create([
+                'user_id' => $request->user()->id,
+                'path' => $path,
+                'original_name' => mb_substr(basename($file->getClientOriginalName()), 0, 255),
+                'mime_type' => $file->getMimeType(),
+                'size' => $file->getSize(),
+                'width' => $dimensions[0] ?? null,
+                'height' => $dimensions[1] ?? null,
+                'alt' => 'Thread attachment',
+            ]);
+
+            $uploaded[] = [
+                'id' => $media->id,
+                'url' => route('media.show', $media->id),
+            ];
+        }
+
+        if (count($uploaded) === 1 && $request->hasFile('image')) {
+            return response()->json($uploaded[0]);
+        }
 
         return response()->json([
-            'id' => $media->id,
-            'url' => route('media.show', $media->id),
+            'items' => $uploaded,
+            'id' => $uploaded[0]['id'],
+            'url' => $uploaded[0]['url'],
         ]);
     }
 }

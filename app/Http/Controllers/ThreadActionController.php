@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Post;
 use App\Models\User;
+use App\Notifications\ThreadInteractionNotification;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -43,6 +44,19 @@ class ThreadActionController extends Controller
         });
 
         $likesCount = max(0, (int) $thread->fresh()->likes_count);
+
+        if ($liked && $thread->user_id !== $user->id) {
+            $thread->author?->notify(new ThreadInteractionNotification([
+                'action' => 'like',
+                'actor_id' => $user->id,
+                'actor_name' => $user->name,
+                'actor_handle' => $user->username ? '@'.$user->username : '@'.Str::slug($user->name, '_'),
+                'actor_avatar' => $user->avatar_path ? route('avatar.show', $user->id) : null,
+                'thread_id' => $thread->id,
+                'content_snippet' => Str::limit(strip_tags($thread->content), 80),
+                'url' => route('threads.show', $thread->id),
+            ]));
+        }
 
         if ($request->wantsJson()) {
             return response()->json([
@@ -127,6 +141,19 @@ class ThreadActionController extends Controller
 
         $repostsCount = max(0, (int) $thread->fresh()->reposts_count);
 
+        if ($reposted && $thread->user_id !== $user->id) {
+            $thread->author?->notify(new ThreadInteractionNotification([
+                'action' => 'repost',
+                'actor_id' => $user->id,
+                'actor_name' => $user->name,
+                'actor_handle' => $user->username ? '@'.$user->username : '@'.Str::slug($user->name, '_'),
+                'actor_avatar' => $user->avatar_path ? route('avatar.show', $user->id) : null,
+                'thread_id' => $thread->id,
+                'content_snippet' => Str::limit(strip_tags($thread->content), 80),
+                'url' => route('threads.show', $thread->id),
+            ]));
+        }
+
         if ($request->wantsJson()) {
             return response()->json([
                 'success' => true,
@@ -160,6 +187,19 @@ class ThreadActionController extends Controller
         });
 
         $followersCount = $user->followers()->count();
+
+        if ($following) {
+            $user->notify(new ThreadInteractionNotification([
+                'action' => 'follow',
+                'actor_id' => $currentUser->id,
+                'actor_name' => $currentUser->name,
+                'actor_handle' => $currentUser->username ? '@'.$currentUser->username : '@'.Str::slug($currentUser->name, '_'),
+                'actor_avatar' => $currentUser->avatar_path ? route('avatar.show', $currentUser->id) : null,
+                'thread_id' => null,
+                'content_snippet' => null,
+                'url' => route('profile.show', $currentUser->username ?: $currentUser->id),
+            ]));
+        }
 
         if ($request->wantsJson()) {
             return response()->json([

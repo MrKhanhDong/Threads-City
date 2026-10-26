@@ -13,8 +13,8 @@ abstract class TestCase extends BaseTestCase
         $driver = $application['config']->get('database.default');
         $database = $application['config']->get('database.connections.'.$driver.'.database');
 
-        if ($driver !== 'mysql' || $database !== 'moc_blog_test') {
-            throw new \LogicException('Kiểm thử chỉ được chạy trên MySQL database moc_blog_test. Tuyệt đối không dùng database website.');
+        if ($driver !== 'mysql' || ! in_array($database, ['threads_test', 'moc_blog_test'], true)) {
+            throw new \LogicException('Kiểm thử chỉ được chạy trên MySQL database test (threads_test / moc_blog_test). Tuyệt đối không dùng database website.');
         }
 
         return $application;

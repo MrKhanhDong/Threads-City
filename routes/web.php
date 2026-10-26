@@ -20,17 +20,17 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', [ThreadController::class, 'index'])->name('home');
 Route::get('/threads', [ThreadController::class, 'index'])->name('threads.index');
 Route::get('/t/{thread}', [ThreadController::class, 'show'])->whereNumber('thread')->name('threads.show');
-Route::get('/blog-cu', [BlogController::class, 'home'])->name('blog.legacy_home');
+Route::redirect('/blog-cu', '/', 301)->name('blog.legacy_home');
 
-Route::get('/bai-viet', [BlogController::class, 'archive'])->name('posts.index');
+Route::redirect('/bai-viet', '/', 301)->name('posts.index');
 Route::get('/bai-viet/{slug}', [BlogController::class, 'show'])->name('posts.show');
-Route::get('/danh-muc/{category:slug}', [BlogController::class, 'category'])->name('categories.show');
-Route::get('/the/{tag:slug}', [BlogController::class, 'tag'])->name('tags.show');
-Route::get('/tac-gia', [BlogController::class, 'author'])->name('author');
-Route::get('/gioi-thieu', [BlogController::class, 'page'])->defaults('page', 'about')->name('about');
-Route::get('/lien-he', [BlogController::class, 'page'])->defaults('page', 'contact')->name('contact');
-Route::get('/chinh-sach', [BlogController::class, 'page'])->defaults('page', 'privacy')->name('privacy');
-Route::get('/dieu-khoan', [BlogController::class, 'page'])->defaults('page', 'terms')->name('terms');
+Route::redirect('/danh-muc/{category:slug}', '/', 301)->name('categories.show');
+Route::redirect('/the/{tag:slug}', '/', 301)->name('tags.show');
+Route::redirect('/tac-gia', '/', 301)->name('author');
+Route::redirect('/gioi-thieu', '/', 301)->name('about');
+Route::redirect('/lien-he', '/', 301)->name('contact');
+Route::redirect('/chinh-sach', '/', 301)->name('privacy');
+Route::redirect('/dieu-khoan', '/', 301)->name('terms');
 Route::get('/sitemap.xml', [BlogController::class, 'sitemap'])->name('sitemap');
 Route::get('/robots.txt', [BlogController::class, 'robots'])->name('robots');
 Route::get('/media/{media}', [Admin\MediaController::class, 'show'])->whereNumber('media')->name('media.show');
@@ -78,8 +78,9 @@ Route::middleware('auth')->group(function (): void {
     })->middleware('throttle:password-reset')->name('verification.send');
     Route::get('/tai-khoan', [AccountController::class, 'edit'])->name('account.edit');
     Route::get('/thong-bao', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::get('/api/notifications/unread', [NotificationController::class, 'unreadCount'])->name('notifications.unread');
     Route::post('/thong-bao/doc-tat-ca', [NotificationController::class, 'readAll'])->middleware('throttle:60,1')->name('notifications.read-all');
-    Route::post('/thong-bao/{id}/mo', [NotificationController::class, 'open'])->whereUuid('id')->middleware('throttle:60,1')->name('notifications.open');
+    Route::match(['get', 'post'], '/thong-bao/{id}/mo', [NotificationController::class, 'open'])->whereUuid('id')->middleware('throttle:60,1')->name('notifications.open');
     Route::patch('/tai-khoan', [AccountController::class, 'update'])->name('account.update');
     Route::put('/tai-khoan/mat-khau', [AccountController::class, 'password'])->name('account.password');
     Route::get('/bai-viet-da-luu', [ReaderController::class, 'saved'])->name('saved');
@@ -90,6 +91,7 @@ Route::middleware('auth')->group(function (): void {
     Route::post('/threads/{thread}/bookmark', [ThreadActionController::class, 'bookmark'])->whereNumber('thread')->name('threads.bookmark');
     Route::post('/threads/{thread}/repost', [ThreadActionController::class, 'repost'])->whereNumber('thread')->name('threads.repost');
     Route::post('/users/{user}/follow', [ThreadActionController::class, 'follow'])->whereNumber('user')->name('users.follow');
+    Route::get('/api/users/mention-suggestions', [ThreadController::class, 'mentionSuggestions'])->name('users.mention-suggestions');
 
     Route::middleware('verified')->group(function (): void {
         Route::post('/bai-viet/{id}/thich', [ReaderController::class, 'like'])->whereNumber('id')->middleware('throttle:60,1')->name('likes.store');
@@ -129,5 +131,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::patch('/settings', [Admin\SettingController::class, 'update'])->name('settings.update');
 });
 
+Route::get('/users/{username}/followers', [UserProfileController::class, 'followers'])->name('users.followers');
+Route::get('/users/{username}/following', [UserProfileController::class, 'following'])->name('users.following');
 Route::get('/@{username}', [UserProfileController::class, 'show'])->name('profile.show');
 Route::get('/u/{username}', [UserProfileController::class, 'show']);

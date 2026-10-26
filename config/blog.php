@@ -1,10 +1,10 @@
 <?php
 
 return [
-    'name' => 'Mộc Journal',
-    'tagline' => 'Một góc viết, một nhịp sống chậm.',
-    'description' => 'Những câu chuyện về cuộc sống, công nghệ và hành trình trưởng thành.',
-    'author_name' => 'Người viết',
+    'name' => 'Threads',
+    'tagline' => 'Nơi kết nối và chia sẻ ý tưởng.',
+    'description' => 'Mạng xã hội Threads — chia sẻ suy nghĩ, kết nối cộng đồng phong cách Meta Threads.',
+    'author_name' => 'Threads City',
     'editor_license' => env('TINYMCE_LICENSE_KEY', 'gpl'),
     'uploads_max_kb' => 5120,
 ];

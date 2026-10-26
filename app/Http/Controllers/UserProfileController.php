@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Post;
 use App\Models\User;
 use Illuminate\Contracts\View\View;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class UserProfileController extends Controller
@@ -55,5 +56,67 @@ class UserProfileController extends Controller
         $threadsCount = Post::published()->where('user_id', $user->id)->count();
 
         return view('profile.show', compact('user', 'threads', 'tab', 'followersCount', 'followingCount', 'threadsCount'));
+    }
+
+    public function followers(Request $request, string $username): JsonResponse
+    {
+        $targetUser = User::where('username', $username)
+            ->orWhere('id', $username)
+            ->firstOrFail();
+
+        $viewer = $request->user();
+
+        $followers = $targetUser->followers()
+            ->latest('follows.created_at')
+            ->limit(100)
+            ->get();
+
+        $data = $followers->map(fn (User $u): array => [
+            'id' => $u->id,
+            'name' => $u->name,
+            'username' => $u->username,
+            'handle' => '@'.$u->username,
+            'bio' => $u->bio,
+            'avatar_url' => $u->avatar_path ? route('avatar.show', $u->id) : null,
+            'profile_url' => route('profile.show', $u->username ?: $u->id),
+            'is_following' => $viewer ? $viewer->isFollowing($u) : false,
+            'is_me' => $viewer ? $viewer->id === $u->id : false,
+        ]);
+
+        return response()->json([
+            'count' => $targetUser->followers()->count(),
+            'users' => $data,
+        ]);
+    }
+
+    public function following(Request $request, string $username): JsonResponse
+    {
+        $targetUser = User::where('username', $username)
+            ->orWhere('id', $username)
+            ->firstOrFail();
+
+        $viewer = $request->user();
+
+        $following = $targetUser->following()
+            ->latest('follows.created_at')
+            ->limit(100)
+            ->get();
+
+        $data = $following->map(fn (User $u): array => [
+            'id' => $u->id,
+            'name' => $u->name,
+            'username' => $u->username,
+            'handle' => '@'.$u->username,
+            'bio' => $u->bio,
+            'avatar_url' => $u->avatar_path ? route('avatar.show', $u->id) : null,
+            'profile_url' => route('profile.show', $u->username ?: $u->id),
+            'is_following' => $viewer ? $viewer->isFollowing($u) : false,
+            'is_me' => $viewer ? $viewer->id === $u->id : false,
+        ]);
+
+        return response()->json([
+            'count' => $targetUser->following()->count(),
+            'users' => $data,
+        ]);
     }
 }

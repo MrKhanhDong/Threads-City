@@ -129,8 +129,13 @@
             </div>
 
             <!-- Content Area -->
+            @php
+                $formattedContent = e($displayThread->content);
+                $formattedContent = preg_replace('/#([\p{L}\p{N}_]+)/u', '<a href="' . route('threads.index') . '?q=%23$1" class="thread-hashtag" onclick="event.stopPropagation();">#$1</a>', $formattedContent);
+                $formattedContent = preg_replace('/@([A-Za-z0-9_]{3,30})/u', '<a href="/@$1" class="thread-mention" onclick="event.stopPropagation();">@$1</a>', $formattedContent);
+            @endphp
             <div class="thread-content-text">
-                {!! preg_replace('/#([\p{L}\p{N}_]+)/u', '<a href="' . route('posts.index') . '?q=$1" class="thread-hashtag">#$1</a>', nl2br(e($displayThread->content))) !!}
+                {!! nl2br($formattedContent) !!}
             </div>
 
             <!-- Media Gallery (Images) -->
@@ -138,7 +143,9 @@
                 <div class="thread-media-gallery gallery-count-{{ min(4, $displayThread->media->count()) }}">
                     @foreach($displayThread->media->take(4) as $mediaItem)
                         <div class="gallery-media-item">
-                            <img src="{{ route('media.show', $mediaItem->id) }}" alt="{{ $mediaItem->alt ?? 'Ảnh đính kèm' }}" loading="lazy">
+                            <a href="{{ route('media.show', $mediaItem->id) }}" target="_blank" rel="noopener" class="gallery-media-link" onclick="event.stopPropagation();" title="Xem ảnh gốc">
+                                <img src="{{ route('media.show', $mediaItem->id) }}" alt="{{ $mediaItem->alt ?? 'Ảnh đính kèm' }}" loading="lazy">
+                            </a>
                         </div>
                     @endforeach
                 </div>
@@ -418,12 +425,14 @@
         margin-bottom: 12px;
         white-space: pre-line;
     }
-    .thread-hashtag {
+    .thread-hashtag, .thread-mention {
         color: var(--accent-blue);
         font-weight: 500;
+        text-decoration: none;
     }
-    .thread-hashtag:hover {
+    .thread-hashtag:hover, .thread-mention:hover {
         text-decoration: underline;
+        color: #38bdf8;
     }
 
     /* Media Gallery Grid */
@@ -432,13 +441,52 @@
         overflow: hidden;
         margin-bottom: 12px;
         border: 1px solid var(--border-color);
-        background: #111;
+        background: #111111;
+        display: grid;
+        gap: 3px;
+    }
+    .thread-media-gallery.gallery-count-1 {
+        grid-template-columns: 1fr;
+    }
+    .thread-media-gallery.gallery-count-2 {
+        grid-template-columns: 1fr 1fr;
+        aspect-ratio: 16 / 9;
+    }
+    .thread-media-gallery.gallery-count-3 {
+        grid-template-columns: 2fr 1fr;
+        grid-template-rows: 1fr 1fr;
+        aspect-ratio: 16 / 9;
+    }
+    .thread-media-gallery.gallery-count-3 .gallery-media-item:first-child {
+        grid-row: span 2;
+    }
+    .thread-media-gallery.gallery-count-4 {
+        grid-template-columns: 1fr 1fr;
+        grid-template-rows: 1fr 1fr;
+        aspect-ratio: 16 / 9;
+    }
+    .gallery-media-item {
+        position: relative;
+        overflow: hidden;
+        background: #000000;
+        width: 100%;
+        height: 100%;
+    }
+    .gallery-media-link {
+        display: block;
+        width: 100%;
+        height: 100%;
     }
     .gallery-media-item img {
         width: 100%;
+        height: 100%;
         max-height: 480px;
         object-fit: cover;
         display: block;
+        transition: transform 0.25s ease;
+    }
+    .gallery-media-item:hover img {
+        transform: scale(1.025);
     }
 
     /* Inner Quoted Thread Card (Exact match to screenshot) */

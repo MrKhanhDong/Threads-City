@@ -130,6 +130,25 @@
             height: 22px;
             flex-shrink: 0;
         }
+        .sidebar-badge-count {
+            position: absolute;
+            top: -5px;
+            right: -7px;
+            background: #ff2d55;
+            color: #ffffff;
+            font-size: 10px;
+            font-weight: 700;
+            min-width: 16px;
+            height: 16px;
+            padding: 0 4px;
+            border-radius: 9999px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid #101010;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.5);
+            line-height: 1;
+        }
 
         /* Feeds Sub-section */
         .sidebar-sub-section {
@@ -531,6 +550,65 @@
             transform: translateX(-50%) translateY(0);
             opacity: 1;
         }
+
+        /* Mention Autocomplete Dropdown */
+        .mention-autocomplete-dropdown {
+            position: absolute;
+            bottom: calc(100% + 4px);
+            left: 0;
+            width: 280px;
+            max-height: 220px;
+            overflow-y: auto;
+            background: #1e1e1e;
+            border: 1px solid #333333;
+            border-radius: 14px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.85);
+            z-index: 1060;
+            padding: 6px 0;
+        }
+        .mention-autocomplete-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 12px;
+            cursor: pointer;
+            transition: background 0.15s ease;
+        }
+        .mention-autocomplete-item:hover,
+        .mention-autocomplete-item.selected {
+            background: #2a2a2a;
+        }
+        .mention-item-avatar {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            object-fit: cover;
+            flex-shrink: 0;
+        }
+        .mention-item-letter {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: #333333;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+        .mention-item-name {
+            font-size: 13px;
+            font-weight: 600;
+            color: #ffffff;
+            line-height: 1.2;
+        }
+        .mention-item-handle {
+            font-size: 12px;
+            color: #777777;
+            line-height: 1.2;
+        }
     </style>
     @stack('threads-styles')
 </head>
@@ -609,10 +687,16 @@
                     </a>
 
                     @auth
+                    @php $unreadNavCount = auth()->user()->unreadNotifications()->count(); @endphp
                     <a href="{{ route('notifications.index') }}" class="sidebar-nav-item {{ request()->routeIs('notifications.*') ? 'active' : '' }}">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
-                        </svg>
+                        <div class="sidebar-icon-wrap" style="position: relative; display: inline-flex; align-items: center;">
+                            <svg viewBox="0 0 24 24" fill="{{ request()->routeIs('notifications.*') ? 'currentColor' : 'none' }}" stroke="currentColor" stroke-width="2">
+                                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                            </svg>
+                            <span id="sidebarNotificationBadge" class="sidebar-badge-count" style="{{ $unreadNavCount > 0 ? '' : 'display: none;' }}">
+                                {{ $unreadNavCount > 99 ? '99+' : $unreadNavCount }}
+                            </span>
+                        </div>
                         <span>Hoạt động</span>
                     </a>
 
@@ -862,7 +946,157 @@
             })
             .catch(err => console.error(err));
         });
+
+        // Real-time notification unread badge polling
+        @auth
+        function pollUnreadNotifications() {
+            fetch('{{ route("notifications.unread") }}', {
+                headers: { 'Accept': 'application/json' }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data && typeof data.unread !== 'undefined') {
+                    const badge = document.getElementById('sidebarNotificationBadge');
+                    if (badge) {
+                        if (data.unread > 0) {
+                            badge.textContent = data.unread > 99 ? '99+' : data.unread;
+                            badge.style.display = 'inline-flex';
+                        } else {
+                            badge.style.display = 'none';
+                        }
+                    }
+                }
+            })
+            .catch(() => {});
+        }
+        setInterval(pollUnreadNotifications, 30000);
+        @endauth
     });
+
+    // Global Mention Autocomplete Helper
+    window.setupMentionAutocomplete = function(textarea, dropdown) {
+        if (!textarea || !dropdown) return;
+
+        let activeIndex = -1;
+        let suggestions = [];
+        let queryTerm = '';
+        let atIndex = -1;
+
+        function closeDropdown() {
+            dropdown.style.display = 'none';
+            dropdown.innerHTML = '';
+            suggestions = [];
+            activeIndex = -1;
+        }
+
+        textarea.addEventListener('input', function() {
+            const val = textarea.value;
+            const cursorPos = textarea.selectionStart;
+            const textBeforeCursor = val.slice(0, cursorPos);
+
+            const match = textBeforeCursor.match(/@([A-Za-z0-9_]*)$/);
+            if (!match) {
+                closeDropdown();
+                return;
+            }
+
+            atIndex = cursorPos - match[0].length;
+            queryTerm = match[1];
+
+            fetch(`/api/users/mention-suggestions?q=${encodeURIComponent(queryTerm)}`, {
+                headers: { 'Accept': 'application/json' }
+            })
+            .then(res => res.json())
+            .then(users => {
+                if (!users || users.length === 0) {
+                    closeDropdown();
+                    return;
+                }
+                suggestions = users;
+                renderDropdown();
+            })
+            .catch(() => closeDropdown());
+        });
+
+        function renderDropdown() {
+            dropdown.innerHTML = '';
+            activeIndex = 0;
+            suggestions.forEach((u, i) => {
+                const item = document.createElement('div');
+                item.className = 'mention-autocomplete-item' + (i === 0 ? ' selected' : '');
+                
+                const avatarHtml = u.avatar_url 
+                    ? `<img src="${u.avatar_url}" class="mention-item-avatar">`
+                    : `<div class="mention-item-letter">${(u.name || 'U').charAt(0).toUpperCase()}</div>`;
+                
+                item.innerHTML = `
+                    ${avatarHtml}
+                    <div class="d-flex flex-column overflow-hidden">
+                        <span class="mention-item-name text-truncate">${u.name}</span>
+                        <span class="mention-item-handle text-truncate">${u.handle}</span>
+                    </div>
+                `;
+                item.addEventListener('mousedown', function(e) {
+                    e.preventDefault();
+                    insertMention(u.username);
+                });
+                dropdown.appendChild(item);
+            });
+            dropdown.style.display = 'block';
+        }
+
+        function insertMention(username) {
+            const val = textarea.value;
+            const cursorPos = textarea.selectionStart;
+            const before = val.slice(0, atIndex);
+            const after = val.slice(cursorPos);
+            const insertText = `@${username} `;
+            textarea.value = before + insertText + after;
+            const newCursorPos = before.length + insertText.length;
+            textarea.setSelectionRange(newCursorPos, newCursorPos);
+            textarea.focus();
+            closeDropdown();
+        }
+
+        textarea.addEventListener('keydown', function(e) {
+            if (dropdown.style.display === 'none') return;
+
+            const items = dropdown.querySelectorAll('.mention-autocomplete-item');
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                activeIndex = (activeIndex + 1) % items.length;
+                updateSelection(items);
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                activeIndex = (activeIndex - 1 + items.length) % items.length;
+                updateSelection(items);
+            } else if (e.key === 'Enter' || e.key === 'Tab') {
+                if (activeIndex >= 0 && suggestions[activeIndex]) {
+                    e.preventDefault();
+                    insertMention(suggestions[activeIndex].username);
+                }
+            } else if (e.key === 'Escape') {
+                closeDropdown();
+            }
+        });
+
+        function updateSelection(items) {
+            items.forEach((item, idx) => {
+                if (idx === activeIndex) {
+                    item.classList.add('selected');
+                    item.scrollIntoView({ block: 'nearest' });
+                } else {
+                    item.classList.remove('selected');
+                }
+            });
+        }
+
+        document.addEventListener('click', function(e) {
+            if (!dropdown.contains(e.target) && e.target !== textarea) {
+                closeDropdown();
+            }
+        });
+    };
     </script>
 </body>
 </html>

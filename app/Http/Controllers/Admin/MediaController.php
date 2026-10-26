@@ -47,9 +47,10 @@ class MediaController extends Controller
     public function show(Request $request, Media $media): BinaryFileResponse
     {
         if (! $request->user()?->isAdmin()) {
-            abort_unless($this->references($media)->published()->exists(), 404);
+            $isAuthor = $request->user() && $media->user_id === $request->user()->id;
+            abort_unless($isAuthor || $this->references($media)->published()->exists(), 404);
         }
-        abort_unless(preg_match('~^media/[A-Za-z0-9]+\.(jpg|jpeg|png|webp)$~', $media->path) && Storage::disk('local')->exists($media->path), 404);
+        abort_unless(preg_match('~^media/[A-Za-z0-9_\-]+\.(jpg|jpeg|png|webp|gif)$~i', $media->path) && Storage::disk('local')->exists($media->path), 404);
 
         return response()->file(Storage::disk('local')->path($media->path), ['Content-Type' => $media->mime_type, 'X-Content-Type-Options' => 'nosniff', 'Cache-Control' => 'private, no-store', 'Vary' => 'Cookie']);
     }
