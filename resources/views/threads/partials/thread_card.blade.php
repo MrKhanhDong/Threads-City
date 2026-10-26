@@ -130,7 +130,8 @@
 
             <!-- Content Area -->
             @php
-                $formattedContent = e($displayThread->content);
+                $cleanContent = preg_replace('/<br\s*\/?>/i', "\n", $displayThread->content ?? '');
+                $formattedContent = e($cleanContent);
                 $formattedContent = preg_replace('/#([\p{L}\p{N}_]+)/u', '<a href="' . route('threads.index') . '?q=%23$1" class="thread-hashtag" onclick="event.stopPropagation();">#$1</a>', $formattedContent);
                 $formattedContent = preg_replace('/@([A-Za-z0-9_]{3,30})/u', '<a href="/@$1" class="thread-mention" onclick="event.stopPropagation();">@$1</a>', $formattedContent);
             @endphp
@@ -193,7 +194,7 @@
                             </div>
                         </div>
                         <div class="inner-quote-text">
-                            {{ $quoted->content }}
+                            {!! nl2br(e(preg_replace('/<br\s*\/?>/i', "\n", $quoted->content ?? ''))) !!}
                         </div>
                         <div class="inner-quote-action-counts">
                             <span class="inner-count-item">
@@ -244,7 +245,7 @@
                     data-thread-id="{{ $displayThread->id }}" 
                     data-author-name="{{ $author->name }}"
                     data-author-handle="{{ $author->handle() }}"
-                    data-content-snippet="{{ Str::limit(strip_tags($displayThread->content), 120) }}"
+                    data-content-snippet="{{ Str::limit(strip_tags(preg_replace('/<br\s*\/?>/i', ' ', $displayThread->content ?? '')), 120) }}"
                     title="Đăng lại">
                     <svg class="repost-icon" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="{{ $isReposted ? '#00ba7c' : 'currentColor' }}" stroke-width="1.8">
                         <path d="M17 1l4 4-4 4"></path>

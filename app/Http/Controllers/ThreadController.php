@@ -116,7 +116,6 @@ class ThreadController extends Controller
 
         $post = DB::transaction(function () use ($request, $data, $type): Post {
             $content = trim($data['content'] ?? '');
-            $cleanContent = e($content);
 
             $post = Post::create([
                 'user_id' => $request->user()->id,
@@ -125,7 +124,7 @@ class ThreadController extends Controller
                 'type' => $type,
                 'title' => Str::limit(strip_tags($content), 60, ''),
                 'slug' => 'thread-'.Str::lower(Str::random(10)).'-'.time(),
-                'content' => nl2br($cleanContent),
+                'content' => $content,
                 'status' => 'published',
                 'published_at' => now(),
             ]);
