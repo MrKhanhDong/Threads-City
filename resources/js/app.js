@@ -1,15 +1,20 @@
-import { Dropdown, Offcanvas } from 'bootstrap';
+import { Dropdown, Offcanvas, Modal } from 'bootstrap';
 import { setupJournalTheme } from './journal-theme';
-import { setupThreadStream } from './thread-stream';
+import { setupDesktopColumns } from './desktop-columns';
 import { setupSidebarFeeds } from './sidebar-feeds';
 import { setupSidebarDrawer } from './sidebar-drawer';
-import { setupDesktopColumns } from './desktop-columns';
-import { setupInsights } from './insights';
+import { setupPhuongComposerBridge } from './phuong-interface';
+import { setupLiveUpdates } from './live-updates';
+import { setupThreadMedia } from './thread-media';
+import { setupVoiceRecorder } from './voice-recorder';
+import { setupPolls } from './polls';
 import { setupCommentThreads, setupReplyNotifications } from './comment-threads';
 import { setupSeoPreview } from './seo-preview';
 import { setupCoverPicker } from './cover-picker';
 import { setupSeoChecks } from './seo-checks';
 import { setupVietnameseValidation, requestErrorMessage } from './validation-messages';
+
+window.bootstrap = { ...window.bootstrap, Dropdown, Offcanvas, Modal };
 
 const showState = (element, text, error = false) => {
     if (!element) return;
@@ -92,10 +97,10 @@ function setupEditor() {
             ],
             toolbar_mode: 'wrap',
             block_formats: 'Paragraph=p;Heading 1=h1;Heading 2=h2;Heading 3=h3;Heading 4=h4;Heading 5=h5;Heading 6=h6',
-            font_family_formats: 'Lora=Moc Lora,Times New Roman,serif;Arial=arial,helvetica,sans-serif;Times New Roman=times new roman,times,serif;Verdana=verdana,geneva,sans-serif',
+            font_family_formats: 'Lora=Threads Lora,Moc Lora,Times New Roman,serif;Arial=arial,helvetica,sans-serif;Times New Roman=times new roman,times,serif;Verdana=verdana,geneva,sans-serif',
             font_size_formats: '10px 12px 14px 16px 18px 20px 24px 28px 32px 36px 48px',
             content_css: '/fonts/lora/fonts.css',
-            content_style: 'body{font-family:"Moc Lora","Times New Roman",serif;font-size:17px;color:#252823;line-height:1.8;padding:15px}h1,h2,h3{color:#24332d}img{max-width:100%;height:auto}table{border-collapse:collapse;width:100%}td,th{border:1px solid #d8dccf;padding:10px}blockquote{border-left:2px solid #c2a878;padding-left:20px;color:#52634b}figcaption{font-size:12px;color:#686c64;text-align:center}',
+            content_style: 'body{font-family:"Threads Lora","Moc Lora","Times New Roman",serif;font-size:17px;color:#252823;line-height:1.8;padding:15px}h1,h2,h3{color:#24332d}img{max-width:100%;height:auto}table{border-collapse:collapse;width:100%}td,th{border:1px solid #d8dccf;padding:10px}blockquote{border-left:2px solid #c2a878;padding-left:20px;color:#52634b}figcaption{font-size:12px;color:#686c64;text-align:center}',
             image_title: true,
             image_caption: true,
             image_advtab: true,
@@ -175,10 +180,14 @@ function setupEditor() {
 
 function init() {
     setupJournalTheme();
-    setupInsights();
+    setupDesktopColumns(document, window, Dropdown);
     setupSidebarFeeds();
     setupSidebarDrawer(Offcanvas);
-    setupDesktopColumns(document, window, Dropdown);
+    setupPhuongComposerBridge(Modal);
+    setupLiveUpdates();
+    setupThreadMedia();
+    setupVoiceRecorder();
+    setupPolls();
     setupVietnameseValidation();
     setupCommentThreads();
     setupReplyNotifications();
@@ -196,7 +205,6 @@ function init() {
     }));
     setupSeoPreview();
     setupEditor();
-    setupThreadStream();
 }
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, { once: true });
 else init();

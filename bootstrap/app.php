@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\EnsureActiveAccount;
 use App\Http\Middleware\EnsureAdmin;
+use App\Http\Middleware\LivePageUpdates;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -11,10 +12,11 @@ use Illuminate\Routing\Exceptions\InvalidSignatureException;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\Response;
 
-return Application::configure(basePath: dirname(__DIR__))
+$app = Application::configure(basePath: dirname(__DIR__))
     ->withRouting(web: __DIR__.'/../routes/web.php', commands: __DIR__.'/../routes/console.php', health: '/up')
     ->withMiddleware(function (Middleware $middleware): void {
-        $middleware->web(append: [EnsureActiveAccount::class, 'auth.session']);
+        $middleware->trustProxies(at: '*');
+        $middleware->web(append: [EnsureActiveAccount::class, 'auth.session', LivePageUpdates::class]);
         $middleware->alias(['admin' => EnsureAdmin::class]);
         $middleware->redirectGuestsTo(fn (): string => route('login'));
     })
@@ -82,3 +84,9 @@ return Application::configure(basePath: dirname(__DIR__))
             return response()->view('errors.http', ['status' => $status, 'message' => $message], $status, $headers);
         });
     })->create();
+
+if (isset($_ENV['VERCEL']) || isset($_SERVER['VERCEL']) || env('VERCEL')) {
+    $app->useStoragePath('/tmp/storage');
+}
+
+return $app;

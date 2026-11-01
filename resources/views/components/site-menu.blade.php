@@ -7,12 +7,10 @@
             <a class="dropdown-item" href="{{ route('account.edit') }}">Cài đặt tài khoản</a>
             @if($mobile)
                 <details class="journal-menu-feeds"><summary>Bảng feed khác<x-journal-icon name="chevron" :size="17"/></summary><nav aria-label="Bảng feed trong menu">
-                    <a class="dropdown-item" href="{{ route('activity.index') }}">Hoạt động</a>
-                    <a class="dropdown-item" href="{{ route('insights.index') }}">Thông tin chi tiết</a>
+                    <a class="dropdown-item" href="{{ route('notifications.index') }}">Hoạt động</a>
                     <a class="dropdown-item" href="{{ route('home', ['tab' => 'following']) }}">Đang theo dõi</a>
                     <a class="dropdown-item" href="{{ route('saved') }}">Đã lưu</a>
-                    <a class="dropdown-item" href="{{ route('liked.index') }}">Đã thích</a>
-                    <a class="dropdown-item" href="{{ route('archives.index') }}">Lưu trữ</a>
+                    <a class="dropdown-item" href="{{ auth()->check() ? route('profile.show', ['username' => auth()->user()->username ?: auth()->id(), 'tab' => 'likes']) : route('login') }}">Đã thích</a>
                 </nav></details>
             @endif
             @if(auth()->user()?->isAdmin())<a class="dropdown-item" href="{{ route('admin.index') }}">Quản trị</a>@endif

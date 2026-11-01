@@ -12,6 +12,7 @@ export function setupJournalTheme(pageDocument = document, pageWindow = window) 
         root.dataset.themePreference = preference;
         root.dataset.theme = theme;
         root.dataset.bsTheme = theme;
+        root.classList?.toggle('dark', theme === 'dark');
         choices.forEach(button => button.setAttribute('aria-pressed', String(button.dataset.themeChoice === preference)));
         toggles.forEach(button => {
             button.setAttribute('aria-pressed', String(theme === 'light'));

@@ -1,6 +1,6 @@
-# Mộc Journal — đồ án blog cá nhân
+# Threads City — Mạng xã hội kết nối & chia sẻ ý tưởng
 
-Website PHP/Laravel + Blade + MySQL của Laragon, theo [word/doanltmnm.docx](word/doanltmnm.docx). Chỉ làm website, không làm app mobile. Admin/tác giả viết bài; Reader đọc, thích/lưu bài, bình luận và trả lời, không đăng bài như mạng xã hội. Theo yêu cầu cập nhật 13/10/2026, bình luận mới hiển thị ngay, không cần duyệt.
+Nền tảng mạng xã hội phong cách Meta Threads được xây dựng trên Laravel 11, Blade và MySQL / TiDB Cloud. Hệ thống hỗ trợ đăng bài (threads), chuỗi phản hồi (replies), đăng lại (repost), trích dẫn (quote), tải lên tối đa 4 ảnh, theo dõi người dùng, nhắc tên (@username), hashtag (#topic) và trung tâm thông báo thời gian thực.
 
 ## Mở bản hiện tại
 
@@ -186,7 +186,7 @@ MAIL_PORT=465
 MAIL_USERNAME=your-sender@gmail.com
 MAIL_PASSWORD="REPLACE_WITH_YOUR_APP_PASSWORD"
 MAIL_FROM_ADDRESS=your-sender@gmail.com
-MAIL_FROM_NAME="Mộc Journal"
+MAIL_FROM_NAME="Threads City"
 MAIL_PREVIEW_URL=
 MAIL_TIMEOUT=10
 ```

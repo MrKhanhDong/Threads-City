@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\AccountRequest;
 use App\Models\User;
+use App\Services\ImageStorage;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -24,7 +25,7 @@ class AccountController extends Controller
         $user = $request->user();
         $data = $request->validated();
         $oldAvatar = $user->avatar_path;
-        $newAvatar = $request->hasFile('avatar') ? $request->file('avatar')->store('avatars', 'local') : null;
+        $newAvatar = $request->hasFile('avatar') ? app(ImageStorage::class)->store($request->file('avatar'), 'avatars') : null;
         try {
             $user->fill(collect($data)->only(['name', 'username', 'bio'])->all());
             if ($newAvatar) {
@@ -33,12 +34,12 @@ class AccountController extends Controller
             $user->save();
         } catch (\Throwable $error) {
             if ($newAvatar) {
-                Storage::disk('local')->delete($newAvatar);
+                app(ImageStorage::class)->delete($newAvatar);
             }
             throw $error;
         }
-        if ($newAvatar && $oldAvatar && str_starts_with($oldAvatar, 'avatars/')) {
-            Storage::disk('local')->delete($oldAvatar);
+        if ($newAvatar && $oldAvatar && (str_starts_with($oldAvatar, 'avatars/') || app(ImageStorage::class)->remoteUrl($oldAvatar))) {
+            app(ImageStorage::class)->delete($oldAvatar);
         }
 
         return back()->with('success', 'Đã cập nhật hồ sơ.');
@@ -55,11 +56,18 @@ class AccountController extends Controller
         return back()->with('success', 'Đã đổi mật khẩu. Các phiên cũ sẽ bị thu hồi.');
     }
 
-    public function avatar(User $user): BinaryFileResponse
+    public function avatar(User $user): BinaryFileResponse|RedirectResponse
     {
+        if ($url = app(ImageStorage::class)->remoteUrl($user->avatar_path)) {
+            return redirect()->away($url);
+        }
+
         abort_unless($user->avatar_path && preg_match('~^avatars/[A-Za-z0-9]+\.(jpg|jpeg|png|webp)$~', $user->avatar_path), 404);
         abort_unless(Storage::disk('local')->exists($user->avatar_path), 404);
 
-        return response()->file(Storage::disk('local')->path($user->avatar_path), ['X-Content-Type-Options' => 'nosniff']);
+        return response()->file(Storage::disk('local')->path($user->avatar_path), [
+            'X-Content-Type-Options' => 'nosniff',
+            'Cache-Control' => 'public, max-age=86400, stale-while-revalidate=604800',
+        ]);
     }
 }

@@ -80,54 +80,75 @@ export function setupCommentThreads(doc = document) {
     });
 }
 
-export function setupReplyNotifications(doc = document) {
+export function setupReplyNotifications(doc = document, pageWindow = window) {
     const bell = doc.querySelector('[data-notification-bell]');
     if (!bell) return;
     const button = bell.querySelector('.notification-button');
     const badge = bell.querySelector('[data-notification-count]');
     const items = bell.querySelector('[data-notification-items]');
     const status = bell.querySelector('[data-notifications-status]');
+    const retry = bell.querySelector('[data-notifications-retry]');
+    const readAll = bell.querySelector('[data-notifications-read-all] button');
     let busy = false;
     let refreshAgain = false;
+    let markingRead = false;
+    let revision = 0;
     async function refresh(summary = false) {
-        if (busy) { if (!summary) refreshAgain = true; return; }
+        if (busy || markingRead) { if (!summary) refreshAgain = true; return; }
         busy = true;
-        if (!summary) status.textContent = 'Đang tải thông báo…';
+        const version = revision;
+        if (!summary) { status.textContent = 'Đang tải thông báo…'; retry.hidden = true; }
         try {
             const url = new URL(bell.dataset.url);
             if (summary) url.searchParams.set('summary', '1');
-            const response = await fetch(url, { headers: { Accept: 'application/json' }, credentials: 'same-origin', cache: 'no-store' });
+            const response = await pageWindow.fetch(url, { headers: { Accept: 'application/json' }, credentials: 'same-origin', cache: 'no-store' });
             const data = await response.json();
             if (!response.ok) throw new Error(data.message || 'Không tải được thông báo.');
-            if (!Number.isSafeInteger(data.unread) || (!summary && typeof data.html !== 'string')) throw new Error('Phản hồi thông báo không hợp lệ.');
+            if (!Number.isSafeInteger(data.unread) || data.unread < 0 || (!summary && typeof data.html !== 'string')) throw new Error('Phản hồi thông báo không hợp lệ.');
+            if (version !== revision) return;
             badge.hidden = data.unread === 0;
-            badge.textContent = data.unread > 99 ? '99+' : String(data.unread);
+            readAll.disabled = data.unread === 0;
             button.setAttribute('aria-label', data.unread ? 'Thông báo: ' + data.unread + ' chưa đọc' : 'Thông báo');
             if (!summary) { items.innerHTML = data.html; status.textContent = ''; }
         } catch (error) {
-            if (!summary) status.textContent = requestErrorMessage(error, 'Không tải được thông báo. Nhấn chuông để thử lại.');
+            if (!summary && version === revision) { status.textContent = requestErrorMessage(error, 'Không tải được thông báo. Hãy thử lại.'); retry.hidden = false; }
         } finally {
             busy = false;
-            if (refreshAgain) { refreshAgain = false; void refresh(); }
+            if (refreshAgain && !markingRead) { refreshAgain = false; void refresh(); }
         }
     }
     bell.addEventListener('show.bs.dropdown', () => void refresh());
+    retry.addEventListener('click', () => void refresh());
     bell.querySelector('[data-notifications-read-all]').addEventListener('submit', async event => {
         event.preventDefault();
         const form = event.target;
         const submit = form.querySelector('button');
+        if (markingRead) return;
+        markingRead = true;
+        revision++;
         submit.disabled = true;
         try {
-            const response = await fetch(form.action, { method: 'POST', body: new FormData(form), headers: { Accept: 'application/json' }, credentials: 'same-origin' });
+            const response = await pageWindow.fetch(form.action, { method: 'POST', body: new pageWindow.FormData(form), headers: { Accept: 'application/json' }, credentials: 'same-origin' });
             const data = await response.json();
             if (!response.ok) throw new Error(data.message || 'Chưa đánh dấu được thông báo.');
-            await refresh();
+            badge.hidden = true;
+            button.setAttribute('aria-label', 'Thông báo');
+            refreshAgain = true;
         } catch (error) {
             status.textContent = requestErrorMessage(error, 'Chưa đánh dấu được thông báo. Hãy thử lại.');
-        } finally { submit.disabled = false; }
+        } finally {
+            markingRead = false;
+            submit.disabled = badge.hidden;
+            if (refreshAgain && !busy) { refreshAgain = false; void refresh(); }
+        }
     });
     const refreshVisible = () => { if (doc.visibilityState === 'visible') void refresh(!bell.querySelector('.dropdown-menu.show')); };
-    window.addEventListener('focus', refreshVisible);
+    pageWindow.addEventListener('focus', refreshVisible);
+    pageWindow.addEventListener('threads:refresh', refreshVisible);
     doc.addEventListener('visibilitychange', refreshVisible);
-    setInterval(refreshVisible, 45000);
+    let timer = pageWindow.setInterval(refreshVisible, 30000);
+    pageWindow.addEventListener('pagehide', () => { pageWindow.clearInterval(timer); timer = null; });
+    pageWindow.addEventListener('pageshow', event => {
+        if (event.persisted && timer === null) { timer = pageWindow.setInterval(refreshVisible, 30000); refreshVisible(); }
+    });
 }

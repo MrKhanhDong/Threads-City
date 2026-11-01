@@ -1,6 +1,6 @@
 <aside class="offcanvas offcanvas-start journal-sidebar-drawer" id="journal-sidebar-drawer" tabindex="-1" aria-labelledby="journal-drawer-title" data-sidebar-drawer>
     <div class="journal-drawer-heading">
-        <a class="journal-brand" href="{{ route('home') }}" aria-label="Threads — Trang chủ" id="journal-drawer-title"><span class="journal-mark">@</span><span class="journal-brand-copy">{{ $site['site_name'] }}</span></a>
+        <a class="journal-brand" href="{{ route('home') }}" aria-label="Threads — Trang chủ" id="journal-drawer-title"><span class="journal-mark">@</span><span class="journal-brand-copy">{{ config('blog.name') }}</span></a>
         <button type="button" class="journal-menu-button" data-bs-dismiss="offcanvas" aria-label="Đóng thanh bên"><x-journal-icon name="close" :size="24"/></button>
     </div>
     <div class="journal-drawer-body">

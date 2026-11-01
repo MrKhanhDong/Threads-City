@@ -23,7 +23,7 @@ class BlogSeeder extends Seeder
         DB::transaction(function (): void {
             $admin = User::where('email', 'admin@blog.local')->first();
             if (! $admin) {
-                $admin = new User(['name' => 'Tác giả Mộc', 'email' => 'admin@blog.local', 'password' => 'Admin@12345', 'bio' => 'Viết về những điều giản dị, học tập và những hành trình nhỏ.']);
+                $admin = new User(['name' => 'Threads Admin', 'email' => 'admin@blog.local', 'password' => 'Admin@12345', 'bio' => 'Quản trị viên Threads City.']);
                 $admin->forceFill(['role' => 'admin', 'email_verified_at' => now()])->save();
             }
             if (! $admin->isAdmin()) {
@@ -32,7 +32,7 @@ class BlogSeeder extends Seeder
 
             $reader = User::where('email', 'reader@blog.local')->first();
             if (! $reader) {
-                $reader = new User(['name' => 'Độc giả Mộc', 'email' => 'reader@blog.local', 'password' => 'Reader@12345']);
+                $reader = new User(['name' => 'Thành viên Threads', 'email' => 'reader@blog.local', 'password' => 'Reader@12345']);
                 $reader->forceFill(['role' => 'reader', 'email_verified_at' => now()])->save();
             }
 
@@ -89,7 +89,7 @@ class BlogSeeder extends Seeder
                 Comment::firstOrCreate(['post_id' => $article->id, 'user_id' => $reader->id, 'body' => 'Một câu chuyện nhỏ giúp mình có thêm cảm hứng viết.'], ['status' => 'approved']);
             }
 
-            foreach (['site_name' => config('blog.name'), 'site_tagline' => config('blog.tagline'), 'site_description' => config('blog.description'), 'about' => config('blog.about'), 'contact_email' => 'hello@example.com'] as $key => $value) {
+            foreach (['site_name' => 'Threads', 'site_tagline' => 'Nơi kết nối và chia sẻ ý tưởng.', 'site_description' => 'Mạng xã hội Threads — chia sẻ suy nghĩ, kết nối cộng đồng phong cách Meta Threads.', 'about' => 'Chào bạn, đây là Threads City — không gian chia sẻ suy nghĩ, thảo luận dạng chuỗi và kết nối cộng đồng.', 'contact_email' => 'hello@example.com'] as $key => $value) {
                 Setting::firstOrCreate(['key' => $key], ['value' => $value]);
             }
         });

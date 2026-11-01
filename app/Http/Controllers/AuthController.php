@@ -54,6 +54,12 @@ class AuthController extends Controller
 
         $request->session()->regenerate();
 
+        if ($redirect = $request->input('redirect')) {
+            if (Str::startsWith($redirect, [url('/'), '/']) && ! Str::contains($redirect, ['dang-nhap', 'dang-ky'])) {
+                return redirect()->to($redirect);
+            }
+        }
+
         return redirect()->intended(route('home'));
     }
 

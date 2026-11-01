@@ -7,11 +7,42 @@ use App\Models\Post;
 use App\Models\Tag;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class SearchTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_navigation_and_multitasking_point_to_the_full_search_page_and_old_links_redirect(): void
+    {
+        $this->get(route('home'))->assertOk()
+            ->assertSee('href="'.route('search.index').'" aria-label="Tìm kiếm"', false)
+            ->assertSee('data-column-choice="search" data-column-url="'.route('search.index').'"', false);
+        $this->get(route('home', ['search' => 1, 'q' => 'Laravel', 'type' => 'people']))
+            ->assertRedirect(route('search.index', ['q' => 'Laravel', 'type' => 'people']));
+        $this->get(route('search.index'))->assertOk()->assertSee('journal-shell', false)->assertDontSee('journal-restored-search', false);
+    }
+
+    public function test_restored_search_respects_hidden_archived_and_blocked_content(): void
+    {
+        $reader = User::factory()->create();
+        $blocked = User::factory()->create(['name' => 'Needle blocked']);
+        $blocking = User::factory()->create(['name' => 'Needle blocking']);
+        $reader->blockedUsers()->attach($blocked);
+        $blocking->blockedUsers()->attach($reader);
+        $visible = Post::factory()->published()->create(['title' => 'Needle public']);
+        $hidden = Post::factory()->published()->create(['title' => 'Needle hidden']);
+        DB::table('hidden_posts')->insert(['user_id' => $reader->id, 'post_id' => $hidden->id, 'created_at' => now()]);
+        Post::factory()->published()->create(['title' => 'Needle archived', 'archived_at' => now()]);
+        $blockedPost = Post::factory()->published()->create(['user_id' => $blocked->id, 'title' => 'Needle blocked']);
+        Post::factory()->published()->create(['user_id' => $blocking->id, 'title' => 'Needle blocking']);
+        Post::factory()->published()->create(['type' => 'quote', 'repost_of_id' => $blockedPost->id, 'title' => 'Needle blocked quote']);
+        $this->actingAs($reader)->get(route('search.index', ['q' => 'Needle']))->assertOk()
+            ->assertViewHas('threads', fn ($threads): bool => $threads->pluck('id')->all() === [$visible->id]);
+        $this->get(route('search.index', ['q' => 'Needle', 'type' => 'people']))->assertOk()
+            ->assertViewHas('people', fn ($people): bool => $people->isEmpty());
+    }
 
     public function test_discovery_uses_real_topics_counts_and_a_preview_for_each_topic(): void
     {

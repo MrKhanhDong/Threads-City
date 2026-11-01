@@ -1,20 +1,47 @@
 @php
-<<<<<<< HEAD
     $isRepost = ($thread->type === 'repost') && $thread->repostOf;
     $displayThread = $isRepost ? $thread->repostOf : $thread;
     $repostedBy = $isRepost ? $thread->author : null;
     $currentUser = auth()->user();
-    $isLiked = $displayThread->isLikedBy($currentUser);
-    $isBookmarked = $displayThread->isBookmarkedBy($currentUser);
-    $isReposted = $displayThread->isRepostedBy($currentUser);
     $author = $displayThread->author;
+
+    // Fast O(1) in-memory lookup if preloaded, fallback to DB query if not passed
+    $isLiked = isset($userInteractions['liked']) 
+        ? isset($userInteractions['liked'][$displayThread->id]) 
+        : $displayThread->isLikedBy($currentUser);
+
+    $isBookmarked = isset($userInteractions['bookmarked']) 
+        ? isset($userInteractions['bookmarked'][$displayThread->id]) 
+        : $displayThread->isBookmarkedBy($currentUser);
+
+    $isReposted = isset($userInteractions['reposted']) 
+        ? isset($userInteractions['reposted'][$displayThread->id]) 
+        : $displayThread->isRepostedBy($currentUser);
+
+    $isMuted = isset($userInteractions['muted']) 
+        ? isset($userInteractions['muted'][$displayThread->id]) 
+        : ($currentUser && $displayThread->isMutedBy($currentUser));
+
+    $isFollowing = isset($userInteractions['following']) 
+        ? isset($userInteractions['following'][$author->id]) 
+        : ($currentUser && $currentUser->isFollowing($author));
+
+    $isRestricted = isset($userInteractions['restricted']) 
+        ? isset($userInteractions['restricted'][$author->id]) 
+        : ($currentUser && $currentUser->isRestricting($author));
+
+    $isBlocked = isset($userInteractions['blocked']) 
+        ? isset($userInteractions['blocked'][$author->id]) 
+        : ($currentUser && $currentUser->isBlocking($author));
+
     $hasReplies = !empty($hasReplies) ? $hasReplies : false;
     $isReplyItem = !empty($isReplyItem) ? $isReplyItem : false;
     $firstTag = $displayThread->tags->first();
     $isTrendingTag = ($firstTag && in_array(mb_strtolower($firstTag->name), ['biểu tình', 'bieu tinh'])) || ($displayThread->slug === 'thread-badat3927-bieu-tinh');
+    $cleanContent = preg_replace('/<br\s*\/?>/i', "\n", $displayThread->content ?? '');
 @endphp
 
-<article class="thread-card-wrapper {{ $hasReplies ? 'has-replies-line' : '' }} {{ $isReplyItem ? 'is-reply-item' : '' }}" id="thread-{{ $thread->id }}" data-thread-id="{{ $displayThread->id }}">
+<article class="thread-card-wrapper {{ $hasReplies ? 'has-replies-line' : '' }} {{ $isReplyItem ? 'is-reply-item' : '' }}" id="thread-{{ $thread->id }}" data-live-key="thread-{{ $thread->id }}" data-thread-id="{{ $displayThread->id }}">
     
     <!-- Repost Header Banner -->
     @if($isRepost && $repostedBy)
@@ -26,7 +53,7 @@
                 <path d="M21 13v2a4 4 0 0 1-4 4H3"></path>
             </svg>
             <a href="{{ route('profile.show', $repostedBy->username ?? $repostedBy->id) }}" class="repost-author-link">
-                <strong>{{ $repostedBy->name }}</strong> đã đăng lại
+                <strong>{{ (auth()->check() && auth()->id() === $repostedBy->id) ? 'Bạn' : $repostedBy->name }}</strong> đã đăng lại
             </a>
         </div>
     @endif
@@ -34,7 +61,7 @@
     <!-- Trending Indicator (Yellow pill / text matching screenshot) -->
     @if($isTrendingTag)
         <div class="thread-trend-indicator">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#facc15" stroke-width="2.5">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                 <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
                 <polyline points="17 6 23 6 23 12"></polyline>
             </svg>
@@ -48,12 +75,12 @@
             <div class="avatar-with-badge">
                 <a href="{{ route('profile.show', $author->username ?? $author->id) }}" class="avatar-link">
                     @if($author->avatar_path)
-                        <img src="{{ route('avatar.show', $author->id) }}" alt="{{ $author->name }}" class="user-avatar-round">
+                        <img src="{{ route('avatar.show', $author->id) }}" alt="{{ $author->name }}" class="user-avatar-round" style="width: 38px; height: 38px; border-radius: 50%; object-fit: cover;">
                     @else
-                        <div class="user-avatar-letter">{{ mb_substr($author->name, 0, 1) }}</div>
+                        <div class="user-avatar-letter" style="width: 38px; height: 38px;">{{ mb_substr($author->name, 0, 1) }}</div>
                     @endif
                 </a>
-                @if(!auth()->check() || (auth()->id() !== $author->id && !auth()->user()->isFollowing($author)))
+                @if(!auth()->check() || (auth()->id() !== $author->id && !$isFollowing))
                     <button type="button" class="avatar-follow-plus-btn btn-ajax-avatar-follow" data-user-id="{{ $author->id }}" title="Theo dõi {{ $author->name }}">
                         <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5">
                             <line x1="12" y1="5" x2="12" y2="19"></line>
@@ -87,63 +114,286 @@
                     <time class="author-time-text" datetime="{{ $displayThread->published_at?->toISOString() }}">
                         {{ $displayThread->published_at ? $displayThread->published_at->diffForHumans(null, true) : 'vừa xong' }}
                     </time>
+                    @php
+                        $threadLocation = null;
+                        if (!empty($displayThread->excerpt)) {
+                            $parsedExcerpt = json_decode($displayThread->excerpt, true);
+                            if (is_array($parsedExcerpt) && !empty($parsedExcerpt['location'])) {
+                                $threadLocation = $parsedExcerpt['location'];
+                            }
+                        }
+                    @endphp
+                    @if($threadLocation)
+                        <span class="meta-separator text-secondary" style="font-size: 11px;">·</span>
+                        <span class="thread-location-pill" title="Địa điểm: {{ $threadLocation }}">
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                                <circle cx="12" cy="10" r="3"></circle>
+                            </svg>
+                            <span>{{ $threadLocation }}</span>
+                        </span>
+                    @endif
                 </div>
 
                 <!-- More Options (3 dots) -->
                 <div class="dropdown">
-                    <button class="thread-more-btn" data-bs-toggle="dropdown" aria-expanded="false" title="Thêm tùy chọn">
+                    <button class="thread-more-btn" data-bs-toggle="dropdown" aria-expanded="false" title="Thêm tùy chọn" aria-label="Tùy chọn bài viết">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <circle cx="12" cy="12" r="1.5" fill="currentColor"></circle>
                             <circle cx="19" cy="12" r="1.5" fill="currentColor"></circle>
                             <circle cx="5" cy="12" r="1.5" fill="currentColor"></circle>
                         </svg>
                     </button>
-                    <ul class="dropdown-menu dropdown-menu-end threads-dropdown-menu">
-                        <li>
-                            <button type="button" class="threads-dropdown-item w-100 text-start btn-copy-thread-link" data-url="{{ route('threads.show', $displayThread->id) }}">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <div class="dropdown-menu dropdown-menu-end thread-options-dropdown-menu">
+                        <!-- Group 1: Hỏi Meta AI -->
+                        <button type="button" class="thread-option-item btn-ask-meta-ai" 
+                            data-thread-id="{{ $displayThread->id }}" 
+                            data-author-name="{{ e($author->name) }}"
+                            data-thread-content="{{ e(Str::limit(strip_tags($cleanContent), 280)) }}">
+                            <span class="thread-option-label">Hỏi Meta AI</span>
+                            <span class="thread-option-icon">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                                    <g transform="translate(12,12)">
+                                        <ellipse cx="0" cy="-7.5" rx="1.2" ry="2.2" transform="rotate(0) rotate(18, 0, -7.5)" fill="currentColor"/>
+                                        <ellipse cx="0" cy="-7.5" rx="1.2" ry="2.2" transform="rotate(40) rotate(18, 0, -7.5)" fill="currentColor"/>
+                                        <ellipse cx="0" cy="-7.5" rx="1.2" ry="2.2" transform="rotate(80) rotate(18, 0, -7.5)" fill="currentColor"/>
+                                        <ellipse cx="0" cy="-7.5" rx="1.2" ry="2.2" transform="rotate(120) rotate(18, 0, -7.5)" fill="currentColor"/>
+                                        <ellipse cx="0" cy="-7.5" rx="1.2" ry="2.2" transform="rotate(160) rotate(18, 0, -7.5)" fill="currentColor"/>
+                                        <ellipse cx="0" cy="-7.5" rx="1.2" ry="2.2" transform="rotate(200) rotate(18, 0, -7.5)" fill="currentColor"/>
+                                        <ellipse cx="0" cy="-7.5" rx="1.2" ry="2.2" transform="rotate(240) rotate(18, 0, -7.5)" fill="currentColor"/>
+                                        <ellipse cx="0" cy="-7.5" rx="1.2" ry="2.2" transform="rotate(280) rotate(18, 0, -7.5)" fill="currentColor"/>
+                                        <ellipse cx="0" cy="-7.5" rx="1.2" ry="2.2" transform="rotate(320) rotate(18, 0, -7.5)" fill="currentColor"/>
+                                    </g>
+                                </svg>
+                            </span>
+                        </button>
+
+                        <div class="thread-option-divider"></div>
+
+                        <!-- Group 2: Sao chép liên kết & Lấy mã nhúng -->
+                        <button type="button" class="thread-option-item btn-copy-thread-link" data-url="{{ route('threads.show', $displayThread->id) }}">
+                            <span class="thread-option-label">Sao chép liên kết</span>
+                            <span class="thread-option-icon">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
                                     <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
                                 </svg>
-                                <span>Sao chép liên kết</span>
-                            </button>
-                        </li>
+                            </span>
+                        </button>
+                        <button type="button" class="thread-option-item btn-embed-thread" data-url="{{ route('threads.embed', $displayThread->id) }}">
+                            <span class="thread-option-label">Lấy mã nhúng</span>
+                            <span class="thread-option-icon">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M7 4a3 3 0 0 0-3 3v2a3 3 0 0 1-3 3 3 3 0 0 1 3 3v2a3 3 0 0 0 3 3"></path>
+                                    <path d="M17 4a3 3 0 0 1 3 3v2a3 3 0 0 0 3 3 3 3 0 0 0-3 3v2a3 3 0 0 1-3 3"></path>
+                                    <circle cx="9.5" cy="12" r="0.9" fill="currentColor"></circle>
+                                    <circle cx="12" cy="12" r="0.9" fill="currentColor"></circle>
+                                    <circle cx="14.5" cy="12" r="0.9" fill="currentColor"></circle>
+                                </svg>
+                            </span>
+                        </button>
+
+                        <div class="thread-option-divider"></div>
+
+                        <!-- Group 3: Lưu / Bỏ lưu & Không quan tâm -->
+                        <button type="button" class="thread-option-item btn-ajax-thread-bookmark" data-thread-id="{{ $displayThread->id }}" data-bookmarked="{{ $isBookmarked ? '1' : '0' }}">
+                            <span class="thread-option-label bookmark-label">{{ $isBookmarked ? 'Bỏ lưu' : 'Lưu' }}</span>
+                            <span class="thread-option-icon">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="{{ $isBookmarked ? 'currentColor' : 'none' }}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="bookmark-svg-icon">
+                                    <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+                                </svg>
+                            </span>
+                        </button>
+                        <button type="button" class="thread-option-item btn-not-interested" data-thread-id="{{ $displayThread->id }}">
+                            <span class="thread-option-label">Không quan tâm</span>
+                            <span class="thread-option-icon">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                                    <line x1="1" y1="1" x2="23" y2="23"></line>
+                                </svg>
+                            </span>
+                        </button>
+
+                        <div class="thread-option-divider"></div>
+
+                        <!-- Group 4: Thêm vào bảng feed -->
+                        <button type="button" class="thread-option-item btn-add-to-custom-feed" data-thread-id="{{ $displayThread->id }}">
+                            <span class="thread-option-label">Thêm vào bảng feed</span>
+                            <span class="thread-option-icon">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="9 18 15 12 9 6"></polyline>
+                                </svg>
+                            </span>
+                        </button>
+
+                        <div class="thread-option-divider"></div>
+
+                        <!-- Group 5: Tắt thông báo, Hạn chế, Chặn, Báo cáo -->
+                        <button type="button" class="thread-option-item btn-mute-thread" data-thread-id="{{ $displayThread->id }}" data-muted="{{ $isMuted ? '1' : '0' }}">
+                            <span class="thread-option-label mute-label">{{ $isMuted ? 'Bật thông báo' : 'Tắt thông báo' }}</span>
+                            <span class="thread-option-icon">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+                                    <circle cx="9" cy="7" r="4"></circle>
+                                    <line x1="17" y1="11" x2="22" y2="16"></line>
+                                    <line x1="22" y1="11" x2="17" y2="16"></line>
+                                </svg>
+                            </span>
+                        </button>
+                        <button type="button" class="thread-option-item btn-restrict-user" data-user-id="{{ $author->id }}" data-user-name="{{ e($author->name) }}" data-restricted="{{ $isRestricted ? '1' : '0' }}">
+                            <span class="thread-option-label restrict-label">{{ $isRestricted ? 'Bỏ hạn chế' : 'Hạn chế' }}</span>
+                            <span class="thread-option-icon">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                                    <circle cx="8.5" cy="7" r="4"></circle>
+                                    <path d="M17.5 12.5l3.5 1.5v3.2c0 2.2-3.5 3.8-3.5 3.8s-3.5-1.6-3.5-3.8V14l3.5-1.5z"></path>
+                                </svg>
+                            </span>
+                        </button>
+                        <button type="button" class="thread-option-item thread-option-danger btn-block-user" data-user-id="{{ $author->id }}" data-user-name="{{ e($author->name) }}" data-blocked="{{ $isBlocked ? '1' : '0' }}">
+                            <span class="thread-option-label block-label">{{ $isBlocked ? 'Bỏ chặn' : 'Chặn' }}</span>
+                            <span class="thread-option-icon">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line>
+                                </svg>
+                            </span>
+                        </button>
+                        <button type="button" class="thread-option-item thread-option-danger btn-report-thread" data-thread-id="{{ $displayThread->id }}" data-author-name="{{ e($author->name) }}">
+                            <span class="thread-option-label">Báo cáo</span>
+                            <span class="thread-option-icon">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
+                                    <line x1="12" y1="8" x2="12" y2="12"></line>
+                                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                                </svg>
+                            </span>
+                        </button>
+
+                        <!-- Author / Admin: Xóa bài viết -->
                         @auth
                             @if($currentUser->id === $thread->user_id || $currentUser->isAdmin())
-                                <li>
-                                    <form action="{{ route('threads.destroy', $thread->id) }}" method="post" onsubmit="return confirm('Bạn có chắc chắn muốn xóa bài viết này không?');">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="threads-dropdown-item w-100 text-start text-danger border-0 bg-transparent">
-                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <div class="thread-option-divider"></div>
+                                <form action="{{ route('threads.destroy', $thread->id) }}" data-live-submit method="post" onsubmit="return confirm('Bạn có chắc chắn muốn xóa bài viết này không?');">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="thread-option-item thread-option-danger w-100">
+                                        <span class="thread-option-label">Xóa bài viết</span>
+                                        <span class="thread-option-icon">
+                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                                 <polyline points="3 6 5 6 21 6"></polyline>
                                                 <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
                                             </svg>
-                                            <span>Xóa bài viết</span>
-                                        </button>
-                                    </form>
-                                </li>
+                                        </span>
+                                    </button>
+                                </form>
                             @endif
                         @endauth
-                    </ul>
+                    </div>
                 </div>
             </div>
 
             <!-- Content Area -->
-            <div class="thread-content-text">
-                {!! preg_replace('/#([\p{L}\p{N}_]+)/u', '<a href="' . route('posts.index') . '?q=$1" class="thread-hashtag">#$1</a>', nl2br(e($displayThread->content))) !!}
-            </div>
-
-            <!-- Media Gallery (Images) -->
-            @if($displayThread->media && $displayThread->media->count() > 0)
-                <div class="thread-media-gallery gallery-count-{{ min(4, $displayThread->media->count()) }}">
-                    @foreach($displayThread->media->take(4) as $mediaItem)
-                        <div class="gallery-media-item">
-                            <img src="{{ route('media.show', $mediaItem->id) }}" alt="{{ $mediaItem->alt ?? 'Ảnh đính kèm' }}" loading="lazy">
-                        </div>
-                    @endforeach
+            @php
+                $cleanContent = preg_replace('/<br\s*\/?>/i', "\n", $displayThread->content ?? '');
+                $formattedContent = e($cleanContent);
+                $formattedContent = preg_replace('/#([\p{L}\p{N}_]+)/u', '<a href="' . route('threads.index') . '?q=%23$1" class="thread-hashtag" onclick="event.stopPropagation();">#$1</a>', $formattedContent);
+                $formattedContent = preg_replace('/@([A-Za-z0-9_]{3,30})/u', '<a href="/@$1" class="thread-mention" onclick="event.stopPropagation();">@$1</a>', $formattedContent);
+            @endphp
+            @if(trim($cleanContent) !== '')
+                <div class="thread-content-text">
+                    {!! nl2br($formattedContent) !!}
                 </div>
             @endif
+
+            <!-- Attached Document Display (if thread has attached text doc) -->
+            @php
+                $attachedDoc = null;
+                if (!empty($displayThread->excerpt)) {
+                    $parsedExcerpt = json_decode($displayThread->excerpt, true);
+                    if (is_array($parsedExcerpt) && !empty($parsedExcerpt['attached_doc'])) {
+                        $attachedDoc = $parsedExcerpt['attached_doc'];
+                    }
+                }
+            @endphp
+
+            @if($attachedDoc)
+                <div class="thread-attached-doc-display">
+                    <div class="attached-doc-display-header">
+                        <div class="attached-doc-display-badge">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                <polyline points="14 2 14 8 20 8"></polyline>
+                                <line x1="16" y1="13" x2="8" y2="13"></line>
+                                <line x1="16" y1="17" x2="8" y2="17"></line>
+                            </svg>
+                            <span>Văn bản đính kèm</span>
+                        </div>
+                    </div>
+                    <div class="attached-doc-display-body">
+                        {!! $attachedDoc !!}
+                    </div>
+                </div>
+            @endif
+
+            <!-- Interactive Poll Display (if thread has a poll) -->
+            @php
+                $pollData = null;
+                if (!empty($displayThread->excerpt)) {
+                    $parsedExcerpt = json_decode($displayThread->excerpt, true);
+                    if (is_array($parsedExcerpt) && !empty($parsedExcerpt['is_poll']) && !empty($parsedExcerpt['options'])) {
+                        $pollData = $parsedExcerpt;
+                    }
+                }
+            @endphp
+
+            @if($pollData)
+                @php
+                    $currentUserId = (string) (auth()->id() ?? '');
+                    $votersList = is_array($pollData['voters']) ? $pollData['voters'] : (array) $pollData['voters'];
+                    $userVoted = isset($votersList[$currentUserId]);
+                    $userPick = $votersList[$currentUserId] ?? null;
+                    $totalVotes = $pollData['total_votes'] ?? 0;
+                    $maxVotes = max(1, $totalVotes);
+                    $pollClosed = !empty($pollData['expires_at']) && strtotime($pollData['expires_at']) <= now()->timestamp;
+                @endphp
+                <div class="thread-poll-display-card" id="pollCard-{{ $displayThread->id }}" data-expires-at="{{ $pollData['expires_at'] ?? '' }}" data-poll-id="{{ $displayThread->id }}" data-poll-options='@json($pollData["options"])' data-poll-total="{{ $totalVotes }}" data-poll-pick="{{ $userPick }}" data-thread-id="{{ $displayThread->id }}">
+                    <div class="poll-items-wrap">
+                        @foreach($pollData['options'] as $opt)
+                            @php
+                                $optVotes = $opt['votes'] ?? 0;
+                                $percent = $totalVotes > 0 ? round(($optVotes / $maxVotes) * 100) : 0;
+                                $isPicked = ($userPick === $opt['id']);
+                            @endphp
+                            @if($userVoted || $pollClosed)
+                                <div class="poll-display-result-row {{ $isPicked ? 'user-picked' : '' }}">
+                                    <div class="poll-result-bar-bg" style="width: {{ $percent }}%;"></div>
+                                    <div class="poll-result-label-row">
+                                        <span class="poll-result-opt-name">
+                                            {{ $opt['text'] }}
+                                            @if($isPicked)
+                                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" class="ms-1 text-white"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                            @endif
+                                        </span>
+                                        <span class="poll-result-percent">{{ $percent }}%</span>
+                                    </div>
+                                </div>
+                            @else
+                                <button type="button" class="poll-display-vote-btn btn-ajax-poll-vote" data-vote-url="{{ route('threads.vote', $displayThread->id) }}" data-thread-id="{{ $displayThread->id }}" data-option-id="{{ $opt['id'] }}">
+                                    {{ $opt['text'] }}
+                                </button>
+                            @endif
+                        @endforeach
+                    </div>
+                    <div class="poll-display-footer">
+                        <span class="poll-total-votes-count">{{ $totalVotes }} phiếu bầu</span>
+                        <span>·</span>
+                        <span class="poll-deadline">{{ $pollClosed ? 'Đã kết thúc' : 'Còn '.\Illuminate\Support\Carbon::parse($pollData['expires_at'] ?? now()->addDay())->diffForHumans(now(), true) }}</span>
+                    </div>
+                </div>
+            @endif
+
+            <x-thread-media :items="$displayThread->media"/>
 
             <!-- Quoted Post Embed (Matches Screenshot) -->
             @if($displayThread->type === 'quote' && $displayThread->repostOf)
@@ -187,7 +437,7 @@
                             </div>
                         </div>
                         <div class="inner-quote-text">
-                            {{ $quoted->content }}
+                            {!! nl2br(e(preg_replace('/<br\s*\/?>/i', "\n", $quoted->content ?? ''))) !!}
                         </div>
                         <div class="inner-quote-action-counts">
                             <span class="inner-count-item">
@@ -224,7 +474,7 @@
                 </button>
 
                 <!-- 2. Reply Button -->
-                <a href="{{ route('threads.show', $displayThread->id) }}#replyBox" class="action-btn" title="Trả lời">
+                <a href="{{ route('threads.show', $displayThread->id) }}#replyBox" class="action-btn" title="Trả lời" @guest onclick="event.preventDefault(); window.checkAuth('trả lời bài viết này');" @endguest>
                     <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
                         <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
                     </svg>
@@ -238,7 +488,7 @@
                     data-thread-id="{{ $displayThread->id }}" 
                     data-author-name="{{ $author->name }}"
                     data-author-handle="{{ $author->handle() }}"
-                    data-content-snippet="{{ Str::limit(strip_tags($displayThread->content), 120) }}"
+                    data-content-snippet="{{ Str::limit(strip_tags(preg_replace('/<br\s*\/?>/i', ' ', $displayThread->content ?? '')), 120) }}"
                     title="Đăng lại">
                     <svg class="repost-icon" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="{{ $isReposted ? '#00ba7c' : 'currentColor' }}" stroke-width="1.8">
                         <path d="M17 1l4 4-4 4"></path>
@@ -280,7 +530,7 @@
         transition: background 0.15s ease;
     }
     .thread-card-wrapper:hover {
-        background: rgba(255, 255, 255, 0.015);
+        background: color-mix(in srgb, var(--journal-text) 2%, transparent);
     }
     .thread-trend-indicator {
         display: flex;
@@ -290,10 +540,10 @@
         margin-bottom: 10px;
         font-size: 13px;
         font-weight: 700;
-        color: #facc15;
+        color: var(--journal-text);
     }
     .trend-indicator-text {
-        color: #facc15;
+        color: var(--journal-text);
     }
     .thread-repost-banner {
         display: flex;
@@ -327,6 +577,44 @@
     .avatar-with-badge {
         position: relative;
         display: inline-block;
+        width: 38px;
+        height: 38px;
+        flex-shrink: 0;
+    }
+    .avatar-link {
+        display: block;
+        width: 38px;
+        height: 38px;
+        border-radius: 50%;
+        overflow: hidden;
+        flex-shrink: 0;
+    }
+    .user-avatar-round {
+        width: 38px !important;
+        height: 38px !important;
+        max-width: 38px !important;
+        max-height: 38px !important;
+        border-radius: 50% !important;
+        object-fit: cover !important;
+        background: var(--journal-raised) !important;
+        display: block !important;
+        flex-shrink: 0 !important;
+    }
+    .user-avatar-letter {
+        width: 38px !important;
+        height: 38px !important;
+        max-width: 38px !important;
+        max-height: 38px !important;
+        border-radius: 50% !important;
+        background: var(--journal-raised) !important;
+        color: var(--journal-text) !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        font-weight: 700 !important;
+        font-size: 15px !important;
+        border: 1px solid var(--journal-line) !important;
+        flex-shrink: 0 !important;
     }
     .avatar-follow-plus-btn {
         position: absolute;
@@ -335,9 +623,9 @@
         width: 17px;
         height: 17px;
         border-radius: 50%;
-        background: #000000;
-        color: #ffffff;
-        border: 2px solid #000000;
+        background: var(--journal-surface);
+        color: var(--journal-text);
+        border: 2px solid var(--journal-line);
         display: flex;
         align-items: center;
         justify-content: center;
@@ -347,13 +635,13 @@
     }
     .avatar-follow-plus-btn:hover {
         transform: scale(1.15);
-        background: #222;
+        background: var(--journal-raised);
     }
     .thread-connecting-line {
         width: 2px;
         flex-grow: 1;
         min-height: 40px;
-        background: #262626;
+        background: var(--journal-raised);
         margin-top: 8px;
         border-radius: 2px;
     }
@@ -375,7 +663,7 @@
     }
     .author-name-text {
         font-weight: 700;
-        color: #ffffff;
+        color: var(--journal-text);
         font-size: 15px;
     }
     .author-name-text:hover {
@@ -388,7 +676,7 @@
     }
     .meta-tag-name {
         font-size: 14px;
-        color: #e5e7eb;
+        color: var(--journal-text);
         font-weight: 600;
     }
     .author-time-text {
@@ -414,17 +702,19 @@
     .thread-content-text {
         font-size: 15px;
         line-height: 1.55;
-        color: #f3f5f7;
+        color: var(--journal-text);
         word-break: break-word;
         margin-bottom: 12px;
         white-space: pre-line;
     }
-    .thread-hashtag {
+    .thread-hashtag, .thread-mention {
         color: var(--accent-blue);
         font-weight: 500;
+        text-decoration: none;
     }
-    .thread-hashtag:hover {
+    .thread-hashtag:hover, .thread-mention:hover {
         text-decoration: underline;
+        color: var(--journal-link);
     }
 
     /* Media Gallery Grid */
@@ -433,19 +723,58 @@
         overflow: hidden;
         margin-bottom: 12px;
         border: 1px solid var(--border-color);
-        background: #111;
+        background: var(--journal-surface);
+        display: grid;
+        gap: 3px;
+    }
+    .thread-media-gallery.gallery-count-1 {
+        grid-template-columns: 1fr;
+    }
+    .thread-media-gallery.gallery-count-2 {
+        grid-template-columns: 1fr 1fr;
+        aspect-ratio: 16 / 9;
+    }
+    .thread-media-gallery.gallery-count-3 {
+        grid-template-columns: 2fr 1fr;
+        grid-template-rows: 1fr 1fr;
+        aspect-ratio: 16 / 9;
+    }
+    .thread-media-gallery.gallery-count-3 .gallery-media-item:first-child {
+        grid-row: span 2;
+    }
+    .thread-media-gallery.gallery-count-4 {
+        grid-template-columns: 1fr 1fr;
+        grid-template-rows: 1fr 1fr;
+        aspect-ratio: 16 / 9;
+    }
+    .gallery-media-item {
+        position: relative;
+        overflow: hidden;
+        background: #000000;
+        width: 100%;
+        height: 100%;
+    }
+    .gallery-media-link {
+        display: block;
+        width: 100%;
+        height: 100%;
     }
     .gallery-media-item img {
         width: 100%;
+        height: 100%;
         max-height: 480px;
         object-fit: cover;
         display: block;
+        transition: transform 0.25s ease;
+    }
+    .gallery-media-item:hover img {
+        transform: scale(1.025);
     }
 
     /* Inner Quoted Thread Card (Exact match to screenshot) */
     .threads-inner-quote-card {
-        border: 1px solid #282828;
-        background: #000000;
+        border: 1px solid var(--journal-line);
+        background: var(--journal-surface);
         border-radius: 16px;
         padding: 14px 16px;
         margin: 10px 0 14px;
@@ -453,7 +782,7 @@
         transition: border-color 0.2s;
     }
     .threads-inner-quote-card:hover {
-        border-color: #383838;
+        border-color: var(--journal-line);
     }
     .inner-quote-topbar {
         display: flex;
@@ -468,7 +797,7 @@
         gap: 6px;
         font-size: 13px;
         font-weight: 600;
-        color: #ffffff;
+        color: var(--journal-text);
     }
     .inner-quote-right-tools {
         display: flex;
@@ -485,7 +814,7 @@
     .inner-quote-author-name {
         font-size: 14px;
         font-weight: 700;
-        color: #ffffff;
+        color: var(--journal-text);
     }
     .inner-quote-arrow {
         color: var(--text-muted);
@@ -493,7 +822,7 @@
     }
     .inner-quote-topic-tag {
         font-size: 13px;
-        color: #d1d5db;
+        color: var(--journal-text);
         font-weight: 600;
     }
     .inner-quote-time {
@@ -511,7 +840,7 @@
     .inner-quote-text {
         font-size: 14px;
         line-height: 1.5;
-        color: #f3f5f7;
+        color: var(--journal-text);
         margin-bottom: 12px;
         white-space: pre-line;
     }
@@ -577,33 +906,225 @@
         50% { transform: scale(1.35); }
         100% { transform: scale(1); }
     }
+
+    /* Thread Location Tag in Header */
+    .thread-location-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        color: var(--journal-muted);
+        font-size: 13px;
+        font-weight: 500;
+        cursor: default;
+        transition: color 0.15s;
+    }
+    .thread-location-pill:hover {
+        color: var(--journal-link);
+    }
+
+    /* Attached Document Display Card Styling */
+    .thread-attached-doc-display {
+        background: var(--journal-surface);
+        border: 1px solid var(--journal-line);
+        border-radius: 14px;
+        padding: 14px 18px;
+        margin-top: 10px;
+        margin-bottom: 12px;
+        max-width: 540px;
+        transition: border-color 0.15s;
+    }
+    .thread-attached-doc-display:hover {
+        border-color: var(--journal-line);
+    }
+    .attached-doc-display-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 8px;
+        padding-bottom: 6px;
+        border-bottom: 1px solid var(--journal-line);
+    }
+    .attached-doc-display-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        color: var(--journal-link);
+        font-size: 13px;
+        font-weight: 600;
+    }
+    .attached-doc-display-body {
+        color: var(--journal-text);
+        font-size: 15px;
+        line-height: 1.6;
+        word-break: break-word;
+    }
+    .attached-doc-display-body b, 
+    .attached-doc-display-body strong {
+        font-weight: 700;
+        color: var(--journal-text);
+    }
+    .attached-doc-display-body i, 
+    .attached-doc-display-body em {
+        font-style: italic;
+    }
+    .attached-doc-display-body u {
+        text-decoration: underline;
+    }
+    .attached-doc-display-body s, 
+    .attached-doc-display-body strike {
+        text-decoration: line-through;
+    }
+    .attached-doc-display-body code, 
+    .attached-doc-display-body pre {
+        background: var(--journal-raised);
+        padding: 2px 6px;
+        border-radius: 4px;
+        color: var(--journal-success);
+        font-family: monospace;
+        font-size: 13.5px;
+    }
+
+    /* Thread Poll Display Card Styling */
+    .thread-poll-display-card {
+        margin: 10px 0 12px;
+        max-width: 520px;
+    }
+    .poll-items-wrap {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+    .poll-display-vote-btn {
+        width: 100%;
+        background: var(--journal-surface);
+        border: 1px solid var(--journal-line);
+        border-radius: 12px;
+        padding: 12px 18px;
+        color: var(--journal-text);
+        font-size: 14.5px;
+        font-weight: 500;
+        text-align: left;
+        cursor: pointer;
+        transition: background 0.15s, border-color 0.15s, transform 0.05s;
+    }
+    .poll-display-vote-btn:hover {
+        background: var(--journal-raised);
+        border-color: var(--journal-line);
+    }
+    .poll-display-vote-btn:active {
+        transform: scale(0.99);
+    }
+    .poll-display-result-row {
+        position: relative;
+        width: 100%;
+        background: var(--journal-surface);
+        border: 1px solid var(--journal-line);
+        border-radius: 12px;
+        overflow: hidden;
+        height: 44px;
+    }
+    .poll-display-result-row.user-picked {
+        border-color: var(--journal-line);
+    }
+    .poll-result-bar-bg {
+        position: absolute;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        background: color-mix(in srgb, var(--journal-text) 12%, transparent);
+        border-radius: 10px;
+        transition: width 0.4s ease;
+    }
+    .poll-display-result-row.user-picked .poll-result-bar-bg {
+        background: color-mix(in srgb, var(--journal-text) 22%, transparent);
+    }
+    .poll-result-label-row {
+        position: relative;
+        z-index: 2;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        height: 100%;
+        padding: 0 18px;
+        font-size: 14.5px;
+        font-weight: 500;
+        color: var(--journal-text);
+    }
+    .poll-result-percent {
+        color: var(--journal-muted);
+        font-size: 13.5px;
+        font-weight: 600;
+    }
+    .poll-display-footer {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        color: var(--journal-faint);
+        font-size: 13px;
+        margin-top: 8px;
+        padding-left: 2px;
+    }
+
+    /* Threads Post 3-Dots Options Dropdown Menu (Exact match to screenshot) */
+    .thread-options-dropdown-menu {
+        min-width: 260px;
+        background: var(--journal-surface) !important;
+        border: 1px solid var(--journal-line) !important;
+        border-radius: 18px !important;
+        padding: 6px !important;
+        box-shadow: var(--journal-shadow) !important;
+        z-index: 1050;
+        margin-top: 6px !important;
+    }
+    .thread-option-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+        padding: 10px 14px;
+        background: transparent;
+        border: none;
+        border-radius: 12px;
+        color: var(--journal-text);
+        font-size: 15px;
+        font-weight: 600;
+        cursor: pointer;
+        text-align: left;
+        transition: background 0.12s ease, color 0.12s ease;
+        text-decoration: none;
+        user-select: none;
+    }
+    .thread-option-item:hover,
+    .thread-option-item:focus {
+        background: color-mix(in srgb, var(--journal-text) 8%, transparent);
+        color: var(--journal-text);
+        outline: none;
+    }
+    .thread-option-item.thread-option-danger {
+        color: var(--journal-danger) !important;
+    }
+    .thread-option-item.thread-option-danger .thread-option-icon svg {
+        stroke: var(--journal-danger) !important;
+    }
+    .thread-option-item.thread-option-danger:hover {
+        background: rgba(255, 59, 48, 0.12);
+        color: var(--journal-danger) !important;
+    }
+    .thread-option-label {
+        flex: 1;
+        white-space: nowrap;
+    }
+    .thread-option-icon {
+        flex-shrink: 0;
+        margin-left: 14px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .thread-option-divider {
+        height: 1px;
+        background: color-mix(in srgb, var(--journal-text) 8%, transparent);
+        margin: 4px 6px;
+        border: none;
+    }
 </style>
-=======
-    $display = $thread->type === 'repost' ? $thread->repostOf : $thread;
-    $isOwn = auth()->id() === $thread->user_id;
-    $isQuickPost = \Illuminate\Support\Str::startsWith($display?->slug ?? '', 'thread-');
-    $editorContent = app(\App\Services\ThreadText::class)->clean($thread->content);
-@endphp
-<article class="stream-post" id="thread-{{ $thread->id }}" data-thread-card="{{ $thread->id }}" data-post-id="{{ $display?->id }}">
-    @if($thread->type === 'repost')<div class="stream-repost-label"><x-journal-icon name="repost" :size="14"/><a href="{{ route('profile.show', $thread->author->username ?: $thread->author->id) }}">{{ $thread->author->name }} đã đăng lại</a></div>@endif
-    @if($display)
-    <div class="stream-post-row">
-        <a href="{{ route('profile.show', $display->author->username ?: $display->author->id) }}" class="stream-avatar"><x-avatar :user="$display->author"/></a>
-        <div class="stream-post-main">
-            <header class="stream-post-header"><a class="stream-author" href="{{ route('profile.show', $display->author->username ?: $display->author->id) }}">{{ $display->author->username ?: $display->author->name }}</a><a class="stream-time" href="{{ route('threads.show', $display) }}"><time datetime="{{ $display->published_at->toIso8601String() }}" title="{{ $display->published_at->format('d/m/Y H:i') }}">{{ $display->published_at->diffForHumans(null, true) }}</time></a><div class="dropdown stream-more"><button type="button" class="stream-icon-button" data-bs-toggle="dropdown" aria-label="Tùy chọn bài viết của {{ $display->author->name }}" aria-expanded="false"><x-journal-icon name="more" :size="20"/></button><ul class="dropdown-menu dropdown-menu-end"><li><button class="dropdown-item" type="button" data-share="{{ route('threads.show', $display) }}">Sao chép liên kết</button></li>@auth<li><form method="post" action="{{ route('threads.bookmark', $display) }}" data-stream-action="bookmark">@csrf<button class="dropdown-item" type="submit" aria-pressed="{{ $display->viewer_bookmarked ? 'true' : 'false' }}"><span data-bookmark-label>{{ $display->viewer_bookmarked ? 'Bỏ lưu bài viết' : 'Lưu bài viết' }}</span></button></form></li>@if($isOwn && $isQuickPost && $thread->type !== 'repost')<li><button class="dropdown-item" type="button" data-compose="edit" data-edit-thread="{{ json_encode(['id' => $thread->id, 'url' => route('threads.update', $thread), 'content' => $editorContent, 'media' => $thread->media->map(fn ($media) => ['id' => $media->id, 'url' => $media->url(), 'alt' => $media->alt])->values()]) }}">Chỉnh sửa bài viết</button></li>@endif @if($isOwn && !$thread->parent_id && $thread->type !== 'repost')<li><form method="post" action="{{ route('threads.archive', $thread) }}">@csrf<button class="dropdown-item" type="submit">Lưu trữ bài viết</button></form></li>@endif @if($isOwn || auth()->user()->isAdmin())<li><form method="post" action="{{ route('threads.destroy', $thread) }}" data-stream-action="delete" data-confirm="Xóa bài viết này?">@csrf @method('delete')<button class="dropdown-item text-danger" type="submit">Xóa bài viết</button></form></li>@endif @endauth</ul></div></header>
-            @if(!$isQuickPost && $display->title)<h2 class="stream-article-title"><a href="{{ route('posts.show', $display->slug) }}">{{ $display->title }}</a></h2><div class="stream-content">{{ $display->excerpt ?: \Illuminate\Support\Str::limit(strip_tags($display->content), 300) }}</div><a class="stream-read-more" href="{{ route('posts.show', $display->slug) }}">Đọc tiếp ↗</a>
-            @else<div class="stream-content">{!! app(\App\Services\ThreadText::class)->html($display->content) !!}</div>@endif
-            @if($display->media->isNotEmpty())<div class="stream-media" data-image-count="{{ $display->media->count() }}">@foreach($display->media as $media)<a href="{{ $media->url() }}" target="_blank" rel="noopener" aria-label="Xem ảnh {{ $loop->iteration }}"><img src="{{ $media->url() }}" alt="{{ $media->alt ?: 'Ảnh đính kèm' }}" loading="lazy"></a>@endforeach</div>@elseif($display->cover)<a class="stream-cover" href="{{ route('posts.show', $display->slug) }}"><img src="{{ $display->cover->url() }}" alt="{{ $display->cover->alt ?: $display->title }}" loading="lazy"></a>@endif
-            @if($thread->type === 'quote')<div class="stream-quote">@if($thread->repostOf)<a href="{{ route('threads.show', $thread->repostOf) }}"><strong>{{ $thread->repostOf->author->name }}</strong><p>{{ \Illuminate\Support\Str::limit(html_entity_decode(strip_tags($thread->repostOf->content), ENT_QUOTES | ENT_HTML5, 'UTF-8'), 200) }}</p></a>@else<span class="muted">Bài viết gốc không còn công khai.</span>@endif</div>@endif
-            @if($display->replies_count > 0)<a class="stream-conversation-link" href="{{ route('threads.show', $display) }}">Xem {{ $display->replies_count }} trả lời ↗</a>@endif
-            <div class="stream-actions">
-                @auth<form method="post" action="{{ route('threads.like', $display) }}" data-stream-action="like">@csrf<button type="submit" class="stream-action" aria-label="Thích bài viết" aria-pressed="{{ $display->viewer_liked ? 'true' : 'false' }}"><x-journal-icon name="heart" :size="21"/><span data-like-count>{{ $display->likes_count ?: '' }}</span></button></form>@else<a href="{{ route('login') }}" class="stream-action" aria-label="Đăng nhập để thích"><x-journal-icon name="heart" :size="21"/><span>{{ $display->likes_count ?: '' }}</span></a>@endauth
-                @auth<button type="button" class="stream-action" data-compose="reply" data-target-id="{{ $display->id }}" data-context="{{ $display->author->name }}: {{ \Illuminate\Support\Str::limit(strip_tags($display->content), 100) }}" aria-label="Trả lời bài viết"><x-journal-icon name="message" :size="21"/><span data-reply-count>{{ $display->replies_count ?: '' }}</span></button>@else<a class="stream-action" href="{{ route('threads.show', $display) }}" aria-label="Xem trả lời"><x-journal-icon name="message" :size="21"/><span data-reply-count>{{ $display->replies_count ?: '' }}</span></a>@endauth
-                @auth<div class="dropdown"><button class="stream-action" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Đăng lại hoặc trích dẫn" aria-pressed="{{ $display->viewer_reposted ? 'true' : 'false' }}"><x-journal-icon name="repost" :size="21"/><span data-repost-count>{{ $display->reposts_count ?: '' }}</span></button><ul class="dropdown-menu"><li><form method="post" action="{{ route('threads.repost', $display) }}" data-stream-action="repost">@csrf<button type="submit" class="dropdown-item" data-repost-label>{{ $display->viewer_reposted ? 'Hủy đăng lại' : 'Đăng lại' }}</button></form></li><li><button type="button" class="dropdown-item" data-compose="quote" data-target-id="{{ $display->id }}" data-context="{{ $display->author->name }}: {{ \Illuminate\Support\Str::limit(strip_tags($display->content), 100) }}">Trích dẫn</button></li></ul></div>@else<a class="stream-action" href="{{ route('login') }}" aria-label="Đăng nhập để đăng lại"><x-journal-icon name="repost" :size="21"/><span>{{ $display->reposts_count ?: '' }}</span></a>@endauth
-                <button class="stream-action" type="button" data-share="{{ route('threads.show', $display) }}" aria-label="Chia sẻ bài viết"><x-journal-icon name="arrow" :size="21"/></button>
-            </div>
-        </div>
-    </div>
-    @else<p class="muted">Bài viết gốc không còn công khai.</p>@endif
-</article>
->>>>>>> Phuong

@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 class SearchController extends Controller
 {
@@ -41,7 +42,8 @@ class SearchController extends Controller
             if ($filters['type'] === 'people') {
                 $people = $this->people($request, $filters)->paginate(12)->withQueryString();
             } else {
-                $query = $this->publicPosts(Post::query())->withThreadContext($request->user());
+                $query = $this->publicPosts(Post::query())->with(['author', 'cover', 'media', 'categories', 'tags', 'repostOf.author', 'repostOf.media'])
+                    ->withCount(['likers as likes_count', 'replies as replies_count']);
                 $this->filterPosts($query, $request, $filters);
                 if ($filters['type'] === 'top') {
                     $query->orderByDesc('likes_count')->orderByDesc('replies_count');
@@ -52,13 +54,32 @@ class SearchController extends Controller
             $recent = $this->publicPosts(Post::query())->with(['author', 'cover', 'media'])->latest('published_at')->latest('id')->take(4)->get();
         }
 
-        return view('threads.search', compact('filters', 'hasQuery', 'topics', 'categories', 'tags', 'threads', 'people', 'recent'));
+        $userInteractions = app(ThreadController::class)->batchPreloadInteractions($request->user(), $threads?->items() ?? []);
+
+        return view('threads.search', compact('filters', 'hasQuery', 'topics', 'categories', 'tags', 'threads', 'people', 'recent', 'userInteractions'));
     }
 
     private function publicPosts(Builder $query): Builder
     {
-        return $query->published()->whereNull('parent_id')->where('type', '!=', 'repost')
-            ->where(fn (Builder $posts): Builder => $posts->whereNull('repost_of_id')->orWhereHas('repostOf', fn (Builder $original): Builder => $original->published()));
+        return $this->visiblePosts($query)->whereNull('parent_id')->where('type', '!=', 'repost')
+            ->where(fn (Builder $posts): Builder => $posts->whereNull('repost_of_id')->orWhereHas('repostOf', fn (Builder $original): Builder => $this->visiblePosts($original)));
+    }
+
+    private function visiblePosts(Builder $query): Builder
+    {
+        $query->published()->whereNull('archived_at')->whereHas('author', fn (Builder $authors): Builder => $authors->where('is_locked', false));
+        if ($viewer = request()->user()) {
+            $query->whereNotIn($query->qualifyColumn('id'), DB::table('hidden_posts')->where('user_id', $viewer->id)->select('post_id'));
+            $this->excludeBlockedUsers($query, $query->qualifyColumn('user_id'), $viewer->id);
+        }
+
+        return $query;
+    }
+
+    private function excludeBlockedUsers(Builder $query, string $column, int $viewerId): void
+    {
+        $query->whereNotIn($column, DB::table('user_blocks')->where('user_id', $viewerId)->select('blocked_user_id'))
+            ->whereNotIn($column, DB::table('user_blocks')->where('blocked_user_id', $viewerId)->select('user_id'));
     }
 
     private function taxonomies(Builder $query): Collection
@@ -112,6 +133,9 @@ class SearchController extends Controller
         $query = User::where('is_locked', false)->withCount('followers')
             ->withCount(['posts as public_posts_count' => fn (Builder $posts): Builder => $this->publicPosts($posts)])
             ->withExists(['followers as viewer_following' => fn (Builder $followers): Builder => $followers->whereKey($request->user()?->id ?? 0)]);
+        if ($viewer = $request->user()) {
+            $this->excludeBlockedUsers($query, 'users.id', $viewer->id);
+        }
         if ($filters['q'] !== '') {
             $term = $this->searchPattern($filters['q']);
             $query->where(fn (Builder $users): Builder => $users->where('name', 'like', $term)->orWhere('username', 'like', $term)->orWhere('bio', 'like', $term));
