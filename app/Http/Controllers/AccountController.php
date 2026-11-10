@@ -57,9 +57,24 @@ class AccountController extends Controller
 
     public function avatar(User $user): BinaryFileResponse
     {
+        abort_if(auth()->user()?->isBlockedWith($user), 404);
+
+        return $this->avatarResponse($user);
+    }
+
+    public function managedAvatar(Request $request, User $user): BinaryFileResponse
+    {
+        abort_unless($request->user()->blockedUsers()->whereKey($user->id)->exists()
+            || $request->user()->mutedUsers()->whereKey($user->id)->exists(), 404);
+
+        return $this->avatarResponse($user);
+    }
+
+    private function avatarResponse(User $user): BinaryFileResponse
+    {
         abort_unless($user->avatar_path && preg_match('~^avatars/[A-Za-z0-9]+\.(jpg|jpeg|png|webp)$~', $user->avatar_path), 404);
         abort_unless(Storage::disk('local')->exists($user->avatar_path), 404);
 
-        return response()->file(Storage::disk('local')->path($user->avatar_path), ['X-Content-Type-Options' => 'nosniff']);
+        return response()->file(Storage::disk('local')->path($user->avatar_path), ['X-Content-Type-Options' => 'nosniff', 'Cache-Control' => 'private, no-store', 'Vary' => 'Cookie']);
     }
 }

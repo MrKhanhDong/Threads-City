@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { setupJournalTheme } from '../../resources/js/journal-theme.js';
 
-function fixture(preference = 'dark', prefersDark = false, denyStorage = false) {
+function fixture(preference = 'dark', prefersDark = false, denyStorage = false, bodyClass = 'journal-body') {
     const control = dataset => Object.assign(new EventTarget(), {
         dataset, attributes: {}, focused: false,
         setAttribute(name, value) { this.attributes[name] = value; },
@@ -15,8 +15,8 @@ function fixture(preference = 'dark', prefersDark = false, denyStorage = false) 
     const mainPanel = { hidden: false };
     const themePanel = { hidden: true, querySelector: selector => choices.find(button => selector.includes(`"${button.dataset.themeChoice}"`)) };
     const menu = Object.assign(new EventTarget(), { querySelector: selector => ({ '[data-menu-main]': mainPanel, '[data-menu-theme]': themePanel, '[data-menu-appearance]': appearance, '[data-menu-back]': back })[selector] });
-    const root = { dataset: { theme: 'dark', themePreference: preference } };
-    const pageDocument = { documentElement: root, querySelectorAll: selector => ({ '[data-theme-choice]': choices, '[data-theme-toggle]': [toggle], '[data-site-menu]': [menu] })[selector] };
+    const root = { dataset: bodyClass === 'journal-body' ? { theme: 'dark', themePreference: preference } : { bsTheme: 'light' } };
+    const pageDocument = { body: { classList: { contains: name => name === bodyClass } }, documentElement: root, querySelectorAll: selector => ({ '[data-theme-choice]': choices, '[data-theme-toggle]': [toggle], '[data-site-menu]': [menu] })[selector] };
     const media = Object.assign(new EventTarget(), { matches: prefersDark });
     const saved = new Map();
     const pageWindow = Object.assign(new EventTarget(), {
@@ -28,6 +28,18 @@ function fixture(preference = 'dark', prefersDark = false, denyStorage = false) 
     const choose = mode => click(choices.find(button => button.dataset.themeChoice === mode));
     return { root, media, pageWindow, choices, saved, toggle, appearance, back, mainPanel, themePanel, menu, click, choose };
 }
+
+test('admin pages stay light when the public theme or system preference changes', () => {
+    const ui = fixture('dark', true, false, 'admin-body');
+    assert.deepEqual(ui.root.dataset, { bsTheme: 'light' });
+
+    ui.pageWindow.dispatchEvent(Object.assign(new Event('storage'), { key: 'journal-theme', newValue: 'dark' }));
+    ui.pageWindow.dispatchEvent(Object.assign(new Event('storage'), { key: null, newValue: null }));
+    ui.media.dispatchEvent(new Event('change'));
+
+    assert.deepEqual(ui.root.dataset, { bsTheme: 'light' });
+    assert.equal(ui.saved.size, 0);
+});
 
 test('explicit choices update both menus, Bootstrap theme and persistent preference', () => {
     const ui = fixture();

@@ -17,7 +17,7 @@ class ReaderSpaceController extends Controller
 {
     public function liked(Request $request): View
     {
-        $threads = $request->user()->likedPosts()->published()->withThreadContext($request->user())
+        $threads = $request->user()->likedPosts()->published()->visibleTo($request->user())->withThreadContext($request->user())
             ->where(fn (Builder $posts): Builder => $posts->whereNull('repost_of_id')->orWhereHas('repostOf', fn (Builder $original): Builder => $original->published()))
             ->latest('post_likes.created_at')->latest('posts.id')->paginate(15);
 
@@ -41,25 +41,26 @@ class ReaderSpaceController extends Controller
         $filters = $request->validate(['type' => 'nullable|in:all,likes,replies,follows,reposts']);
         $type = $filters['type'] ?? 'all';
         $viewerId = $request->user()->id;
-        $ownedPosts = Post::published()->where('user_id', $viewerId)->select('id');
+        $ownedPosts = Post::published()->visibleTo($request->user())->where('user_id', $viewerId)->select('id');
         $likes = DB::table('post_likes as interactions')->whereIn('interactions.post_id', clone $ownedPosts)->where('interactions.user_id', '!=', $viewerId)
             ->selectRaw("'likes' as kind, interactions.user_id as actor_id, interactions.post_id as post_id, NULL as comment_id, interactions.created_at as occurred_at, CONCAT('like-', interactions.post_id, '-', interactions.user_id) as event_key");
         $follows = DB::table('follows')->where('following_id', $viewerId)
             ->selectRaw("'follows' as kind, follower_id as actor_id, NULL as post_id, NULL as comment_id, created_at as occurred_at, CONCAT('follow-', follower_id) as event_key");
-        $replies = DB::table('posts')->whereIn('id', Post::published()->select('id'))->whereIn('parent_id', clone $ownedPosts)->where('user_id', '!=', $viewerId)
+        $replies = DB::table('posts')->whereIn('id', Post::published()->visibleTo($request->user())->select('id'))->whereIn('parent_id', clone $ownedPosts)->where('user_id', '!=', $viewerId)
             ->selectRaw("'replies' as kind, user_id as actor_id, id as post_id, NULL as comment_id, created_at as occurred_at, CONCAT('reply-', id) as event_key");
-        $reposts = DB::table('posts')->whereIn('id', Post::published()->select('id'))->whereIn('repost_of_id', clone $ownedPosts)->whereIn('type', ['repost', 'quote'])->where('user_id', '!=', $viewerId)
+        $reposts = DB::table('posts')->whereIn('id', Post::published()->visibleTo($request->user())->select('id'))->whereIn('repost_of_id', clone $ownedPosts)->whereIn('type', ['repost', 'quote'])->where('user_id', '!=', $viewerId)
             ->selectRaw("'reposts' as kind, user_id as actor_id, id as post_id, NULL as comment_id, created_at as occurred_at, CONCAT('repost-', id) as event_key");
         $comments = DB::table('comments')->whereIn('id', $commentThreads->visible()->select('id'))->where('user_id', '!=', $viewerId)
             ->where(fn (\Illuminate\Database\Query\Builder $comments): \Illuminate\Database\Query\Builder => $comments->whereIn('post_id', clone $ownedPosts)->orWhereIn('parent_id', Comment::where('user_id', $viewerId)->select('id')))
             ->selectRaw("'replies' as kind, user_id as actor_id, post_id, id as comment_id, created_at as occurred_at, CONCAT('comment-', id) as event_key");
-        $events = DB::query()->fromSub($likes->unionAll($follows)->unionAll($replies)->unionAll($reposts)->unionAll($comments), 'events');
+        $events = DB::query()->fromSub($likes->unionAll($follows)->unionAll($replies)->unionAll($reposts)->unionAll($comments), 'events')
+            ->whereIn('actor_id', User::discoverableTo($request->user())->select('users.id'));
         if ($type !== 'all') {
             $events->where('kind', $type);
         }
         $activities = $events->orderByDesc('occurred_at')->orderByDesc('event_key')->paginate(20)->withQueryString();
         $actors = User::whereIn('id', $activities->pluck('actor_id'))->get()->keyBy('id');
-        $posts = Post::published()->whereIn('id', $activities->pluck('post_id')->filter())->get()->keyBy('id');
+        $posts = Post::published()->visibleTo($request->user())->whereIn('id', $activities->pluck('post_id')->filter())->get()->keyBy('id');
         $comments = Comment::with('post')->whereIn('id', $activities->pluck('comment_id')->filter())->get()->keyBy('id');
 
         return view('threads.activity', compact('activities', 'actors', 'posts', 'comments', 'type', 'commentThreads'));

@@ -7,6 +7,7 @@
 
 @section('content')
 <div class="py-3">
+    <p><a class="btn-threads-outline" href="{{ route('safety.index') }}">Quyền riêng tư, yêu cầu theo dõi và tài khoản đã chặn</a></p>
     <!-- Header -->
     <div class="d-flex align-items-center gap-3 mb-4 pb-3 border-bottom border-dark">
         <a href="{{ route('home') }}" class="btn-threads-outline rounded-circle p-2 d-inline-flex align-items-center justify-content-center" style="width: 38px; height: 38px;" title="Về góc đọc">

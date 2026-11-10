@@ -46,6 +46,7 @@ class ThreadActionController extends Controller
     {
         [$reposted, $count] = DB::transaction(function () use ($request, $thread): array {
             $post = $this->lockPublished($thread);
+            abort_if($post->author->is_private, 403, 'Không thể đăng lại bài viết của tài khoản riêng tư.');
             $existing = $post->reposts()->where('user_id', $request->user()->id)->where('type', 'repost')->first();
             if ($existing) {
                 $existing->delete();
@@ -66,21 +67,41 @@ class ThreadActionController extends Controller
     public function follow(Request $request, User $user): JsonResponse|RedirectResponse
     {
         abort_if($request->user()->id === $user->id, 422, 'Bạn không thể tự theo dõi chính mình.');
-        $following = DB::transaction(function () use ($request, $user): bool {
-            $currentUser = User::lockForUpdate()->findOrFail($request->user()->id);
-            $result = $currentUser->following()->toggle([$user->id => ['created_at' => now()]]);
+        [$following, $requested] = DB::transaction(function () use ($request, $user): array {
+            $lockedUsers = User::whereKey([$request->user()->id, $user->id])->orderBy('id')->lockForUpdate()->get()->keyBy('id');
+            $currentUser = $lockedUsers->get($request->user()->id);
+            $target = $lockedUsers->get($user->id);
+            abort_unless($currentUser && $target && ! $target->is_locked && ! $currentUser->isBlockedWith($target), 404);
+            $pending = DB::table('follow_requests')->where('requester_id', $currentUser->id)->where('target_id', $target->id);
+            if ($currentUser->isFollowing($target)) {
+                $currentUser->following()->detach($target->id);
+                $pending->delete();
 
-            return count($result['attached']) > 0;
+                return [false, false];
+            }
+            if ((clone $pending)->exists()) {
+                $pending->delete();
+
+                return [false, false];
+            }
+            if ($target->is_private) {
+                DB::table('follow_requests')->insertOrIgnore(['requester_id' => $currentUser->id, 'target_id' => $target->id, 'created_at' => now()]);
+
+                return [false, true];
+            }
+            $currentUser->following()->syncWithoutDetaching([$target->id => ['created_at' => now()]]);
+
+            return [true, false];
         });
 
         return $request->expectsJson()
-            ? response()->json(['success' => true, 'following' => $following, 'followers_count' => $user->followers()->count()])
-            : back()->with('success', $following ? 'Đã theo dõi '.$user->handle() : 'Đã hủy theo dõi.');
+            ? response()->json(['success' => true, 'following' => $following, 'requested' => $requested, 'follow_label' => $requested ? 'Đã gửi yêu cầu' : ($following ? 'Đang theo dõi' : ($user->is_private ? 'Yêu cầu theo dõi' : 'Theo dõi')), 'followers_count' => $user->followers()->count()])
+            : back()->with('success', $requested ? 'Đã gửi yêu cầu theo dõi.' : ($following ? 'Đã theo dõi '.$user->handle() : 'Đã hủy theo dõi hoặc yêu cầu đang chờ.'));
     }
 
     private function lockPublished(Post $thread): Post
     {
-        $post = Post::published()->lockForUpdate()->findOrFail($thread->id);
+        $post = Post::published()->visibleTo(auth()->user())->lockForUpdate()->findOrFail($thread->id);
         if ($post->parent_id) {
             abort_unless(Post::published()->whereKey($post->parent_id)->exists(), 404);
         }

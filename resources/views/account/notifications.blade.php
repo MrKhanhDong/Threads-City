@@ -23,8 +23,14 @@
     <!-- Notifications List -->
     <div class="notifications-threads-list">
         @forelse($notifications as $notification)
-            @php($reply = $comments->get((int) $notification->data['comment_id']))
-            @if($reply)
+            @php($reply = $comments->get((int) ($notification->data['comment_id'] ?? 0)))
+            @php($report = $reportResults->get((int) ($notification->data['report_id'] ?? 0)))
+            @if($notification->type === \App\Notifications\ReportHandled::class && $report)
+                <form method="post" action="{{ route('notifications.open', $notification->id) }}" class="notification-item-card {{ $notification->read_at ? '' : 'unread' }}">
+                    @csrf
+                    <button type="submit" class="notification-item-btn"><span class="notification-result-icon" aria-hidden="true"><x-journal-icon name="info" :size="24"/></span><div class="notification-item-text"><x-report-notification-copy :report="$report"/><div class="notification-meta mt-1"><span>{{ $notification->created_at->diffForHumans() }}</span><span>{{ $notification->read_at ? 'Đã đọc' : 'Mới' }}</span></div></div></button>
+                </form>
+            @elseif($reply)
                 <form method="post" action="{{ route('notifications.open', $notification->id) }}" class="notification-item-card {{ $notification->read_at ? '' : 'unread' }}">
                     @csrf
                     <button type="submit" class="notification-item-btn">
@@ -57,7 +63,7 @@
             <div class="text-center py-5">
                 <div class="mb-2 text-secondary" style="font-size: 36px;">🔔</div>
                 <h6 class="text-white fw-bold mb-1">Chưa có thông báo nào</h6>
-                <p class="text-secondary small">Khi có ai đó trả lời bình luận của bạn, thông báo sẽ hiển thị ở đây.</p>
+                <p class="text-secondary small">Thông báo trả lời bình luận và kết quả xử lý báo cáo sẽ hiển thị ở đây.</p>
                 <a class="btn-threads-outline" href="{{ route('activity.index') }}">Xem tất cả hoạt động</a>
             </div>
         @endforelse

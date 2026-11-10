@@ -20,8 +20,8 @@ class BlogController extends Controller
 {
     public function home(): View
     {
-        $featured = Post::published()->where('is_featured', true)->with(['author', 'cover', 'categories'])->latest('published_at')->first();
-        $posts = Post::published()->with(['author', 'cover', 'categories'])->when($featured, fn (Builder $query): Builder => $query->whereKeyNot($featured->id))->latest('published_at')->paginate(6);
+        $featured = Post::published()->visibleTo(auth()->user(), true)->where('is_featured', true)->with(['author', 'cover', 'categories'])->latest('published_at')->first();
+        $posts = Post::published()->visibleTo(auth()->user(), true)->with(['author', 'cover', 'categories'])->when($featured, fn (Builder $query): Builder => $query->whereKeyNot($featured->id))->latest('published_at')->paginate(6);
 
         return view('blog.home', compact('featured', 'posts'));
     }
@@ -29,7 +29,7 @@ class BlogController extends Controller
     public function archive(Request $request): View
     {
         $filters = $request->validate(['q' => 'nullable|string|max:150', 'category' => 'nullable|string|max:150', 'tag' => 'nullable|string|max:100']);
-        $posts = Post::published()->with(['author', 'cover', 'categories', 'tags'])
+        $posts = Post::published()->visibleTo($request->user())->with(['author', 'cover', 'categories', 'tags'])
             ->when($filters['q'] ?? null, function (Builder $query, string $search): void {
                 $query->where(function (Builder $query) use ($search): void {
                     $query->where('title', 'like', '%'.$search.'%')->orWhere('excerpt', 'like', '%'.$search.'%');
@@ -39,7 +39,7 @@ class BlogController extends Controller
             ->when($filters['tag'] ?? null, fn (Builder $query, string $slug): Builder => $query->whereHas('tags', fn (Builder $tag): Builder => $tag->where('slug', $slug)))
             ->latest('published_at')->paginate(9)->withQueryString();
 
-        return view('blog.archive', ['posts' => $posts, 'filters' => $filters, 'heading' => 'Tất cả bài viết', 'subtitle' => 'Tìm một câu chuyện dành cho bạn.', 'tags' => Tag::orderBy('name')->get()]);
+        return view('blog.archive', ['posts' => $posts, 'filters' => $filters, 'heading' => 'Tất cả bài viết', 'subtitle' => 'Tìm một câu chuyện dành cho bạn.', 'tags' => Tag::whereHas('posts', fn (Builder $query): Builder => $query->published()->visibleTo($request->user()))->orderBy('name')->get()]);
     }
 
     public function category(Category $category): RedirectResponse
@@ -54,9 +54,9 @@ class BlogController extends Controller
 
     public function show(Request $request, string $slug, HtmlSanitizer $sanitizer, ViewRecorder $recorder): View|RedirectResponse
     {
-        $post = Post::published()->where('slug', $slug)->with(['author', 'cover', 'ogImage', 'categories', 'tags'])->first();
+        $post = Post::published()->visibleTo($request->user())->where('slug', $slug)->with(['author', 'cover', 'ogImage', 'categories', 'tags'])->first();
         if (! $post) {
-            $redirect = PostRedirect::where('slug', $slug)->whereHas('post', fn (Builder $query): Builder => $query->published())->first();
+            $redirect = PostRedirect::where('slug', $slug)->whereHas('post', fn (Builder $query): Builder => $query->published()->visibleTo($request->user()))->first();
             abort_unless($redirect, 404);
 
             return redirect()->route('posts.show', $redirect->post->slug, 301);
@@ -85,7 +85,7 @@ class BlogController extends Controller
                 }
             });
         };
-        $comments = $post->comments()->whereNull('parent_id')->where($visible)
+        $comments = $post->comments()->whereNull('parent_id')->where($visible)->whereHas('user', fn (Builder $users): Builder => $users->discoverableTo($request->user()))
             ->with('user')->withCount(['replies' => $visible])
             ->orderByDesc('id')->paginate(10, ['*'], 'comments_page');
         $focusedRoot = null;
@@ -102,7 +102,7 @@ class BlogController extends Controller
                 }
             }
         }
-        $related = Post::published()->whereKeyNot($post->id)->whereHas('categories', fn (Builder $query): Builder => $query->whereIn('categories.id', $post->categories->modelKeys()))->with(['author', 'cover', 'categories'])->latest('published_at')->limit(3)->get();
+        $related = Post::published()->visibleTo($request->user())->whereKeyNot($post->id)->whereHas('categories', fn (Builder $query): Builder => $query->whereIn('categories.id', $post->categories->modelKeys()))->with(['author', 'cover', 'categories'])->latest('published_at')->limit(3)->get();
 
         return view('blog.show', compact('post', 'body', 'comments', 'related', 'preview', 'likesCount', 'liked', 'focusedRoot', 'focusedBatch'));
     }
@@ -121,7 +121,7 @@ class BlogController extends Controller
 
     public function sitemap(): Response
     {
-        $posts = Post::published()->select(['slug', 'updated_at'])->latest()->get();
+        $posts = Post::published()->visibleTo(null)->select(['slug', 'updated_at'])->latest()->get();
 
         return response()->view('blog.sitemap', compact('posts'))->header('Content-Type', 'application/xml; charset=UTF-8');
     }

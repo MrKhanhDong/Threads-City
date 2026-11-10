@@ -9,6 +9,8 @@ use App\Http\Controllers\GoogleAuthController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ReaderController;
 use App\Http\Controllers\ReaderSpaceController;
+use App\Http\Controllers\ReportController;
+use App\Http\Controllers\SafetyController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\ThreadActionController;
 use App\Http\Controllers\ThreadController;
@@ -80,6 +82,16 @@ Route::middleware('auth')->group(function (): void {
         return back()->with('success', 'Đã gửi email xác minh.');
     })->middleware('throttle:password-reset')->name('verification.send');
     Route::get('/tai-khoan', [AccountController::class, 'edit'])->name('account.edit');
+    Route::get('/an-toan', [SafetyController::class, 'index'])->name('safety.index');
+    Route::get('/bao-cao-cua-toi', [ReportController::class, 'index'])->name('reports.index');
+    Route::get('/bao-cao-cua-toi/{report}', [ReportController::class, 'show'])->whereNumber('report')->name('reports.show');
+    Route::get('/an-toan/avatar/{user}', [AccountController::class, 'managedAvatar'])->whereNumber('user')->name('safety.avatar');
+    Route::patch('/tai-khoan/quyen-rieng-tu', [SafetyController::class, 'privacy'])->name('safety.privacy');
+    Route::match(['put', 'delete'], '/users/{user}/block', [SafetyController::class, 'block'])->whereNumber('user')->middleware('throttle:60,1')->name('safety.block');
+    Route::match(['put', 'delete'], '/users/{user}/mute', [SafetyController::class, 'mute'])->whereNumber('user')->middleware('throttle:60,1')->name('safety.mute');
+    Route::post('/yeu-cau-theo-doi/{user}', [SafetyController::class, 'followRequest'])->whereNumber('user')->middleware('throttle:60,1')->name('safety.follow-request');
+    Route::match(['get', 'post'], '/bao-cao/bai-viet/{thread}', [ReportController::class, 'thread'])->whereNumber('thread')->middleware('throttle:20,1')->name('reports.thread');
+    Route::match(['get', 'post'], '/bao-cao/nguoi-dung/{user}', [ReportController::class, 'user'])->whereNumber('user')->middleware('throttle:20,1')->name('reports.user');
     Route::get('/thong-bao', [NotificationController::class, 'index'])->name('notifications.index');
     Route::post('/thong-bao/doc-tat-ca', [NotificationController::class, 'readAll'])->middleware('throttle:60,1')->name('notifications.read-all');
     Route::post('/thong-bao/{id}/mo', [NotificationController::class, 'open'])->whereUuid('id')->middleware('throttle:60,1')->name('notifications.open');
@@ -99,7 +111,7 @@ Route::middleware('auth')->group(function (): void {
     Route::post('/threads/{thread}/like', [ThreadActionController::class, 'like'])->whereNumber('thread')->middleware('throttle:60,1')->name('threads.like');
     Route::post('/threads/{thread}/bookmark', [ThreadActionController::class, 'bookmark'])->whereNumber('thread')->name('threads.bookmark');
     Route::post('/threads/{thread}/repost', [ThreadActionController::class, 'repost'])->whereNumber('thread')->middleware('throttle:60,1')->name('threads.repost');
-    Route::post('/users/{user}/follow', [ThreadActionController::class, 'follow'])->whereNumber('user')->name('users.follow');
+    Route::post('/users/{user}/follow', [ThreadActionController::class, 'follow'])->whereNumber('user')->middleware('throttle:60,1')->name('users.follow');
 
     Route::middleware('verified')->group(function (): void {
         Route::post('/bai-viet/{id}/thich', [ReaderController::class, 'like'])->whereNumber('id')->middleware('throttle:60,1')->name('likes.store');
@@ -134,6 +146,9 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::delete('/comments/{comment}', [Admin\CommentController::class, 'destroy'])->whereNumber('comment')->name('comments.destroy');
     Route::post('/reports/{report}/resolve', [Admin\CommentController::class, 'resolve'])->whereNumber('report')->name('reports.resolve');
     Route::get('/users', [Admin\UserController::class, 'index'])->name('users.index');
+    Route::get('/moderation-reports', [Admin\ModerationController::class, 'index'])->name('moderation.index');
+    Route::patch('/moderation-reports/{report}', [Admin\ModerationController::class, 'update'])->whereNumber('report')->name('moderation.update');
+    Route::patch('/users/{user}/verification', [Admin\UserController::class, 'verification'])->whereNumber('user')->name('users.verification');
     Route::patch('/users/{user}', [Admin\UserController::class, 'update'])->whereNumber('user')->name('users.update');
     Route::get('/settings', [Admin\SettingController::class, 'edit'])->name('settings.edit');
     Route::patch('/settings', [Admin\SettingController::class, 'update'])->name('settings.update');

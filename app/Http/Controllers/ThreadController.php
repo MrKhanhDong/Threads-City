@@ -29,7 +29,7 @@ class ThreadController extends Controller
         if ($tab === 'following' && ! $request->user()) {
             return redirect()->route('login');
         }
-        $query = Post::published()->withThreadContext($request->user())->whereNull('parent_id')
+        $query = Post::published()->visibleTo($request->user(), true)->withThreadContext($request->user())->whereNull('parent_id')
             ->where(fn (Builder $query): Builder => $query->whereNull('repost_of_id')->orWhereHas('repostOf', fn (Builder $original): Builder => $original->published()));
         if ($tab === 'following') {
             $followingIds = $request->user()->following()->pluck('users.id');
@@ -48,7 +48,7 @@ class ThreadController extends Controller
 
     public function show(Request $request, Post $thread, ViewRecorder $recorder): View
     {
-        abort_unless(Post::published()->whereKey($thread->id)->exists(), 404);
+        abort_unless(Post::published()->visibleTo($request->user())->whereKey($thread->id)->exists(), 404);
         $thread = Post::withThreadContext($request->user())->with('parent.author')->findOrFail($thread->id);
         $replies = $thread->replies()->withThreadContext($request->user())->reorder()->oldest('published_at')->oldest('id')->paginate(20, ['*'], 'replies_page');
         $recorder->record($request, $thread);
@@ -60,8 +60,9 @@ class ThreadController extends Controller
     {
         $data = $request->validated();
         $post = DB::transaction(function () use ($request, $data): Post {
-            $parent = ! empty($data['parent_id']) ? Post::published()->lockForUpdate()->findOrFail($data['parent_id']) : null;
-            $original = ! empty($data['repost_of_id']) ? Post::published()->lockForUpdate()->findOrFail($data['repost_of_id']) : null;
+            $parent = ! empty($data['parent_id']) ? Post::published()->visibleTo($request->user())->lockForUpdate()->findOrFail($data['parent_id']) : null;
+            $original = ! empty($data['repost_of_id']) ? Post::published()->visibleTo($request->user())->lockForUpdate()->findOrFail($data['repost_of_id']) : null;
+            abort_if($original?->author->is_private, 403, 'Không thể trích dẫn bài viết của tài khoản riêng tư.');
             $post = $this->publish($request->user(), $data['content'] ?? '', $parent, $original, $data['content_format'] ?? 'plain');
             $post->media()->sync($data['media_ids'] ?? []);
             $previous = $post;

@@ -14,9 +14,18 @@ class UserController extends Controller
     public function index(Request $request): View
     {
         $data = $request->validate(['q' => 'nullable|string|max:150']);
-        $users = User::where('role', 'reader')->when($data['q'] ?? null, fn (Builder $query, string $search): Builder => $query->where(fn (Builder $query): Builder => $query->where('name', 'like', '%'.$search.'%')->orWhere('email', 'like', '%'.$search.'%')))->withCount('comments')->latest()->paginate(20)->withQueryString();
+        $users = User::query()->when($data['q'] ?? null, fn (Builder $query, string $search): Builder => $query->where(fn (Builder $query): Builder => $query->where('name', 'like', '%'.$search.'%')->orWhere('email', 'like', '%'.$search.'%')->orWhere('username', 'like', '%'.$search.'%')))->withCount('comments')->latest()->paginate(20)->withQueryString();
 
         return view('admin.users', compact('users'));
+    }
+
+    public function verification(Request $request, User $user): RedirectResponse
+    {
+        $data = $request->validate(['is_verified' => 'required|boolean']);
+        $user->is_verified = $data['is_verified'];
+        $user->save();
+
+        return back()->with('success', $user->is_verified ? 'Đã cấp tích xanh cho '.$user->name.'.' : 'Đã gỡ tích xanh của '.$user->name.'.');
     }
 
     public function update(Request $request, User $user): RedirectResponse

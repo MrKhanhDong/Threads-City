@@ -49,7 +49,7 @@ class Post extends Model
 
     public function replies(): HasMany
     {
-        return $this->hasMany(Post::class, 'parent_id')->published()->latest();
+        return $this->hasMany(Post::class, 'parent_id')->published()->visibleTo(auth()->user())->latest();
     }
 
     public function repostOf(): BelongsTo
@@ -104,16 +104,16 @@ class Post extends Model
 
     public function scopeWithThreadContext(Builder $query, ?User $viewer = null): Builder
     {
-        return $query->threadInteractions($viewer)->with(['author', 'media', 'cover', 'categories', 'tags', 'repostOf' => fn (BelongsTo $original): BelongsTo => $original->published()->threadInteractions($viewer)->with(['author', 'media', 'cover', 'categories'])]);
+        return $query->threadInteractions($viewer)->with(['author', 'media', 'cover', 'categories', 'tags', 'repostOf' => fn (BelongsTo $original): BelongsTo => $original->published()->visibleTo($viewer)->threadInteractions($viewer)->with(['author', 'media', 'cover', 'categories'])]);
     }
 
     public function scopeThreadInteractions(Builder $query, ?User $viewer = null): Builder
     {
-        return $query->withCount(['likers as likes_count', 'replies as replies_count', 'reposts as reposts_count' => fn (Builder $reposts): Builder => $reposts->published()])
+        return $query->withCount(['likers as likes_count', 'replies as replies_count', 'reposts as reposts_count' => fn (Builder $reposts): Builder => $reposts->published()->visibleTo($viewer)])
             ->withExists([
                 'likers as viewer_liked' => fn (Builder $users): Builder => $users->whereKey($viewer?->id ?? 0),
                 'bookmarkers as viewer_bookmarked' => fn (Builder $users): Builder => $users->whereKey($viewer?->id ?? 0),
-                'reposts as viewer_reposted' => fn (Builder $posts): Builder => $posts->published()->where('user_id', $viewer?->id ?? 0)->where('type', 'repost'),
+                'reposts as viewer_reposted' => fn (Builder $posts): Builder => $posts->published()->visibleTo($viewer)->where('user_id', $viewer?->id ?? 0)->where('type', 'repost'),
             ]);
     }
 
@@ -157,6 +157,24 @@ class Post extends Model
     public function scopePublished(Builder $q): Builder
     {
         return $q->whereNull('archived_at')->whereIn('status', ['published', 'scheduled'])->whereNotNull('published_at')->where('published_at', '<=', now());
+    }
+
+    public function scopeVisibleTo(Builder $query, ?User $viewer, bool $hideMuted = false): Builder
+    {
+        $authors = User::contentVisibleTo($viewer)->select('users.id');
+        if ($viewer && $hideMuted) {
+            $authors->whereNotIn('users.id', $viewer->mutedUsers()->select('users.id'));
+        }
+        $hidden = DB::table('posts')->select('id')->where(function (\Illuminate\Database\Query\Builder $posts) use ($authors): void {
+            $posts->whereNotIn('user_id', $authors)
+                ->orWhereNotNull('deleted_at')->orWhereNotNull('archived_at')
+                ->orWhereNotIn('status', ['published', 'scheduled'])->orWhereNull('published_at')->orWhere('published_at', '>', now());
+        });
+        $sql = 'WITH RECURSIVE hidden_posts AS ('.$hidden->toSql().' UNION DISTINCT '
+            .'SELECT children.id FROM posts children INNER JOIN hidden_posts ON children.parent_id = hidden_posts.id OR children.repost_of_id = hidden_posts.id) '
+            .'SELECT id FROM hidden_posts';
+
+        return $query->whereNotIn($query->qualifyColumn('id'), DB::query()->fromRaw('('.$sql.') AS restricted_posts', $hidden->getBindings())->select('id'));
     }
 
     public function readingMinutes(): int

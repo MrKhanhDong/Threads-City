@@ -74,3 +74,15 @@
 .site-breadcrumbs [aria-current="page"] { color: var(--journal-text, var(--forest)); }
 .site-breadcrumb-separator { opacity: .55; }
 .admin-main > .site-breadcrumbs { margin-bottom: 22px; }
+.verified-badge { display: inline-block; flex-shrink: 0; color: #20c6e6; vertical-align: -0.1em; margin-left: 3px; }
+.admin-user-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.moderation-report { padding: 24px 0; border-top: 1px solid var(--line); }
+.moderation-report header { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.admin-main .moderation-report h2 { font: 600 17px/1.5 Arial, Helvetica, sans-serif; margin: 0; }
+.moderation-report blockquote { padding: 14px; margin: 16px 0; background: #f5f6f0; border-left: 3px solid var(--forest); white-space: pre-wrap; overflow-wrap: anywhere; }
+.moderation-report-details { white-space: pre-wrap; overflow-wrap: anywhere; }
+.moderation-report label { display: block; margin: 12px 0 6px; }
+.moderation-report form > button { margin-top: 14px; }
+.notification-result-icon { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; flex-shrink: 0; border-radius: 50%; background: #edf1e7; color: #24332d; }
+.report-notification-copy { display: block; color: inherit; overflow-wrap: anywhere; }
+.report-notification-copy > span { display: block; margin-top: 5px; font-weight: 400; }

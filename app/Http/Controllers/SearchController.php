@@ -57,7 +57,7 @@ class SearchController extends Controller
 
     private function publicPosts(Builder $query): Builder
     {
-        return $query->published()->whereNull('parent_id')->where('type', '!=', 'repost')
+        return $query->published()->visibleTo(auth()->user())->whereNull('parent_id')->where('type', '!=', 'repost')
             ->where(fn (Builder $posts): Builder => $posts->whereNull('repost_of_id')->orWhereHas('repostOf', fn (Builder $original): Builder => $original->published()));
     }
 
@@ -109,7 +109,7 @@ class SearchController extends Controller
     /** @param array{q: string, type: string, period: string, scope: string, category: string, tag: string} $filters */
     private function people(Request $request, array $filters): Builder
     {
-        $query = User::where('is_locked', false)->withCount('followers')
+        $query = User::discoverableTo($request->user())->where('is_locked', false)->withCount('followers')
             ->withCount(['posts as public_posts_count' => fn (Builder $posts): Builder => $this->publicPosts($posts)])
             ->withExists(['followers as viewer_following' => fn (Builder $followers): Builder => $followers->whereKey($request->user()?->id ?? 0)]);
         if ($filters['q'] !== '') {

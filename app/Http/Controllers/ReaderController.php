@@ -20,6 +20,7 @@ class ReaderController extends Controller
     {
         $threads = $request->user()->bookmarks()
             ->published()
+            ->visibleTo($request->user())
             ->withThreadContext($request->user())
             ->latest('bookmarks.created_at')
             ->paginate(15);
@@ -29,7 +30,7 @@ class ReaderController extends Controller
 
     public function bookmark(Request $request, string $id): RedirectResponse
     {
-        $post = Post::published()->findOrFail($id);
+        $post = Post::published()->visibleTo($request->user())->findOrFail($id);
         $request->user()->bookmarks()->syncWithoutDetaching([$post->id => ['created_at' => now()]]);
 
         return back()->with('success', 'Đã lưu bài vào góc đọc.');
@@ -45,7 +46,7 @@ class ReaderController extends Controller
     public function like(Request $request, string $id): RedirectResponse
     {
         DB::transaction(function () use ($request, $id): void {
-            $post = Post::published()->lockForUpdate()->findOrFail($id);
+            $post = Post::published()->visibleTo($request->user())->lockForUpdate()->findOrFail($id);
             DB::table('post_likes')->insertOrIgnore([
                 'post_id' => $post->id,
                 'user_id' => $request->user()->id,
@@ -59,7 +60,7 @@ class ReaderController extends Controller
     public function unlike(Request $request, string $id): RedirectResponse
     {
         DB::transaction(function () use ($request, $id): void {
-            $post = Post::published()->lockForUpdate()->findOrFail($id);
+            $post = Post::published()->visibleTo($request->user())->lockForUpdate()->findOrFail($id);
             $post->likers()->detach($request->user()->id);
         });
 
@@ -68,7 +69,7 @@ class ReaderController extends Controller
 
     public function comment(CommentRequest $request, string $id, CommentThreads $threads): RedirectResponse
     {
-        $post = Post::published()->findOrFail($id);
+        $post = Post::published()->visibleTo($request->user())->findOrFail($id);
         $data = $request->validated();
         $comment = DB::transaction(function () use ($request, $data, $post, $threads): Comment {
             $parent = null;
@@ -90,7 +91,7 @@ class ReaderController extends Controller
     public function updateComment(CommentRequest $request, Comment $comment, CommentThreads $threads): RedirectResponse
     {
         Gate::authorize('update', $comment);
-        abort_unless($comment->post && Post::published()->whereKey($comment->post_id)->exists(), 404);
+        abort_unless($comment->post && Post::published()->visibleTo($request->user())->whereKey($comment->post_id)->exists(), 404);
         $comment->update(['body' => $request->validated('body')]);
 
         $response = $threads->root($comment, $request->user()->id) !== null
@@ -112,7 +113,7 @@ class ReaderController extends Controller
     public function report(Request $request, Comment $comment): RedirectResponse
     {
         $data = $request->validate(['reason' => 'required|string|min:5|max:1000']);
-        abort_unless($comment->status === 'approved' && Post::published()->whereKey($comment->post_id)->exists(), 404);
+        abort_unless($comment->status === 'approved' && Post::published()->visibleTo($request->user())->whereKey($comment->post_id)->exists(), 404);
         CommentReport::updateOrCreate(['comment_id' => $comment->id, 'user_id' => $request->user()->id], [...$data, 'resolved' => false]);
 
         return back()->with('success', 'Đã gửi báo cáo đến quản trị viên.');
