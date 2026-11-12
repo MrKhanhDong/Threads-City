@@ -12,7 +12,7 @@ class BlogController extends Controller
 {
     public function show(string $slug): RedirectResponse
     {
-        $post = Post::published()->where('slug', $slug)->first();
+        $post = Post::published()->visibleTo(auth()->user())->where('slug', $slug)->first();
         if (! $post) {
             $post = PostRedirect::where('slug', $slug)->first()?->post;
             abort_unless($post && $post->status === 'published' && $post->published_at <= now(), 404);
@@ -33,7 +33,7 @@ class BlogController extends Controller
 
     public function sitemap(): Response
     {
-        $posts = Post::published()->select(['id', 'updated_at'])->latest()->get();
+        $posts = Post::published()->visibleTo(null)->select(['id', 'updated_at'])->latest()->get();
 
         return response()->view('blog.sitemap', compact('posts'))->header('Content-Type', 'application/xml; charset=UTF-8');
     }

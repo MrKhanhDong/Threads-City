@@ -5,6 +5,8 @@
         <div data-menu-main>
             <button class="dropdown-item journal-appearance-link" type="button" data-menu-appearance aria-expanded="false"><span>Giao diện</span><x-journal-icon name="chevron" :size="19"/></button>
             <a class="dropdown-item" href="{{ route('account.edit') }}">Cài đặt tài khoản</a>
+            @auth<a class="dropdown-item" href="{{ route('safety.index') }}">Quyền riêng tư và an toàn</a>@endauth
+            @auth<a class="dropdown-item" href="{{ route('reports.index') }}">Báo cáo của tôi</a>@endauth
             @if($mobile)
                 <details class="journal-menu-feeds"><summary>Bảng feed khác<x-journal-icon name="chevron" :size="17"/></summary><nav aria-label="Bảng feed trong menu">
                     <a class="dropdown-item" href="{{ route('notifications.index') }}">Hoạt động</a>

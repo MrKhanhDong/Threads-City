@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Comment;
 use App\Models\CommentReport;
+use App\Models\ContentReport;
 use App\Models\Post;
 use App\Models\PostDailyView;
 use App\Models\User;
@@ -33,7 +34,7 @@ class DashboardController extends Controller
             'readers' => User::where('role', 'reader')->count(),
             'comments' => Comment::whereHas('post')->count(),
             'pending_comments' => Comment::whereHas('post')->where('status', 'pending')->count(),
-            'reports' => CommentReport::where('resolved', false)->whereHas('comment.post')->count(),
+            'reports' => CommentReport::where('resolved', false)->whereHas('comment.post')->count() + ContentReport::where('status', 'pending')->count(),
             'trash' => Post::onlyTrashed()->count(),
         ];
         $topPosts = Post::withSum(['dailyViews as period_views' => fn (Builder $query): Builder => $query->whereBetween('view_date', [$start->toDateString(), $end->toDateString()])], 'views')->having('period_views', '>', 0)->orderByDesc('period_views')->limit(5)->get();

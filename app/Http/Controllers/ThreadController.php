@@ -8,50 +8,36 @@ use App\Models\Tag;
 use App\Models\User;
 use App\Notifications\ThreadInteractionNotification;
 use App\Services\ImageStorage;
+use App\Services\Mentions;
+use App\Services\ThreadText;
+use Illuminate\Contracts\Pagination\Paginator;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class ThreadController extends Controller
 {
-    public function mentionSuggestions(Request $request): JsonResponse
+    public function mentionSuggestions(Request $request, Mentions $mentions): JsonResponse
     {
-        $q = trim((string) $request->query('q', ''));
-        if (mb_strlen($q) === 0) {
-            $users = User::query()
-                ->whereNotNull('username')
-                ->latest()
-                ->limit(6)
-                ->get(['id', 'name', 'username', 'avatar_path']);
-        } else {
-            $users = User::query()
-                ->where(function ($query) use ($q): void {
-                    $query->where('username', 'like', "%{$q}%")
-                        ->orWhere('name', 'like', "%{$q}%");
-                })
-                ->limit(6)
-                ->get(['id', 'name', 'username', 'avatar_path']);
-        }
+        $data = $request->validate(['q' => 'nullable|string|max:60']);
+        $term = $data['q'] ?? '';
+        $users = $mentions->candidates($request->user())->where(function ($users) use ($term): void {
+            $users->where('username', 'like', addcslashes($term, '%_\\').'%')->orWhere('name', 'like', addcslashes($term, '%_\\').'%');
+        })->orderBy('username')->limit(8)->get();
 
-        $results = $users->map(fn (User $u): array => [
-            'id' => $u->id,
-            'name' => $u->name,
-            'username' => $u->username,
-            'handle' => '@'.$u->username,
-            'avatar_url' => $u->avatar_path ? route('avatar.show', $u->id) : null,
-        ]);
-
-        return response()->json($results);
+        return response()->json($users->map(fn (User $user): array => ['id' => $user->id, 'name' => $user->name, 'username' => $user->username, 'handle' => $user->handle(), 'url' => route('mentions.profile', $user), 'avatar_url' => $user->avatar_path ? route('avatar.show', $user) : null]))->header('Cache-Control', 'private, no-store');
     }
 
     public function index(Request $request): View|JsonResponse
     {
         $filters = $request->validate(['tab' => 'nullable|in:for-you,following', 'q' => 'nullable|string|max:150', 'search' => 'nullable|boolean']);
         $tab = $filters['tab'] ?? 'for-you';
-        $query = Post::published()
+        $query = Post::published()->visibleTo($request->user(), true)
             ->whereNull('parent_id')
             ->where(function ($q): void {
                 $q->whereNull('type')->orWhere('type', '!=', 'reply');
@@ -110,11 +96,11 @@ class ThreadController extends Controller
 
     public function show(Request $request, Post $thread): View
     {
-        abort_unless($thread->status === 'published' && $thread->published_at <= now(), 404);
+        abort_unless(Post::published()->visibleTo($request->user())->whereKey($thread->id)->exists(), 404);
 
         $thread->load(['author', 'media', 'repostOf.author', 'repostOf.media', 'tags', 'parent.author']);
 
-        $replies = Post::published()
+        $replies = Post::published()->visibleTo($request->user())
             ->where('parent_id', $thread->id)
             ->with(['author', 'media', 'repostOf.author', 'repostOf.media', 'tags'])
             ->oldest('published_at')
@@ -138,6 +124,8 @@ class ThreadController extends Controller
      */
     public function batchPreloadInteractions(?User $user, iterable $posts): array
     {
+        $posts = collect($posts instanceof Paginator ? $posts->items() : $posts);
+        app(Mentions::class)->preloadPosts($posts);
         $interactions = [
             'liked' => [],
             'bookmarked' => [],
@@ -233,12 +221,17 @@ class ThreadController extends Controller
         }
 
         $data = $request->validate([
+            'content_format' => 'sometimes|in:plain,html',
+            'mention_ids' => 'nullable|array|max:6',
+            'mention_ids.*' => 'integer|distinct|exists:users,id',
+            'continuations' => 'nullable|array|max:9',
+            'continuations.*' => 'required|string|max:2000',
             'content' => 'required_without_all:media_ids,images,poll_options,attached_document_html,location,repost_of_id|nullable|string|max:2000',
             'parent_id' => 'nullable|exists:posts,id',
             'repost_of_id' => 'nullable|exists:posts,id',
             'type' => 'nullable|in:post,reply,repost,quote',
             'media_ids' => 'nullable|array|max:4',
-            'media_ids.*' => 'exists:media,id',
+            'media_ids.*' => ['integer', 'distinct', Rule::exists('media', 'id')->where('user_id', $request->user()?->id)],
             'images' => 'nullable|array|max:4',
             'images.*' => 'image|mimes:jpeg,png,jpg,webp,gif|max:5120',
             'poll_options' => 'nullable|array|min:2|max:4',
@@ -258,6 +251,15 @@ class ThreadController extends Controller
 
         $post = DB::transaction(function () use ($request, $data, $type): Post {
             $content = trim($data['content'] ?? '');
+            if (($data['content_format'] ?? 'plain') === 'html') {
+                $content = app(ThreadText::class)->clean($content);
+            }
+            foreach (['parent_id', 'repost_of_id'] as $targetField) {
+                if (! empty($data[$targetField])) {
+                    $target = Post::published()->visibleTo($request->user())->visibleTo($request->user())->lockForUpdate()->findOrFail($data[$targetField]);
+                    abort_if($targetField === 'repost_of_id' && $target->author->is_private, 403);
+                }
+            }
 
             $pollData = null;
             $rawPoll = $data['poll_options'] ?? [];
@@ -325,6 +327,7 @@ class ThreadController extends Controller
                 'slug' => 'thread-'.Str::lower(Str::random(10)).'-'.time(),
                 'excerpt' => ! empty($metaExcerpt) ? json_encode($metaExcerpt, JSON_UNESCAPED_UNICODE) : null,
                 'content' => $content,
+                'content_format' => $data['content_format'] ?? 'plain',
                 'status' => 'published',
                 'published_at' => now(),
             ]);
@@ -372,11 +375,20 @@ class ThreadController extends Controller
                 Post::where('id', $post->repost_of_id)->increment('reposts_count');
             }
 
+            $mentions = app(Mentions::class);
+            $mentions->sync($post, $request->user(), $post->content_format === 'html' ? $mentions->fromHtml($post->content) : $mentions->fromPlain($post, $data['mention_ids'] ?? []));
+            $previous = $post;
+            foreach ($data['continuations'] ?? [] as $continuation) {
+                $previous->increment('replies_count');
+                $previous = Post::create(['user_id' => $request->user()->id, 'parent_id' => $previous->id, 'type' => 'reply', 'title' => Str::limit(strip_tags($continuation), 60), 'slug' => 'thread-'.Str::uuid(), 'content' => ($data['content_format'] ?? 'plain') === 'html' ? app(ThreadText::class)->clean($continuation) : $continuation, 'content_format' => $data['content_format'] ?? 'plain', 'status' => 'published', 'published_at' => now()]);
+                $mentions->sync($previous, $request->user(), $previous->content_format === 'html' ? $mentions->fromHtml($previous->content) : []);
+            }
+
             return $post;
         });
 
         $author = $request->user();
-        $notifiedUserIds = [$author->id];
+        $notifiedUserIds = [$author->id, ...DB::table('content_mentions')->where('post_id', $post->id)->where('active', true)->pluck('user_id')->all()];
 
         if ($post->parent_id) {
             $parent = Post::with('author')->find($post->parent_id);
@@ -412,28 +424,6 @@ class ThreadController extends Controller
             }
         }
 
-        preg_match_all('/@([A-Za-z0-9_]{3,30})/', $data['content'] ?? '', $mentionMatches);
-        if (! empty($mentionMatches[1])) {
-            $mentionedUsernames = array_unique($mentionMatches[1]);
-            $mentionedUsers = User::whereIn('username', $mentionedUsernames)
-                ->whereNotIn('id', $notifiedUserIds)
-                ->get();
-
-            foreach ($mentionedUsers as $mentionedUser) {
-                $notifiedUserIds[] = $mentionedUser->id;
-                $mentionedUser->notify(new ThreadInteractionNotification([
-                    'action' => 'mention',
-                    'actor_id' => $author->id,
-                    'actor_name' => $author->name,
-                    'actor_handle' => $author->username ? '@'.$author->username : '@'.Str::slug($author->name, '_'),
-                    'actor_avatar' => $author->avatar_path ? route('avatar.show', $author->id) : null,
-                    'thread_id' => $post->id,
-                    'content_snippet' => Str::limit(strip_tags($data['content'] ?? ''), 80),
-                    'url' => route('threads.show', $post->id),
-                ]));
-            }
-        }
-
         if ($request->wantsJson()) {
             $post->load(['author', 'media', 'repostOf.author', 'repostOf.media']);
 
@@ -441,10 +431,44 @@ class ThreadController extends Controller
                 'success' => true,
                 'message' => 'Đã đăng bài viết thành công.',
                 'thread' => $post,
+                'id' => $post->id,
+                'url' => route('threads.show', $post),
+                'html' => view('threads.partials.thread_card', ['thread' => $post, 'userInteractions' => $this->batchPreloadInteractions($request->user(), [$post])])->render(),
             ]);
         }
 
         return back()->with('success', $post->parent_id ? 'Đã trả lời bài viết.' : 'Đã đăng lên Threads.');
+    }
+
+    public function update(Request $request, Post $thread): JsonResponse
+    {
+        abort_unless($thread->user_id === $request->user()->id, 403);
+        $data = $request->validate(['content' => 'nullable|string|max:20000', 'content_format' => 'sometimes|in:plain,html', 'media_ids' => 'sometimes|array|max:4', 'media_ids.*' => ['integer', 'distinct', Rule::exists('media', 'id')->where('user_id', $request->user()?->id)], 'mention_ids' => 'nullable|array|max:6', 'mention_ids.*' => 'integer|distinct|exists:users,id']);
+        $post = DB::transaction(function () use ($request, $thread, $data): Post {
+            $post = Post::lockForUpdate()->findOrFail($thread->id);
+            $format = $data['content_format'] ?? $post->content_format ?? 'plain';
+            $value = array_key_exists('content', $data) ? ($data['content'] ?? '') : $post->content;
+            $content = $format === 'html' ? app(ThreadText::class)->clean($value) : $value;
+            $plain = $format === 'html' ? app(ThreadText::class)->plain($content) : trim($content);
+            $hasMedia = array_key_exists('media_ids', $data) ? count($data['media_ids']) > 0 : $post->media()->exists();
+            $metadata = json_decode($post->excerpt ?? '', true);
+            $hasAttachment = is_array($metadata) && (! empty($metadata['is_poll']) || ! empty($metadata['location']) || ! empty($metadata['attached_doc']));
+            if (($plain === '' && ! $hasMedia && ! $hasAttachment) || mb_strlen($plain) > 2000) {
+                throw ValidationException::withMessages(['content' => 'Nhập nội dung hoặc đính kèm ảnh, bình chọn, vị trí hay tài liệu. Nội dung tối đa 2000 ký tự.']);
+            }
+            $post->update(['content' => $content, 'content_format' => $format, 'title' => Str::limit($plain, 60, '')]);
+            if (array_key_exists('media_ids', $data)) {
+                $post->media()->sync($data['media_ids']);
+            }
+            $mentions = app(Mentions::class);
+            $ids = $data['mention_ids'] ?? DB::table('content_mentions')->where('post_id', $post->id)->where('active', true)->pluck('user_id')->all();
+            $mentions->sync($post, $request->user(), $post->content_format === 'html' ? $mentions->fromHtml($content) : $mentions->fromPlain($post, $ids));
+
+            return $post;
+        });
+        $post->load(['author', 'media', 'tags', 'repostOf.author', 'repostOf.media']);
+
+        return response()->json(['success' => true, 'thread' => $post, 'html' => view('threads.partials.thread_card', ['thread' => $post, 'userInteractions' => $this->batchPreloadInteractions($request->user(), [$post])])->render()]);
     }
 
     public function destroy(Request $request, Post $thread): RedirectResponse|JsonResponse
@@ -623,14 +647,14 @@ class ThreadController extends Controller
 
         if ($tab === 'liked') {
             $posts = $user->likedPosts()
-                ->published()
+                ->published()->visibleTo($request->user())
                 ->with(['author', 'media'])
                 ->latest('post_likes.created_at')
                 ->take(25)
                 ->get();
         } elseif ($tab === 'mine') {
             $posts = $user->posts()
-                ->published()
+                ->published()->visibleTo($request->user())
                 ->with(['author', 'media'])
                 ->latest('posts.created_at')
                 ->take(25)
@@ -638,7 +662,7 @@ class ThreadController extends Controller
         } else {
             // Default: saved
             $posts = $user->bookmarks()
-                ->published()
+                ->published()->visibleTo($request->user())
                 ->with(['author', 'media'])
                 ->latest('bookmarks.created_at')
                 ->take(25)

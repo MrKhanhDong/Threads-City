@@ -10,6 +10,8 @@
             <x-theme-choices/>
             <nav class="journal-nav" aria-label="Cài đặt và giới thiệu">
                 <a href="{{ route('account.edit') }}"><x-journal-icon name="settings"/><span>Cài đặt tài khoản</span></a>
+                @auth<a href="{{ route('safety.index') }}"><x-journal-icon name="archive"/><span>Quyền riêng tư và an toàn</span></a>@endauth
+                @auth<a href="{{ route('reports.index') }}"><x-journal-icon name="info"/><span>Báo cáo của tôi</span></a>@endauth
                 @if(auth()->user()?->isAdmin())<a href="{{ route('admin.index') }}"><x-journal-icon name="chart"/><span>Quản trị</span></a>@endif
                 <a href="{{ route('about') }}"><x-journal-icon name="info"/><span>Về Threads</span></a>
                 @guest<a href="{{ route('login') }}"><x-journal-icon name="person"/><span>Đăng nhập</span></a>@endguest

@@ -14,7 +14,7 @@
     @isset($replyTo)
         <p class="reply-context">Trả lời <a href="#comment-{{ $replyTo->id }}">{{ $replyTo->user->name }}</a></p>
     @endisset
-    <p class="comment-body">{{ $comment->body }}</p>
+    <p class="comment-body">{!! app(\App\Services\Mentions::class)->commentHtml($comment) !!}</p>
     @auth
         @if(auth()->user()->hasVerifiedEmail())
             <div class="comment-actions">
@@ -36,6 +36,8 @@
                         <form action="{{ route('comments.update', $comment) }}" method="post">
                             @csrf
                             @method('patch')
+                            <small class="muted">Gõ @ và chọn người dùng để nhắc đến. Tối đa 5 người ngoài bản thân.</small>
+                            @foreach(app(\App\Services\Mentions::class)->commentSelections($comment) as $mentionId => $mentionLabel)<input type="hidden" name="mention_ids[]" value="{{ $mentionId }}" data-mention-label="{{ $mentionLabel }}">@endforeach
                             <label class="visually-hidden" for="edit-comment-{{ $comment->id }}">Sửa bình luận</label>
                             <textarea id="edit-comment-{{ $comment->id }}" name="body" class="form-control" rows="3" required minlength="2" maxlength="5000">{{ $comment->body }}</textarea>
                             <button type="submit" class="btn btn-forest btn-sm mt-2">Lưu sửa đổi</button>

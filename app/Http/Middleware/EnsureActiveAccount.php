@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\Post;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -24,6 +25,11 @@ class EnsureActiveAccount
 
         if ($request->user()?->google_profile_pending && ! $request->routeIs('google.profile', 'google.profile.store', 'logout', 'terms', 'privacy')) {
             return redirect()->route('google.profile');
+        }
+
+        $thread = $request->route('thread');
+        if ($thread instanceof Post && ! $request->routeIs('threads.destroy', 'threads.unarchive', 'admin.*')) {
+            abort_unless(Post::published()->visibleTo($request->user())->whereKey($thread->id)->exists(), 404);
         }
 
         return $next($request);

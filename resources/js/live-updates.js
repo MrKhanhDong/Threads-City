@@ -96,7 +96,7 @@ export function setupLiveUpdates() {
 
     async function refresh() {
         if (stopped || document.hidden) return;
-        if (busy || mutations || document.querySelector('.dropdown-menu.show')) { schedule(2000); return; }
+        if (busy || mutations || document.querySelector('.dropdown-menu.show') || document.querySelector('[data-stream-primary]')?.dataset.loading === 'true') { schedule(2000); return; }
         busy = true;
         const version = revision;
         activeRequest = new AbortController();
@@ -156,6 +156,7 @@ export function setupLiveUpdates() {
     }
 
     window.addEventListener('threads:refresh', () => { revision++; schedule(150); });
+    window.addEventListener('threads:refresh-start', () => { revision++; activeRequest?.abort(); });
     document.addEventListener('visibilitychange', () => {
         if (document.hidden) { clearTimeout(timer); activeRequest?.abort(); }
         else schedule(100);

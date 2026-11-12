@@ -102,11 +102,8 @@
                     <a href="{{ route('profile.show', $author->username ?? $author->id) }}" class="author-name-text">
                         {{ $author->username ?? $author->name }}
                     </a>
-                    @if($author->isAdmin() || in_array($author->username, ['binhphatlien', 'dieu_nhiii', 'mrkhanhdong']))
-                        <svg class="verified-badge-icon" width="13" height="13" viewBox="0 0 24 24" fill="#0095f6">
-                            <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
-                        </svg>
-                    @endif
+                    <x-verified-badge :user="$author"/>
+
                     @if($author->username === 'minhanna2025' || ($displayThread->tags->count() > 1))
                         <span class="meta-tag-arrow">></span>
                         <span class="meta-tag-name">{{ $author->username === 'minhanna2025' ? 'du học sinh' : $displayThread->tags->skip(1)->first()->name }}</span>
@@ -296,13 +293,14 @@
             <!-- Content Area -->
             @php
                 $cleanContent = preg_replace('/<br\s*\/?>/i', "\n", $displayThread->content ?? '');
-                $formattedContent = e($cleanContent);
-                $formattedContent = preg_replace('/#([\p{L}\p{N}_]+)/u', '<a href="' . route('threads.index') . '?q=%23$1" class="thread-hashtag" onclick="event.stopPropagation();">#$1</a>', $formattedContent);
-                $formattedContent = preg_replace('/@([A-Za-z0-9_]{3,30})/u', '<a href="/@$1" class="thread-mention" onclick="event.stopPropagation();">@$1</a>', $formattedContent);
+                $formattedContent = $displayThread->content_format === 'html'
+                    ? app(\App\Services\ThreadText::class)->html($displayThread->content)
+                    : app(\App\Services\ThreadText::class)->html(str_replace(["\r\n", "\n", "\r"], '<br>', app(\App\Services\Mentions::class)->commentHtml($displayThread)));
+                $formattedContent = str_replace('class="stream-hashtag"', 'class="thread-hashtag"', $formattedContent);
             @endphp
             @if(trim($cleanContent) !== '')
                 <div class="thread-content-text">
-                    {!! nl2br($formattedContent) !!}
+                    {!! $formattedContent !!}
                 </div>
             @endif
 
@@ -394,10 +392,10 @@
 
             <!-- Media Gallery (Images) -->
             @if($displayThread->media && $displayThread->media->count() > 0)
-                <div class="thread-media-gallery gallery-count-{{ min(4, $displayThread->media->count()) }}">
+                <div data-lightbox-gallery class="thread-media-gallery gallery-count-{{ min(4, $displayThread->media->count()) }}">
                     @foreach($displayThread->media->take(4) as $mediaItem)
                         <div class="gallery-media-item">
-                            <a href="{{ route('media.show', $mediaItem->id) }}" target="_blank" rel="noopener" class="gallery-media-link" onclick="event.stopPropagation();" title="Xem ảnh gốc">
+                            <a data-lightbox-image href="{{ route('media.show', $mediaItem->id) }}" target="_blank" rel="noopener" class="gallery-media-link" onclick="event.stopPropagation();" title="Xem ảnh gốc">
                                 <img src="{{ route('media.show', $mediaItem->id) }}" alt="{{ $mediaItem->alt ?? 'Ảnh đính kèm' }}" loading="lazy">
                             </a>
                         </div>

@@ -49,7 +49,7 @@ class MediaController extends Controller
     {
         if (! $request->user()?->isAdmin()) {
             $isAuthor = $request->user() && $media->user_id === $request->user()->id;
-            abort_unless($isAuthor || $this->references($media)->published()->exists(), 404);
+            abort_unless($isAuthor || $this->references($media)->published()->visibleTo($request->user())->exists(), 404);
         }
         if ($url = app(ImageStorage::class)->remoteUrl($media->path)) {
             return redirect()->away($url)->header('Cache-Control', 'private, no-store');

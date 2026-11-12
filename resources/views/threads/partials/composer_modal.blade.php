@@ -1283,6 +1283,7 @@ document.addEventListener('DOMContentLoaded', function() {
             },
             body: JSON.stringify({
                 content: content,
+                mention_ids: [...modalForm.querySelectorAll('input[name="mention_ids[]"]')].map(input => Number(input.value)),
                 parent_id: parentId,
                 repost_of_id: repostOfId,
                 type: postType,
@@ -1323,7 +1324,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     function resetModal() {
-        if (modalForm) modalForm.reset();
+        if (modalForm) { modalForm.reset(); modalForm.querySelectorAll('input[name="mention_ids[]"]').forEach(input => input.remove()); }
         uploadedMedia = [];
         isUploadingCount = 0;
         if (modalMediaIdsContainer) modalMediaIdsContainer.innerHTML = '';

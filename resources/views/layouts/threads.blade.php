@@ -4,6 +4,8 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="csrf-token" content="{{ csrf_token() }}">
+<link rel="manifest" href="{{ asset('app.webmanifest') }}"><link rel="apple-touch-icon" href="{{ asset('pwa-icon-192.png') }}"><meta name="theme-color" content="#101010"><meta name="apple-mobile-web-app-capable" content="yes">
+@auth<meta name="mention-suggestions" content="{{ route('mentions.suggestions') }}">@endauth
 <title>{{ $pageTitle ?? $site['site_name'] }}{{ isset($pageTitle) ? ' — '.$site['site_name'] : '' }}</title>
 <meta name="description" content="{{ $seo['description'] ?? $site['site_description'] }}">
 <meta name="robots" content="{{ ($preview ?? false) || request()->routeIs('auth.*','login','register','saved','liked.*','archives.*','insights.*','activity.*','account.*','password.*','verification.*','notifications.*') || request()->has('q') ? 'noindex,nofollow' : 'index,follow' }}">
@@ -74,11 +76,11 @@
             @hasSection('search-bar')@yield('search-bar')@else<span>{{ $pageTitle ?? 'Dành cho bạn' }}</span>@endif
             <div class="journal-topbar-actions">
                 @auth
-                @php($unreadNavCount = auth()->user()->unreadNotifications()->count())
+                @php($unreadNavCount = app(\App\Services\UserNotifications::class)->forUser(auth()->user())->whereNull('read_at')->count())
                 <a href="{{ route('notifications.index') }}" class="journal-menu-button journal-notification-link" aria-label="Thông báo"><x-journal-icon name="heart"/><span id="sidebarNotificationBadge" class="sidebar-badge-count" data-live-region="badge" style="{{ $unreadNavCount ? '' : 'display: none;' }}">{{ $unreadNavCount > 99 ? '99+' : $unreadNavCount }}</span></a>
                 @endauth
                 @auth
-                <div class="dropdown journal-header-account"><button type="button" class="journal-account-button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Menu tài khoản"><x-avatar :user="auth()->user()"/></button><ul class="dropdown-menu dropdown-menu-end"><li><a class="dropdown-item" href="{{ route('account.edit') }}">Tài khoản của bạn</a></li><li><a class="dropdown-item" href="{{ route('saved') }}">Bài viết đã lưu</a></li>@if(auth()->user()->isAdmin())<li><a class="dropdown-item" href="{{ route('admin.index') }}">Quản trị</a></li>@endif<li><form method="post" action="{{ route('logout') }}">@csrf<button type="submit" class="dropdown-item">Đăng xuất</button></form></li></ul></div>
+                <div class="dropdown journal-header-account"><button type="button" class="journal-account-button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Menu tài khoản"><x-avatar :user="auth()->user()"/></button><ul class="dropdown-menu dropdown-menu-end"><li><a class="dropdown-item" href="{{ route('account.edit') }}">Tài khoản của bạn</a></li><li><a class="dropdown-item" href="{{ route('saved') }}">Bài viết đã lưu</a></li><li><a class="dropdown-item" href="{{ route('safety.index') }}">Quyền riêng tư và ứng dụng</a></li>@if(auth()->user()->isAdmin())<li><a class="dropdown-item" href="{{ route('admin.index') }}">Quản trị</a></li>@endif<li><form method="post" action="{{ route('logout') }}">@csrf<button type="submit" class="dropdown-item">Đăng xuất</button></form></li></ul></div>
                 @endauth
             </div>
         </header>
@@ -115,6 +117,8 @@
     @stack('threads-scripts')
 
 
+<x-mobile-dialogs/>
+<div hidden data-pwa-config data-worker-url="{{ asset('sw.js') }}" data-user-id="{{ auth()->id() }}" data-public-key="{{ app(\App\Services\PushSubscriptions::class)->configured() ? config('services.webpush.public_key') : '' }}" data-push-url="{{ route('push.store') }}" data-logout-url="{{ route('logout') }}"></div>
 @stack('scripts')
     <script>
     // Global sidebar follow button handler
@@ -141,8 +145,8 @@
                 })
                 .then(data => {
                     if (data && data.success) {
-                        if (data.following) {
-                            btn.textContent = 'Đang theo dõi';
+                        if (data.following || data.requested) {
+                            btn.textContent = data.follow_label || 'Đang theo dõi';
                             btn.classList.add('following');
                         } else {
                             btn.textContent = 'Theo dõi';
@@ -182,7 +186,7 @@
                 return res.json();
             })
             .then(data => {
-                if (data && data.success && data.following) {
+                if (data && data.success && (data.following || data.requested)) {
                     avatarFollowBtn.remove();
                 }
             })
@@ -225,8 +229,11 @@
         let suggestions = [];
         let queryTerm = '';
         let atIndex = -1;
+        let mentionRevision = 0;
+        textarea.form?.addEventListener('reset', () => { textarea.form.querySelectorAll('input[name="mention_ids[]"]').forEach(input => input.remove()); textarea.dataset.mentionIds = '[]'; });
 
         function closeDropdown() {
+            mentionRevision++;
             dropdown.style.display = 'none';
             dropdown.innerHTML = '';
             suggestions = [];
@@ -238,7 +245,7 @@
             const cursorPos = textarea.selectionStart;
             const textBeforeCursor = val.slice(0, cursorPos);
 
-            const match = textBeforeCursor.match(/@([A-Za-z0-9_]*)$/);
+            const match = textBeforeCursor.match(/(?<![\\p{L}\\p{N}_@-])@([\\p{L}\\p{N}_-]*)$/u);
             if (!match) {
                 closeDropdown();
                 return;
@@ -247,11 +254,13 @@
             atIndex = cursorPos - match[0].length;
             queryTerm = match[1];
 
+            const requestRevision = ++mentionRevision;
             fetch(`/api/users/mention-suggestions?q=${encodeURIComponent(queryTerm)}`, {
                 headers: { 'Accept': 'application/json' }
             })
             .then(res => res.json())
             .then(users => {
+                if (requestRevision !== mentionRevision) return;
                 if (!users || users.length === 0) {
                     closeDropdown();
                     return;
@@ -269,27 +278,34 @@
                 const item = document.createElement('div');
                 item.className = 'mention-autocomplete-item' + (i === 0 ? ' selected' : '');
                 
+                const safe = value => { const span = document.createElement('span'); span.textContent = value || ''; return span.innerHTML; };
                 const avatarHtml = u.avatar_url 
                     ? `<img src="${u.avatar_url}" class="mention-item-avatar">`
-                    : `<div class="mention-item-letter">${(u.name || 'U').charAt(0).toUpperCase()}</div>`;
+                    : `<div class="mention-item-letter">${safe((u.name || 'U').charAt(0).toUpperCase())}</div>`;
                 
                 item.innerHTML = `
                     ${avatarHtml}
                     <div class="d-flex flex-column overflow-hidden">
-                        <span class="mention-item-name text-truncate">${u.name}</span>
-                        <span class="mention-item-handle text-truncate">${u.handle}</span>
+                        <span class="mention-item-name text-truncate">${safe(u.name)}</span>
+                        <span class="mention-item-handle text-truncate">${safe(u.handle)}</span>
                     </div>
                 `;
                 item.addEventListener('mousedown', function(e) {
                     e.preventDefault();
-                    insertMention(u.username);
+                    insertMention(u);
                 });
                 dropdown.appendChild(item);
             });
             dropdown.style.display = 'block';
         }
 
-        function insertMention(username) {
+        function insertMention(user) {
+            const username = user.username;
+            textarea.dataset.mentionIds = JSON.stringify([...new Set([...JSON.parse(textarea.dataset.mentionIds || '[]'), user.id])]);
+            if (textarea.form) {
+                let selected = [...textarea.form.querySelectorAll('input[name="mention_ids[]"]')].find(input => input.value === String(user.id));
+                if (!selected) { selected = document.createElement('input'); selected.type = 'hidden'; selected.name = 'mention_ids[]'; selected.value = String(user.id); textarea.form.append(selected); }
+            }
             const val = textarea.value;
             const cursorPos = textarea.selectionStart;
             const before = val.slice(0, atIndex);
@@ -317,7 +333,7 @@
             } else if (e.key === 'Enter' || e.key === 'Tab') {
                 if (activeIndex >= 0 && suggestions[activeIndex]) {
                     e.preventDefault();
-                    insertMention(suggestions[activeIndex].username);
+                    insertMention(suggestions[activeIndex]);
                 }
             } else if (e.key === 'Escape') {
                 closeDropdown();

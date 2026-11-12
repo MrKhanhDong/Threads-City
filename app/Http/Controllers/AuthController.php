@@ -8,6 +8,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
@@ -95,6 +96,9 @@ class AuthController extends Controller
 
     public function logout(Request $request): RedirectResponse
     {
+        if ($request->session()->has('push_browser_token')) {
+            DB::table('push_subscriptions')->where('user_id', $request->user()->id)->where('browser_token', $request->session()->get('push_browser_token'))->delete();
+        }
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();

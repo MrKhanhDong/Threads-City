@@ -15,7 +15,7 @@ class ThreadSocialInteractionsTest extends TestCase
     {
         $author = User::factory()->create();
         $liker = User::factory()->create();
-        $thread = Post::factory()->create([
+        $thread = Post::factory()->published()->create([
             'user_id' => $author->id,
             'status' => 'published',
             'type' => 'post',
@@ -64,7 +64,7 @@ class ThreadSocialInteractionsTest extends TestCase
         $mentionedUser = User::factory()->create(['username' => 'cool_dev']);
         $replier = User::factory()->create(['username' => 'replier_user']);
 
-        $thread = Post::factory()->create([
+        $thread = Post::factory()->published()->create([
             'user_id' => $author->id,
             'status' => 'published',
             'type' => 'post',
@@ -74,6 +74,7 @@ class ThreadSocialInteractionsTest extends TestCase
             ->postJson(route('threads.store'), [
                 'parent_id' => $thread->id,
                 'content' => 'Xin chào @cool_dev, đây là câu trả lời cho bài viết!',
+                'mention_ids' => [$mentionedUser->id],
             ])
             ->assertOk();
 
@@ -100,7 +101,7 @@ class ThreadSocialInteractionsTest extends TestCase
             ->assertOk()
             ->assertJson(['unread' => 0]);
 
-        $thread = Post::factory()->create(['user_id' => $user->id, 'status' => 'published']);
+        $thread = Post::factory()->published()->create(['user_id' => $user->id, 'status' => 'published']);
 
         // Actor likes user's thread
         $this->actingAs($actor)->postJson(route('threads.like', $thread->id))->assertOk();
@@ -192,9 +193,9 @@ class ThreadSocialInteractionsTest extends TestCase
         $user = User::factory()->create();
         $otherAuthor = User::factory()->create();
 
-        $savedThread = Post::factory()->create(['user_id' => $otherAuthor->id, 'status' => 'published', 'published_at' => now()->subMinute(), 'type' => 'post']);
-        $likedThread = Post::factory()->create(['user_id' => $otherAuthor->id, 'status' => 'published', 'published_at' => now()->subMinute(), 'type' => 'post']);
-        $myThread = Post::factory()->create(['user_id' => $user->id, 'status' => 'published', 'published_at' => now()->subMinute(), 'type' => 'post']);
+        $savedThread = Post::factory()->published()->create(['user_id' => $otherAuthor->id, 'status' => 'published', 'published_at' => now()->subMinute(), 'type' => 'post']);
+        $likedThread = Post::factory()->published()->create(['user_id' => $otherAuthor->id, 'status' => 'published', 'published_at' => now()->subMinute(), 'type' => 'post']);
+        $myThread = Post::factory()->published()->create(['user_id' => $user->id, 'status' => 'published', 'published_at' => now()->subMinute(), 'type' => 'post']);
 
         $user->bookmarks()->attach($savedThread->id, ['created_at' => now()]);
         $user->likedPosts()->attach($likedThread->id, ['created_at' => now()]);

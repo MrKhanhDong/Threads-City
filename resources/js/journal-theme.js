@@ -1,4 +1,6 @@
 export function setupJournalTheme(pageDocument = document, pageWindow = window) {
+    if (!pageDocument.body?.classList.contains('journal-body')) return;
+
     const root = pageDocument.documentElement;
     const choices = pageDocument.querySelectorAll('[data-theme-choice]');
     const toggles = pageDocument.querySelectorAll('[data-theme-toggle]');

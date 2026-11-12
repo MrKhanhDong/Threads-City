@@ -49,6 +49,9 @@
         @forelse($notifications as $notification)
             @php
                 $data = $notification->data ?? [];
+                if ($notification->type === \App\Notifications\CommentReplied::class && ($reply = $comments->get((int) ($data['comment_id'] ?? 0)))) {
+                    $data = [...$data, 'action' => 'reply', 'actor_id' => $reply->user_id, 'actor_name' => $reply->user->name, 'actor_handle' => $reply->user->handle(), 'actor_avatar' => $reply->user->avatar_path ? route('avatar.show', $reply->user) : null];
+                }
                 $action = $data['action'] ?? 'reply';
                 $actorName = $data['actor_name'] ?? 'Một người dùng';
                 $actorHandle = $data['actor_handle'] ?? '';
@@ -58,6 +61,10 @@
                 $targetUrl = route('notifications.open', $notification->id);
             @endphp
 
+            @if($notification->type === \App\Notifications\ReportHandled::class && $reportResults->has((int) ($data['report_id'] ?? 0)))
+                <form data-live-key="notification-{{ $notification->id }}" method="post" action="{{ $targetUrl }}" class="notification-item-card">@csrf<button type="submit" class="notification-item-btn"><span><x-report-notification-copy :report="$reportResults->get((int) $data['report_id'])"/><small>{{ $notification->read_at ? 'Đã đọc' : 'Chưa đọc' }}</small></span></button></form>
+                @continue
+            @endif
             <div data-live-key="notification-{{ $notification->id }}" class="notification-item-card {{ $notification->read_at ? '' : 'unread' }}">
                 <a href="{{ $targetUrl }}" class="notification-item-link">
                     <!-- Left: Avatar with Action Badge -->

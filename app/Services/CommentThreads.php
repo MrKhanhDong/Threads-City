@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Comment;
+use App\Models\Post;
 use App\Models\User;
 use App\Notifications\CommentReplied;
 use Illuminate\Database\Eloquent\Collection;
@@ -15,9 +16,12 @@ class CommentThreads
     /** Only reachable comments are visible; hiding an ancestor hides its entire branch. */
     public function visible(?int $viewerId = null, ?int $postId = null, ?int $rootId = null): Builder
     {
-        $status = "(c.status = 'approved' OR (c.status = 'pending' AND c.user_id = ?))";
+        $viewer = $viewerId !== null ? User::find($viewerId) : auth()->user();
+        $authors = User::discoverableTo($viewer)->select('users.id');
+        $status = "(c.status = 'approved' OR (c.status = 'pending' AND c.user_id = ?)) AND c.user_id IN (".$authors->toSql().')';
+        $statusBindings = array_merge([$viewerId ?? 0], $authors->getBindings());
         $seed = '';
-        $bindings = [now(), $viewerId ?? 0];
+        $bindings = array_merge([now()], $statusBindings);
         if ($postId !== null) {
             $seed .= ' AND c.post_id = ?';
             $bindings[] = $postId;
@@ -26,11 +30,11 @@ class CommentThreads
             $seed .= ' AND c.id = ?';
             $bindings[] = $rootId;
         }
-        $bindings[] = $viewerId ?? 0;
+        $bindings = array_merge($bindings, $statusBindings);
         $sql = "WITH RECURSIVE visible AS (
             SELECT c.id, c.id AS root_id, c.post_id FROM comments c
             JOIN posts p ON p.id = c.post_id
-            WHERE c.parent_id IS NULL AND p.deleted_at IS NULL
+            WHERE c.parent_id IS NULL AND p.deleted_at IS NULL AND p.archived_at IS NULL
               AND p.status IN ('published', 'scheduled') AND p.published_at <= ?
               AND {$status}{$seed}
             UNION DISTINCT
@@ -39,7 +43,8 @@ class CommentThreads
             WHERE {$status}
         ) SELECT id, root_id, post_id FROM visible";
 
-        return DB::query()->fromRaw('('.$sql.') AS visible_comments', $bindings);
+        return DB::query()->fromRaw('('.$sql.') AS visible_comments', $bindings)
+            ->whereIn('post_id', Post::published()->visibleTo($viewer)->select('posts.id'));
     }
 
     public function root(Comment $comment, ?int $viewerId = null): ?int
@@ -85,6 +90,6 @@ class CommentThreads
     public function notifications(User $user): MorphMany
     {
         return $user->notifications()->where('type', CommentReplied::class)
-            ->whereIn('data->comment_id', $this->visible()->select('id'));
+            ->whereIn('data->comment_id', $this->visible($user->id)->select('id'));
     }
 }

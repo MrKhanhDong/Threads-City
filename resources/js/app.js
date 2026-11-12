@@ -9,6 +9,11 @@ import { setupCommentThreads, setupReplyNotifications } from './comment-threads'
 import { setupSeoPreview } from './seo-preview';
 import { setupCoverPicker } from './cover-picker';
 import { setupSeoChecks } from './seo-checks';
+import { setupLightbox, setupConnections, setupPullToRefresh, setupFeedPagination } from './mobile-experience.js';
+import { setupInsights } from './insights.js';
+import { setupThreadStream } from './thread-stream.js';
+import { setupCommentMentions } from './mentions.js';
+import { setupPwa } from './pwa.js';
 import { setupVietnameseValidation, requestErrorMessage } from './validation-messages';
 
 window.bootstrap = { ...window.bootstrap, Dropdown, Offcanvas, Modal };
@@ -182,6 +187,14 @@ function init() {
     setupSidebarDrawer(Offcanvas);
     setupPhuongComposerBridge(Modal);
     setupLiveUpdates();
+    setupLightbox();
+    setupConnections();
+    setupPullToRefresh();
+    setupFeedPagination();
+    setupInsights();
+    setupCommentMentions();
+    setupPwa();
+    if (document.querySelector('[data-stream-composer]')) setupThreadStream();
     setupVietnameseValidation();
     setupCommentThreads();
     setupReplyNotifications();

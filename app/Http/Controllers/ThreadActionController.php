@@ -112,6 +112,7 @@ class ThreadActionController extends Controller
 
     public function repost(Request $request, Post $thread): JsonResponse|RedirectResponse
     {
+        abort_if($thread->author->is_private, 403, 'Không thể đăng lại bài viết của tài khoản riêng tư.');
         $user = $request->user();
 
         $reposted = DB::transaction(function () use ($user, $thread): bool {
@@ -170,49 +171,41 @@ class ThreadActionController extends Controller
 
     public function follow(Request $request, User $user): JsonResponse|RedirectResponse
     {
-        $currentUser = $request->user();
-        if ($currentUser->id === $user->id) {
-            abort(422, 'Bạn không thể tự theo dõi chính mình.');
-        }
+        abort_if($request->user()->id === $user->id, 422, 'Bạn không thể tự theo dõi chính mình.');
+        [$following, $requested] = DB::transaction(function () use ($request, $user): array {
+            $lockedUsers = User::whereKey([$request->user()->id, $user->id])->orderBy('id')->lockForUpdate()->get()->keyBy('id');
+            $currentUser = $lockedUsers->get($request->user()->id);
+            $target = $lockedUsers->get($user->id);
+            abort_unless($currentUser && $target && ! $target->is_locked && ! $currentUser->isBlockedWith($target), 404);
+            $pending = DB::table('follow_requests')->where('requester_id', $currentUser->id)->where('target_id', $target->id);
+            if ($currentUser->isFollowing($target)) {
+                $currentUser->following()->detach($target->id);
+                $pending->delete();
 
-        $following = DB::transaction(function () use ($currentUser, $user): bool {
-            $isFollowing = $currentUser->following()->where('following_id', $user->id)->exists();
-
-            if ($isFollowing) {
-                $currentUser->following()->detach($user->id);
-
-                return false;
+                return [false, false];
             }
+            if ((clone $pending)->exists()) {
+                $pending->delete();
 
-            $currentUser->following()->attach($user->id, ['created_at' => now()]);
+                return [false, false];
+            }
+            if ($target->is_private) {
+                DB::table('follow_requests')->insertOrIgnore(['requester_id' => $currentUser->id, 'target_id' => $target->id, 'created_at' => now()]);
 
-            return true;
+                return [false, true];
+            }
+            $currentUser->following()->syncWithoutDetaching([$target->id => ['created_at' => now()]]);
+
+            return [true, false];
         });
 
-        $followersCount = $user->followers()->count();
-
         if ($following) {
-            $user->notify(new ThreadInteractionNotification([
-                'action' => 'follow',
-                'actor_id' => $currentUser->id,
-                'actor_name' => $currentUser->name,
-                'actor_handle' => $currentUser->username ? '@'.$currentUser->username : '@'.Str::slug($currentUser->name, '_'),
-                'actor_avatar' => $currentUser->avatar_path ? route('avatar.show', $currentUser->id) : null,
-                'thread_id' => null,
-                'content_snippet' => null,
-                'url' => route('profile.show', $currentUser->username ?: $currentUser->id),
-            ]));
+            $user->notify(new ThreadInteractionNotification(['action' => 'follow', 'actor_id' => $request->user()->id, 'actor_name' => $request->user()->name, 'actor_handle' => $request->user()->handle(), 'actor_avatar' => $request->user()->avatar_path ? route('avatar.show', $request->user()) : null, 'thread_id' => null, 'content_snippet' => null, 'url' => route('profile.show', $request->user()->username ?: $request->user()->id)]));
         }
 
-        if ($request->wantsJson()) {
-            return response()->json([
-                'success' => true,
-                'following' => $following,
-                'followers_count' => $followersCount,
-            ]);
-        }
-
-        return back()->with('success', $following ? 'Đã theo dõi @'.$user->username : 'Đã hủy theo dõi.');
+        return $request->expectsJson()
+            ? response()->json(['success' => true, 'following' => $following, 'requested' => $requested, 'follow_label' => $requested ? 'Đã gửi yêu cầu' : ($following ? 'Đang theo dõi' : ($user->is_private ? 'Yêu cầu theo dõi' : 'Theo dõi')), 'followers_count' => $user->followers()->count(), 'target_id' => $user->id, 'viewer_id' => $request->user()->id, 'viewer_following_count' => $request->user()->following()->count()])
+            : back()->with('success', $requested ? 'Đã gửi yêu cầu theo dõi.' : ($following ? 'Đã theo dõi '.$user->handle() : 'Đã hủy theo dõi hoặc yêu cầu đang chờ.'));
     }
 
     public function notInterested(Request $request, Post $thread): JsonResponse
@@ -297,6 +290,7 @@ class ThreadActionController extends Controller
         }
 
         $blocked = DB::transaction(function () use ($currentUser, $user): bool {
+            User::whereKey([$currentUser->id, $user->id])->orderBy('id')->lockForUpdate()->get();
             $exists = DB::table('user_blocks')
                 ->where('user_id', $currentUser->id)
                 ->where('blocked_user_id', $user->id)
@@ -308,9 +302,13 @@ class ThreadActionController extends Controller
                     ->where('blocked_user_id', $user->id)
                     ->delete();
 
+                DB::table('user_safety_blocks')->where('blocker_id', $currentUser->id)->where('blocked_id', $user->id)->delete();
+
                 return false;
             }
 
+            DB::table('user_safety_blocks')->insertOrIgnore(['blocker_id' => $currentUser->id, 'blocked_id' => $user->id, 'created_at' => now()]);
+            DB::table('follow_requests')->where(fn ($pairs) => $pairs->where('requester_id', $currentUser->id)->where('target_id', $user->id))->orWhere(fn ($pairs) => $pairs->where('requester_id', $user->id)->where('target_id', $currentUser->id))->delete();
             DB::table('user_blocks')->insert([
                 'user_id' => $currentUser->id,
                 'blocked_user_id' => $user->id,

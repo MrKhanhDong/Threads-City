@@ -7,6 +7,7 @@ use Closure;
 use DOMDocument;
 use DOMXPath;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpFoundation\Response;
 
 class LivePageUpdates
@@ -58,7 +59,11 @@ class LivePageUpdates
         $knownIds = array_slice($knownIds, 0, 100);
         $removed = [];
         if ($knownIds !== []) {
-            $existing = Post::published()->whereIn('id', $knownIds)->pluck('id')->map(fn ($id): string => (string) $id)->all();
+            $visible = Post::published()->visibleTo($request->user(), true)->whereIn('id', $knownIds);
+            if ($request->user() && $request->routeIs('home', 'threads.index')) {
+                $visible->whereNotIn('id', DB::table('hidden_posts')->where('user_id', $request->user()->id)->select('post_id'));
+            }
+            $existing = $visible->pluck('id')->map(fn ($id): string => (string) $id)->all();
             $removed = array_values(array_diff($knownIds, $existing));
         }
 

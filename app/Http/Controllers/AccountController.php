@@ -56,10 +56,24 @@ class AccountController extends Controller
         return back()->with('success', 'Đã đổi mật khẩu. Các phiên cũ sẽ bị thu hồi.');
     }
 
-    public function avatar(User $user): BinaryFileResponse|RedirectResponse
+    public function managedAvatar(Request $request, User $user): BinaryFileResponse|RedirectResponse
     {
+        abort_unless($request->user()->blockedUsers()->whereKey($user->id)->exists() || $request->user()->mutedUsers()->whereKey($user->id)->exists(), 404);
         if ($url = app(ImageStorage::class)->remoteUrl($user->avatar_path)) {
-            return redirect()->away($url);
+            return redirect()->away($url)->header('Cache-Control', 'private, no-store');
+        }
+        abort_unless($user->avatar_path && Storage::disk('local')->exists($user->avatar_path), 404);
+
+        return response()->file(Storage::disk('local')->path($user->avatar_path), ['Cache-Control' => 'private, no-store', 'X-Content-Type-Options' => 'nosniff', 'Vary' => 'Cookie']);
+    }
+
+    public function avatar(User $user, ?Request $request = null): BinaryFileResponse|RedirectResponse
+    {
+        if ($user->exists) {
+            abort_unless(! $user->is_locked && User::discoverableTo(($request ?? request())->user())->whereKey($user->id)->exists(), 404);
+        }
+        if ($url = app(ImageStorage::class)->remoteUrl($user->avatar_path)) {
+            return redirect()->away($url)->header('Cache-Control', 'private, no-store');
         }
 
         abort_unless($user->avatar_path && preg_match('~^avatars/[A-Za-z0-9]+\.(jpg|jpeg|png|webp)$~', $user->avatar_path), 404);
@@ -67,7 +81,8 @@ class AccountController extends Controller
 
         return response()->file(Storage::disk('local')->path($user->avatar_path), [
             'X-Content-Type-Options' => 'nosniff',
-            'Cache-Control' => 'public, max-age=86400, stale-while-revalidate=604800',
+            'Cache-Control' => 'private, no-store',
+            'Vary' => 'Cookie',
         ]);
     }
 }

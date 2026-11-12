@@ -18,7 +18,8 @@
     @include('threads.partials.composer')
 
     <!-- Threads Feed Container -->
-    <div id="threadsFeedContainer" data-live-region="feed" data-live-list>
+    <p class="pull-refresh-status" data-pull-refresh role="status" aria-live="polite" hidden></p>
+    <div data-stream-primary="{{ $tab }}" data-stream-feed id="threadsFeedContainer" data-live-region="feed" data-live-list>
         @include('threads.partials.thread_list', ['threads' => $threads, 'userInteractions' => $userInteractions ?? []])
     </div>
 

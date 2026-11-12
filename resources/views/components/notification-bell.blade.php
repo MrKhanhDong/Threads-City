@@ -1,5 +1,5 @@
 @auth
-@php($unreadCount = app(\App\Services\CommentThreads::class)->notifications(auth()->user())->whereNull('read_at')->count())
+@php($unreadCount = app(\App\Services\UserNotifications::class)->forUser(auth()->user())->whereNull('read_at')->count())
 <div class="dropdown notification-bell" data-notification-bell data-url="{{ route('notifications.index') }}">
     <button type="button" class="notification-button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false" aria-label="Thông báo{{ $unreadCount ? ': '.$unreadCount.' chưa đọc' : '' }}">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9Z"/><path d="M10 21h4"/></svg>

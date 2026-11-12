@@ -2,35 +2,69 @@
 
 namespace App\Providers;
 
+use App\Http\Controllers\ThreadController;
 use App\Models\Category;
 use App\Models\Setting;
 use App\Models\Tag;
 use App\Models\TrendingTopic;
 use App\Models\User;
+use App\Services\Mentions;
+use App\Services\PushSubscriptions;
+use App\Services\SendWebPush;
+use GuzzleHttp\Client;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
+use Illuminate\Notifications\Events\NotificationSent;
 use Illuminate\Pagination\Paginator;
+use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
+use Minishlink\WebPush\WebPush;
 
 class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
+        $this->app->scoped(Mentions::class);
+        $this->app->bind(WebPush::class, fn (): WebPush => new WebPush([
+            'VAPID' => ['subject' => config('services.webpush.subject'), 'publicKey' => config('services.webpush.public_key'), 'privateKey' => config('services.webpush.private_key')],
+        ], ['TTL' => 300], new Client(['timeout' => 10, 'connect_timeout' => 5, 'allow_redirects' => false])));
         $this->app->scoped('blog.context', fn (): array => [
             'site' => array_merge(['site_name' => config('blog.name'), 'site_tagline' => config('blog.tagline'), 'site_description' => config('blog.description'), 'about' => '', 'contact_email' => ''], Setting::pluck('value', 'key')->all()),
-            'navigationCategories' => Category::withCount(['posts' => fn (Builder $query): Builder => $query->published()])->orderBy('name')->get(),
+            'navigationCategories' => Category::whereHas('posts', fn (Builder $query): Builder => $query->published()->visibleTo(request()->user()))->withCount(['posts' => fn (Builder $query): Builder => $query->published()->visibleTo(request()->user())])->orderBy('name')->get(),
         ]);
         $this->app->scoped('blog.saved', fn (): array => request()->user()?->bookmarks()->pluck('posts.id')->all() ?? []);
     }
 
     public function boot(): void
     {
+        View::composer('threads.partials.thread_list', function (\Illuminate\View\View $view): void {
+            $data = $view->getData();
+            if (! isset($data['threads'])) {
+                return;
+            }
+            app(Mentions::class)->preloadPosts($data['threads']);
+            if (! array_key_exists('userInteractions', $data)) {
+                $view->with('userInteractions', app(ThreadController::class)->batchPreloadInteractions(request()->user(), $data['threads']));
+            }
+        });
+        Event::listen(NotificationSent::class, function (NotificationSent $event): void {
+            if ($event->channel !== 'database' || ! $event->notifiable instanceof User || ! app(PushSubscriptions::class)->configured()) {
+                return;
+            }
+            $userId = $event->notifiable->id;
+            $notificationId = $event->notification->id;
+            DB::afterCommit(fn () => rescue(fn () => Bus::dispatch(new SendWebPush($userId, $notificationId))));
+        });
+        View::composer('layouts.public', function (\Illuminate\View\View $view): void {
+            $view->with(app('blog.context'))->with('savedIds', app('blog.saved'));
+        });
         if ($this->app->environment('production') || isset($_ENV['VERCEL']) || isset($_SERVER['VERCEL'])) {
             URL::forceScheme('https');
         }
@@ -49,8 +83,8 @@ class AppServiceProvider extends ServiceProvider
 
             $currentUserId = auth()->id();
 
-            $suggestedUsers = Cache::remember('threads_suggested_users_v4', 300, function (): array {
-                return User::query()
+            $suggestedUsers = Cache::remember('threads_suggested_users_v5', 300, function (): array {
+                return User::query()->where('is_locked', false)
                     ->whereIn('username', ['binhphatlien', 'dieu_nhiii', 'mrkhanhdong', 'minhphuong'])
                     ->orderByRaw("FIELD(username, 'binhphatlien', 'dieu_nhiii', 'mrkhanhdong', 'minhphuong')")
                     ->take(4)
@@ -68,11 +102,12 @@ class AppServiceProvider extends ServiceProvider
 
             // If logged in, filter out the current user from suggested list in-memory without extra DB query
             if ($currentUserId) {
-                $suggestedUsers = array_values(array_filter($suggestedUsers, fn ($u): bool => (int) data_get($u, 'id') !== (int) $currentUserId));
+                $discoverableIds = User::discoverableTo(request()->user())->where('is_locked', false)->whereKey(array_column($suggestedUsers, 'id'))->pluck('id')->all();
+                $suggestedUsers = array_values(array_filter($suggestedUsers, fn ($u): bool => (int) data_get($u, 'id') !== (int) $currentUserId && in_array((int) data_get($u, 'id'), $discoverableIds, true)));
             }
 
             // Cache trending topics for 5 minutes
-            $trendingTopics = Cache::remember('threads_trending_topics_v4', 300, function (): array {
+            $trendingTopics = Cache::remember('threads_trending_topics_v5', 300, function (): array {
                 $topics = TrendingTopic::query()
                     ->active()
                     ->orderBy('order')
@@ -81,8 +116,8 @@ class AppServiceProvider extends ServiceProvider
                     ->get();
 
                 if ($topics->isEmpty()) {
-                    $topTags = Tag::withCount('posts')
-                        ->has('posts')
+                    $topTags = Tag::withCount(['posts' => fn (Builder $posts): Builder => $posts->published()->visibleTo(null)])
+                        ->whereHas('posts', fn (Builder $posts): Builder => $posts->published()->visibleTo(null))
                         ->orderByDesc('posts_count')
                         ->take(4)
                         ->get();
