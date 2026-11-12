@@ -1,7 +1,7 @@
 @extends('layouts.public')
 @php($pageTitle = $user->name)
 @section('content')
-<section class="stream-profile" data-follow-context @if($user->is_private) data-private-profile @endif>
+<section class="stream-profile" data-follow-context data-profile-user-id="{{ $user->id }}" @if($user->is_private) data-private-profile @endif>
     <div class="stream-profile-heading">
         <div><h1>{{ $user->name }}<x-verified-badge :user="$user" :size="20"/></h1><p>{{ $user->handle() }}</p>@if($user->is_private)<span class="private-account-label">Tài khoản riêng tư</span>@endif</div>
         <div class="profile-identity-actions"><x-avatar :user="$user"/>
@@ -11,7 +11,12 @@
         </div>
     </div>
     @if($user->bio)<p class="stream-profile-bio">{{ $user->bio }}</p>@endif
-    <div class="stream-profile-counts"><span><strong data-followers-count>{{ $followersCount }}</strong> người theo dõi</span><span>{{ $followingCount }} đang theo dõi</span></div>
+    <div class="stream-profile-counts">
+    @if($canViewPosts)
+        <a href="{{ route('profile.connections', [$user, 'followers']) }}" data-connections-url data-connections-title="Người theo dõi"><strong data-followers-count>{{ $followersCount }}</strong> người theo dõi</a>
+        <a href="{{ route('profile.connections', [$user, 'following']) }}" data-connections-url data-connections-title="Đang theo dõi"><strong data-following-count>{{ $followingCount }}</strong> đang theo dõi</a>
+    @else<span><strong data-followers-count>{{ $followersCount }}</strong> người theo dõi</span><span>{{ $followingCount }} đang theo dõi</span>@endif
+    </div>
     @if(auth()->id() === $user->id)
     <div class="stream-profile-buttons"><a class="btn-threads-outline" href="{{ route('account.edit') }}">Chỉnh sửa hồ sơ</a><a class="btn-threads-outline" href="{{ route('safety.index') }}">Quyền riêng tư</a><button type="button" class="stream-submit" data-compose="new">Bài viết mới</button></div>
     @elseif(auth()->check())

@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\User;
 use DOMDocument;
 use DOMXPath;
 
@@ -63,6 +64,18 @@ class ThreadText
             $node->parentNode->replaceChild($fragment, $node);
         }
         foreach ($root->getElementsByTagName('a') as $link) {
+            $id = app(Mentions::class)->userIdFromUrl($link->getAttribute('href'));
+            if ($id !== null && str_starts_with($link->textContent, '@')) {
+                $user = User::discoverableTo(auth()->user())->where('is_locked', false)->find($id);
+                if ($user) {
+                    $link->textContent = $user->handle();
+                    $link->setAttribute('class', 'stream-mention');
+                    $link->setAttribute('href', route('mentions.profile', $user));
+                    $link->removeAttribute('target');
+                } else {
+                    $link->removeAttribute('href');
+                }
+            }
             $link->setAttribute('rel', 'nofollow noopener noreferrer');
         }
         $output = '';

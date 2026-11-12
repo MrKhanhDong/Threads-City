@@ -3,6 +3,22 @@
 @section('content')
 <div class="safety-page">
     <header class="safety-heading"><h1>Quyền riêng tư và an toàn</h1><p>Chọn người có thể xem bài viết và quản lý trải nghiệm của bạn.</p></header>
+    <section class="safety-panel" aria-labelledby="app-experience-title">
+        <h2 id="app-experience-title">Threads trên điện thoại</h2>
+        <button type="button" class="btn-threads-outline" data-pwa-install hidden>Cài Threads</button>
+        <p>Trên Safari: mở menu Chia sẻ → Thêm vào Màn hình chính. Trên Chrome: mở menu → Cài đặt ứng dụng hoặc Thêm vào màn hình chính.</p>
+        <button type="button" class="btn-threads-outline" data-push-toggle hidden disabled>Bật thông báo trên thiết bị này</button>
+        <p>Bạn cần duy trì đăng nhập để nhận thông báo đẩy. Khi đăng xuất, thông báo trên thiết bị này sẽ tắt.</p>
+        <p data-push-status role="status" aria-live="polite">Thông báo đẩy cần HTTPS và trình duyệt hỗ trợ. Bạn vẫn có thể xem thông báo trong ứng dụng.</p>
+    </section>
+    <section class="safety-panel" aria-labelledby="mention-policy-title">
+        <h2 id="mention-policy-title">Ai được nhắc đến tôi?</h2>
+        <form method="post" action="{{ route('safety.mentions') }}">@csrf @method('patch')
+            <label for="mention-policy">Cho phép nhắc đến trong bài viết và bình luận</label>
+            <select id="mention-policy" name="mention_policy" class="form-select">@foreach(['everyone' => 'Mọi người', 'following' => 'Người tôi đang theo dõi', 'nobody' => 'Không ai'] as $value => $label)<option value="{{ $value }}" @selected($user->mention_policy === $value)>{{ $label }}</option>@endforeach</select>
+            <button type="submit" class="btn-threads-outline">Lưu cài đặt nhắc đến</button>
+        </form>
+    </section>
     <p><a class="btn-threads-outline" href="{{ route('reports.index') }}">Báo cáo của tôi và kết quả xử lý</a></p>
     <section class="safety-panel" aria-labelledby="privacy-title">
         <h2 id="privacy-title">Tài khoản riêng tư</h2>

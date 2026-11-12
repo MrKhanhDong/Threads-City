@@ -1,3 +1,5 @@
+import { setupEditorMentions } from './mentions.js';
+
 let enginePromise;
 
 export function plainComposerHtml(value) {
@@ -71,6 +73,7 @@ export async function createThreadEditor(textarea, modalElement, onChange) {
         link_context_toolbar: true,
         content_style: 'body{font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:15px;line-height:1.8;margin:12px;overflow-wrap:anywhere}p{margin:0 0 .75em}h1,h2,h3,h4{line-height:1.35;margin:.8em 0 .5em}h1{font-size:1.7em}h2{font-size:1.45em}h3{font-size:1.25em}h4{font-size:1.1em}blockquote{border-left:3px solid var(--editor-accent);margin:1em 0;padding-left:14px}a{color:var(--editor-accent)}',
         setup(editor) {
+            setupEditorMentions(editor, pageDocument.querySelector('meta[name="mention-suggestions"]')?.content);
             const update = () => { editor.save(); onChange(); };
             editor.on('input change undo redo SetContent', update);
             editor.on('init', () => {

@@ -95,7 +95,7 @@ class ThreadActionController extends Controller
         });
 
         return $request->expectsJson()
-            ? response()->json(['success' => true, 'following' => $following, 'requested' => $requested, 'follow_label' => $requested ? 'Đã gửi yêu cầu' : ($following ? 'Đang theo dõi' : ($user->is_private ? 'Yêu cầu theo dõi' : 'Theo dõi')), 'followers_count' => $user->followers()->count()])
+            ? response()->json(['success' => true, 'following' => $following, 'requested' => $requested, 'follow_label' => $requested ? 'Đã gửi yêu cầu' : ($following ? 'Đang theo dõi' : ($user->is_private ? 'Yêu cầu theo dõi' : 'Theo dõi')), 'followers_count' => $user->followers()->count(), 'target_id' => $user->id, 'viewer_id' => $request->user()->id, 'viewer_following_count' => $request->user()->following()->count()])
             : back()->with('success', $requested ? 'Đã gửi yêu cầu theo dõi.' : ($following ? 'Đã theo dõi '.$user->handle() : 'Đã hủy theo dõi hoặc yêu cầu đang chờ.'));
     }
 

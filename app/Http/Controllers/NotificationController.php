@@ -4,8 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Models\Comment;
 use App\Models\ContentReport;
+use App\Models\Post;
+use App\Notifications\Mentioned;
 use App\Notifications\ReportHandled;
 use App\Services\CommentThreads;
+use App\Services\Mentions;
 use App\Services\UserNotifications;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
@@ -27,17 +30,29 @@ class NotificationController extends Controller
         $reportResults = ContentReport::where('reporter_id', $request->user()->id)
             ->whereIn('id', $notifications->map(fn ($notification): int => (int) ($notification->data['report_id'] ?? 0))->filter())
             ->get(['id', 'status', 'action', 'reporter_message'])->keyBy('id');
+        $mentionRecords = app(Mentions::class)->visibleTo($request->user())
+            ->whereIn('id', $notifications->map(fn ($notification): int => (int) ($notification->data['mention_id'] ?? 0))->filter())->get();
+        $mentionedPosts = Post::whereIn('id', $mentionRecords->pluck('post_id')->filter())->with('author')->get()->keyBy('id');
+        $mentionedComments = Comment::whereIn('id', $mentionRecords->pluck('comment_id')->filter())->with('user')->get()->keyBy('id');
+        $mentionContexts = $mentionRecords->mapWithKeys(fn (object $mention): array => [$mention->id => ['actor' => $mention->comment_id ? $mentionedComments->get($mention->comment_id)?->user : $mentionedPosts->get($mention->post_id)?->author, 'is_comment' => $mention->comment_id !== null]]);
         if ($request->expectsJson()) {
-            return response()->json(['unread' => $unread, 'html' => view('components.notification-items', compact('notifications', 'comments', 'reportResults'))->render()])
+            return response()->json(['unread' => $unread, 'html' => view('components.notification-items', compact('notifications', 'comments', 'reportResults', 'mentionContexts'))->render()])
                 ->header('Cache-Control', 'private, no-store');
         }
 
-        return view('account.notifications', compact('notifications', 'comments', 'reportResults', 'unread'));
+        return view('account.notifications', compact('notifications', 'comments', 'reportResults', 'unread', 'mentionContexts'));
     }
 
     public function open(Request $request, string $id, CommentThreads $threads, UserNotifications $inbox): RedirectResponse
     {
         $notification = $inbox->forUser($request->user())->whereKey($id)->firstOrFail();
+        if ($notification->type === Mentioned::class) {
+            $mention = app(Mentions::class)->visibleTo($request->user())->where('id', $notification->data['mention_id'])->firstOrFail();
+            $url = $mention->comment_id ? $threads->url(Comment::findOrFail($mention->comment_id), $request->user()->id) : route('threads.show', $mention->post_id);
+            $notification->markAsRead();
+
+            return redirect($url);
+        }
         if ($notification->type === ReportHandled::class) {
             $report = ContentReport::where('reporter_id', $request->user()->id)->findOrFail($notification->data['report_id']);
             $notification->markAsRead();

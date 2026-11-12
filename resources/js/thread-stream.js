@@ -256,6 +256,8 @@ export function setupThreadStream() {
         const card = form.closest('[data-thread-card]');
         const action = form.dataset.streamAction;
         if (button) button.disabled = true;
+        const followButtons = action === 'follow' ? [...document.querySelectorAll('form[data-stream-action="follow"]')].filter(other => other.action === form.action).map(other => other.querySelector('button[type="submit"]')).filter(Boolean) : [];
+        followButtons.forEach(control => { control.disabled = true; });
         try {
             const data = await request(form.action, { method: action === 'delete' ? 'DELETE' : 'POST' });
             if (!data.success) throw new Error('Chưa hoàn tất thao tác. Vui lòng thử lại.');
@@ -263,14 +265,29 @@ export function setupThreadStream() {
             if (action === 'like') cards.forEach(item => { item.querySelectorAll('[data-stream-action="like"] button').forEach(button => button.setAttribute('aria-pressed', String(data.liked))); item.querySelectorAll('[data-like-count]').forEach(count => count.textContent = data.likes_count || ''); });
             if (action === 'bookmark') { form.querySelector('[data-bookmark-label]').textContent = data.bookmarked ? 'Bỏ lưu bài viết' : 'Lưu bài viết'; button.setAttribute('aria-pressed', String(data.bookmarked)); notify(data.bookmarked ? 'Đã lưu bài viết.' : 'Đã bỏ lưu.'); }
             if (action === 'repost') cards.forEach(item => { item.querySelectorAll('[data-repost-count]').forEach(count => { count.textContent = data.reposts_count || ''; count.closest('button').setAttribute('aria-pressed', String(data.reposted)); }); item.querySelectorAll('[data-repost-label]').forEach(label => label.textContent = data.reposted ? 'Hủy đăng lại' : 'Đăng lại'); });
-            if (action === 'follow') { button.textContent = data.follow_label ?? (data.following ? 'Đang theo dõi' : 'Theo dõi'); button.setAttribute('aria-pressed', String(data.following || data.requested)); const context = form.closest('[data-follow-context]') || document; context.querySelectorAll('[data-followers-count]').forEach(count => count.textContent = data.followers_count); if (context.matches?.('[data-private-profile]')) window.location.reload(); }
+            if (action === 'follow') {
+                document.querySelectorAll('form[data-stream-action="follow"]').forEach(other => {
+                    if (other.action !== form.action) return;
+                    const control = other.querySelector('button[type="submit"]');
+                    control.textContent = data.follow_label;
+                    control.setAttribute('aria-pressed', String(data.following || data.requested));
+                });
+                const profile = document.querySelector(`[data-profile-user-id="${data.target_id}"]`);
+                profile?.querySelectorAll('[data-followers-count]').forEach(count => count.textContent = data.followers_count);
+                document.querySelector(`[data-profile-user-id="${data.viewer_id}"] [data-following-count]`)?.replaceChildren(String(data.viewer_following_count));
+                if (profile?.hasAttribute('data-private-profile')) window.location.reload();
+            }
             if (action === 'delete') { const isRoot = document.querySelector('[data-stream-replies]')?.dataset.streamReplies === card?.dataset.threadCard; card?.remove(); notify('Đã xóa bài viết.'); if (isRoot) window.location.assign(data.redirect); }
         } catch (error) { notify(error.message); }
-        finally { if (button) button.disabled = false; }
+        finally { if (button) button.disabled = false; followButtons.forEach(control => { control.disabled = false; }); }
     });
-    document.querySelectorAll('[data-stream-more]').forEach(link => link.addEventListener('click', async event => {
+    document.addEventListener('click', async event => {
+        const link = event.target.closest('[data-stream-more]');
+        if (!link) return;
         event.preventDefault();
-        if (link.getAttribute('aria-disabled') === 'true') return;
+        const feed = document.querySelector('[data-stream-feed]');
+        if (link.getAttribute('aria-disabled') === 'true' || feed?.dataset.loading === 'true') return;
+        if (feed) feed.dataset.loading = 'true';
         link.setAttribute('aria-disabled', 'true'); link.textContent = 'Đang tải…';
         try {
             const data = await request(link.href);
@@ -279,6 +296,6 @@ export function setupThreadStream() {
             if (data.nextPageUrl) link.href = data.nextPageUrl;
             else link.parentElement.remove();
         } catch (error) { notify(error.message); }
-        finally { link.setAttribute('aria-disabled', 'false'); link.textContent = 'Tải thêm bài viết'; }
-    }));
+        finally { if (feed) feed.dataset.loading = 'false'; link.setAttribute('aria-disabled', 'false'); link.textContent = 'Tải thêm bài viết'; }
+    });
 }

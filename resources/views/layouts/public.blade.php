@@ -1,8 +1,14 @@
 <!doctype html>
 <html lang="vi" data-theme="dark">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="manifest" href="{{ asset('app.webmanifest') }}">
+<link rel="apple-touch-icon" href="{{ asset('pwa-icon-192.png') }}">
+<meta name="theme-color" content="#101010">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Threads">
 <meta name="csrf-token" content="{{ csrf_token() }}">
+@auth<meta name="mention-suggestions" content="{{ route('mentions.suggestions') }}">@endauth
 <title>{{ $pageTitle ?? $site['site_name'] }}{{ isset($pageTitle) ? ' — '.$site['site_name'] : '' }}</title>
 <meta name="description" content="{{ $seo['description'] ?? $site['site_description'] }}">
 <meta name="robots" content="{{ ($preview ?? false) || request()->routeIs('auth.*','login','register','saved','liked.*','archives.*','insights.*','activity.*','account.*','password.*','verification.*','notifications.*') || request()->has('q') ? 'noindex,nofollow' : 'index,follow' }}">
@@ -64,6 +70,8 @@
 <nav class="journal-mobile-nav" aria-label="Điều hướng trên điện thoại"><a href="{{ route('home') }}" aria-label="Dành cho bạn"><x-journal-icon name="home"/><span>Bảng tin</span></a><a href="{{ route('search.index') }}" aria-label="Tìm kiếm" @class(['is-active' => request()->routeIs('search.index')])><x-journal-icon name="search"/><span>Tìm kiếm</span></a>@auth<button type="button" data-compose="new" aria-label="Bài viết mới"><x-journal-icon name="plus"/><span>Bài viết mới</span></button>@else<a href="{{ route('login') }}" aria-label="Đăng nhập để đăng bài"><x-journal-icon name="plus"/><span>Bài viết mới</span></a>@endauth<a href="{{ route('activity.index') }}" aria-label="Hoạt động" @class(['is-active' => request()->routeIs('activity.*', 'notifications.*')])><x-journal-icon name="heart"/><span>Hoạt động</span></a><a href="{{ auth()->check() ? route('profile.show', auth()->user()->username ?: auth()->id()) : route('login') }}" aria-label="Trang cá nhân"><x-journal-icon name="person"/><span>Cá nhân</span></a></nav>
 @auth<button type="button" class="stream-floating-compose" data-compose="new" aria-label="Tạo Bài viết mới"><x-journal-icon name="plus" :size="30"/></button>@endauth
 @include('threads.partials.composer_modal')
+<x-mobile-dialogs/>
+<div hidden data-pwa-config data-worker-url="{{ asset('sw.js') }}" data-user-id="{{ auth()->id() }}" data-public-key="{{ app(\App\Services\PushSubscriptions::class)->configured() ? config('services.webpush.public_key') : '' }}" data-push-url="{{ route('push.store') }}" data-logout-url="{{ route('logout') }}"></div>
 <div class="stream-toast" data-stream-toast role="status" aria-live="polite" hidden></div>
 @stack('scripts')
 @stack('threads-scripts')

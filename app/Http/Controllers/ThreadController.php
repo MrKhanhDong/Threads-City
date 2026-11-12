@@ -7,6 +7,7 @@ use App\Models\Media;
 use App\Models\Post;
 use App\Models\Tag;
 use App\Models\User;
+use App\Services\Mentions;
 use App\Services\ThreadText;
 use App\Services\ViewRecorder;
 use Illuminate\Contracts\View\View;
@@ -40,7 +41,7 @@ class ThreadController extends Controller
         }
         $threads = $query->latest('published_at')->latest('id')->paginate(15)->withQueryString();
         if ($request->expectsJson()) {
-            return response()->json(['html' => view('threads.partials.thread_list', compact('threads'))->render(), 'nextPageUrl' => $threads->nextPageUrl()]);
+            return response()->json(['html' => view('threads.partials.thread_list', compact('threads'))->render(), 'nextPageUrl' => $threads->nextPageUrl()])->header('Cache-Control', 'private, no-store');
         }
 
         return view('threads.index', compact('threads', 'tab'));
@@ -85,12 +86,14 @@ class ThreadController extends Controller
         abort_unless($thread->user_id === $request->user()->id, 403);
         abort_unless(Str::startsWith($thread->slug ?? '', 'thread-'), 403);
         $data = $request->validated();
-        DB::transaction(function () use ($thread, $data): void {
+        DB::transaction(function () use ($request, $thread, $data): void {
+            $thread = Post::lockForUpdate()->findOrFail($thread->id);
             $storedContent = $this->text->store($data['content'] ?? '', $data['content_format'] ?? 'plain');
             $plain = $this->text->plain($storedContent);
             $thread->update(['content' => $storedContent, 'title' => Str::limit($plain, 60, ''), 'excerpt' => Str::limit($plain, 200)]);
             $thread->media()->sync($data['media_ids'] ?? []);
             $this->syncTags($thread, $plain);
+            app(Mentions::class)->sync($thread, $request->user(), app(Mentions::class)->fromHtml($storedContent));
         });
         $thread = Post::withThreadContext($request->user())->findOrFail($thread->id);
         if ($request->expectsJson()) {
@@ -147,6 +150,7 @@ class ThreadController extends Controller
         $plain = $this->text->plain($storedContent);
         $post = Post::create(['user_id' => $author->id, 'parent_id' => $parent?->id, 'repost_of_id' => $original?->id, 'type' => $parent ? 'reply' : ($original ? 'quote' : 'post'), 'title' => Str::limit($plain, 60, ''), 'slug' => 'thread-'.Str::uuid(), 'excerpt' => Str::limit($plain, 200), 'content' => $storedContent, 'status' => 'published', 'published_at' => now()]);
         $this->syncTags($post, $plain);
+        app(Mentions::class)->sync($post, $author, app(Mentions::class)->fromHtml($storedContent));
         $parent?->increment('replies_count');
         $original?->increment('reposts_count');
 

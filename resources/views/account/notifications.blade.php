@@ -30,6 +30,8 @@
                     @csrf
                     <button type="submit" class="notification-item-btn"><span class="notification-result-icon" aria-hidden="true"><x-journal-icon name="info" :size="24"/></span><div class="notification-item-text"><x-report-notification-copy :report="$report"/><div class="notification-meta mt-1"><span>{{ $notification->created_at->diffForHumans() }}</span><span>{{ $notification->read_at ? 'Đã đọc' : 'Mới' }}</span></div></div></button>
                 </form>
+            @elseif($notification->type === \App\Notifications\Mentioned::class && $mentionContexts->has((int) ($notification->data['mention_id'] ?? 0)))
+                <x-mention-notification :notification="$notification" :context="$mentionContexts->get((int) $notification->data['mention_id'])"/>
             @elseif($reply)
                 <form method="post" action="{{ route('notifications.open', $notification->id) }}" class="notification-item-card {{ $notification->read_at ? '' : 'unread' }}">
                     @csrf

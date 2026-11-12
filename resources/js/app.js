@@ -10,6 +10,9 @@ import { setupSeoPreview } from './seo-preview';
 import { setupCoverPicker } from './cover-picker';
 import { setupSeoChecks } from './seo-checks';
 import { setupVietnameseValidation, requestErrorMessage } from './validation-messages';
+import { setupLightbox, setupConnections, setupPullToRefresh } from './mobile-experience.js';
+import { setupCommentMentions } from './mentions.js';
+import { setupPwa } from './pwa.js';
 
 const showState = (element, text, error = false) => {
     if (!element) return;
@@ -197,6 +200,11 @@ function init() {
     setupSeoPreview();
     setupEditor();
     setupThreadStream();
+    setupLightbox();
+    setupConnections();
+    setupPullToRefresh();
+    setupCommentMentions();
+    setupPwa();
 }
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, { once: true });
 else init();

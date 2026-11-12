@@ -5,6 +5,7 @@
         <div class="modal-body"><form method="post" action="{{ route('threads.store') }}" data-stream-form>
             @csrf
             <input type="hidden" name="content_format" value="html">
+            <p class="muted small">Gõ @ và chọn người dùng để nhắc đến, tối đa 5 người ngoài bản thân. Chỉ người có quyền xem bài mới nhận thông báo.</p>
             <div class="stream-compose-context" data-compose-context hidden></div>
             <div class="stream-compose-row"><x-avatar :user="auth()->user()"/><div class="stream-compose-main"><strong>{{ auth()->user()->username ?: auth()->user()->name }}<x-verified-badge :user="auth()->user()"/></strong><label for="streamContent" class="visually-hidden">Nội dung bài viết</label><textarea id="streamContent" name="content" rows="4" placeholder="Có gì mới?" data-compose-text></textarea><span class="stream-counter" data-compose-count>0/500</span><div class="stream-media-previews" data-compose-media></div><div class="stream-compose-toolbar"><button type="button" class="stream-icon-button" data-compose-attach aria-label="Đính kèm ảnh"><x-journal-icon name="image"/></button><span>Tối đa 4 ảnh · 5 MB/ảnh</span><input type="file" data-compose-file accept="image/jpeg,image/png,image/webp" multiple hidden></div></div></div>
             <div data-compose-continuations></div>

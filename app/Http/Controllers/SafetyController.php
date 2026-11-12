@@ -44,6 +44,16 @@ class SafetyController extends Controller
         return back()->with('success', $data['is_private'] ? 'Đã bật tài khoản riêng tư.' : 'Đã chuyển tài khoản sang công khai và chấp nhận các yêu cầu theo dõi đang chờ.');
     }
 
+    public function mentions(Request $request): RedirectResponse
+    {
+        $data = $request->validate(['mention_policy' => 'required|in:everyone,following,nobody']);
+        $user = $request->user();
+        $user->mention_policy = $data['mention_policy'];
+        $user->save();
+
+        return back()->with('success', 'Đã cập nhật người được phép nhắc đến bạn.');
+    }
+
     public function block(Request $request, User $user): RedirectResponse
     {
         abort_if($request->user()->id === $user->id, 422, 'Bạn không thể chặn chính mình.');

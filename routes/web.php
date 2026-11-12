@@ -6,7 +6,9 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BlogController;
 use App\Http\Controllers\CommentThreadController;
 use App\Http\Controllers\GoogleAuthController;
+use App\Http\Controllers\MentionController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\PushSubscriptionController;
 use App\Http\Controllers\ReaderController;
 use App\Http\Controllers\ReaderSpaceController;
 use App\Http\Controllers\ReportController;
@@ -23,6 +25,8 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', [ThreadController::class, 'index'])->name('home');
 Route::get('/threads', [ThreadController::class, 'index'])->name('threads.index');
+Route::get('/people/{user}', [MentionController::class, 'profile'])->whereNumber('user')->name('mentions.profile');
+Route::get('/users/{user}/connections/{kind}', [UserProfileController::class, 'connections'])->whereNumber('user')->whereIn('kind', ['followers', 'following'])->middleware('throttle:120,1')->name('profile.connections');
 Route::get('/search', [SearchController::class, 'index'])->name('search.index');
 Route::get('/t/{thread}', [ThreadController::class, 'show'])->whereNumber('thread')->name('threads.show');
 Route::get('/blog-cu', [BlogController::class, 'home'])->name('blog.legacy_home');
@@ -57,6 +61,11 @@ Route::get('/dat-lai-mat-khau/{token}', [AuthController::class, 'reset'])->name(
 Route::post('/dat-lai-mat-khau', [AuthController::class, 'updatePassword'])->middleware('throttle:password-reset')->name('password.update');
 
 Route::middleware('auth')->group(function (): void {
+    Route::get('/mentions/suggestions', [MentionController::class, 'index'])->middleware('throttle:120,1')->name('mentions.suggestions');
+    Route::patch('/account/mentions', [SafetyController::class, 'mentions'])->name('safety.mentions');
+    Route::post('/push/subscriptions', [PushSubscriptionController::class, 'store'])->middleware('throttle:30,1')->name('push.store');
+    Route::delete('/push/subscriptions', [PushSubscriptionController::class, 'destroy'])->middleware('throttle:30,1')->name('push.destroy');
+    Route::get('/push/context', [PushSubscriptionController::class, 'context'])->middleware('throttle:120,1')->name('push.context');
     Route::get('/auth/google/hoan-tat', [GoogleAuthController::class, 'profile'])->name('google.profile');
     Route::post('/auth/google/hoan-tat', [GoogleAuthController::class, 'completeProfile'])->middleware('throttle:10,1')->name('google.profile.store');
     Route::post('/dang-xuat', [AuthController::class, 'logout'])->name('logout');
