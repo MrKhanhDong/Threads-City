@@ -770,13 +770,13 @@
     .gallery-media-item img {
         width: 100%;
         height: 100%;
-        max-height: 480px;
-        object-fit: cover;
+        object-fit: contain;
         display: block;
-        transition: transform 0.25s ease;
     }
-    .gallery-media-item:hover img {
-        transform: scale(1.025);
+    .gallery-count-1 .gallery-media-item,
+    .gallery-count-1 .gallery-media-link,
+    .gallery-count-1 .gallery-media-item img {
+        height: auto;
     }
 
     /* Inner Quoted Thread Card (Exact match to screenshot) */

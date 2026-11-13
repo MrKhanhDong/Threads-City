@@ -30,12 +30,14 @@
                         autocomplete="off"
                         spellcheck="false"
                     >
-                    <button type="button" class="location-gps-btn" id="btnLocationGPS" title="Lấy vị trí hiện tại">
+                    <button type="button" class="location-gps-btn" id="btnLocationGPS" title="Lấy vị trí hiện tại" aria-label="Lấy vị trí hiện tại" aria-describedby="locationPickerStatus locationPickerPrivacy">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <polygon points="3 11 22 2 13 21 11 13 3 11"></polygon>
                         </svg>
                     </button>
                 </div>
+                <p id="locationPickerPrivacy" class="location-picker-hint">Khi dùng GPS, tọa độ được gửi tới BigDataCloud để tra tên khu vực.</p>
+                <p id="locationPickerStatus" class="location-picker-hint" role="status" aria-live="polite"></p>
             </div>
 
             <!-- Body: List of Locations -->
@@ -149,6 +151,18 @@
     color: #0095f6;
     background: rgba(0, 149, 246, 0.1);
 }
+.location-gps-btn:disabled {
+    opacity: 0.5;
+    cursor: wait;
+}
+.location-picker-hint {
+    margin: 8px 0 0;
+    color: #aaaaaa;
+    font-size: 12px;
+}
+.location-picker-hint:empty {
+    display: none;
+}
 
 /* Body & List */
 .location-picker-body {
@@ -231,7 +245,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const searchInput = document.getElementById('locationSearchInput');
     const listContainer = document.getElementById('locationPickerList');
     const btnBack = document.getElementById('btnLocationPickerBack');
-    const btnGps = document.getElementById('btnLocationGPS');
     const modalAddLocationBtn = document.getElementById('modalAddLocationBtn');
 
     if (!locationModalEl) return;
@@ -353,28 +366,9 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // GPS Navigation Arrow Click
-    if (btnGps) {
-        btnGps.addEventListener('click', function() {
-            if (navigator.geolocation) {
-                btnGps.style.opacity = '0.5';
-                navigator.geolocation.getCurrentPosition(
-                    (pos) => {
-                        btnGps.style.opacity = '1';
-                        // Detected position - default to TP. Hồ Chí Minh or exact city
-                        selectLocation("TP. Hồ Chí Minh");
-                    },
-                    (err) => {
-                        btnGps.style.opacity = '1';
-                        selectLocation("TP. Hồ Chí Minh");
-                    },
-                    { timeout: 5000 }
-                );
-            } else {
-                selectLocation("TP. Hồ Chí Minh");
-            }
-        });
-    }
+    locationModalEl.addEventListener('threads:location-selected', event => {
+        selectLocation(event.detail.name);
+    });
 
     function selectLocation(name) {
         const badge = document.getElementById('composerLocationBadge');

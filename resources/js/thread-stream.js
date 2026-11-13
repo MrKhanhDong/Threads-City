@@ -1,6 +1,7 @@
 import { Modal } from 'bootstrap';
 import { composerValidation, threadRequest } from './thread-api';
 import { composerText, createThreadEditor, plainComposerHtml } from './thread-editor';
+import { uploadThreadImage } from './image-upload';
 
 export function setupThreadStream() {
     const csrf = document.querySelector('meta[name="csrf-token"]')?.content ?? '';
@@ -193,8 +194,7 @@ export function setupThreadStream() {
             state.busy = true; showError(''); refresh();
             try {
                 for (const file of files) {
-                    const data = new FormData(); data.append('image', file);
-                    const media = await request(modalElement.dataset.uploadUrl, { method: 'POST', body: data });
+                    const media = await uploadThreadImage(file, modalElement.dataset.uploadUrl, csrf);
                     if (!Number.isInteger(media.id) || typeof media.url !== 'string') throw new Error('Chưa tải ảnh thành công. Vui lòng thử lại.');
                     state.media.push(media); renderMedia(); saveDraft();
                 }

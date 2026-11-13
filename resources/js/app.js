@@ -14,9 +14,12 @@ import { setupInsights } from './insights.js';
 import { setupThreadStream } from './thread-stream.js';
 import { setupCommentMentions } from './mentions.js';
 import { setupPwa } from './pwa.js';
+import { setupLocationGps } from './location-picker.js';
+import { uploadThreadImage } from './image-upload.js';
 import { setupVietnameseValidation, requestErrorMessage } from './validation-messages';
 
 window.bootstrap = { ...window.bootstrap, Dropdown, Offcanvas, Modal };
+window.uploadThreadImage = uploadThreadImage;
 
 const showState = (element, text, error = false) => {
     if (!element) return;
@@ -194,6 +197,7 @@ function init() {
     setupInsights();
     setupCommentMentions();
     setupPwa();
+    setupLocationGps();
     if (document.querySelector('[data-stream-composer]')) setupThreadStream();
     setupVietnameseValidation();
     setupCommentThreads();

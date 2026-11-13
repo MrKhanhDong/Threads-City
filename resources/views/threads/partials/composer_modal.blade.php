@@ -716,6 +716,21 @@
     object-fit: cover;
     display: block;
 }
+.modal-media-loading img {
+    position: absolute;
+    inset: 0;
+}
+.modal-media-status {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    padding: 8px 4px;
+    background: rgba(0, 0, 0, 0.75);
+    color: #ffffff;
+    text-align: center;
+    font-size: 12px;
+}
 .modal-media-remove {
     position: absolute;
     top: 5px;
@@ -814,6 +829,16 @@ document.addEventListener('DOMContentLoaded', function() {
     const MAX_IMAGES = 4;
     let uploadedMedia = []; // Array of { id, url }
     let isUploadingCount = 0;
+    const pendingUploads = new Map();
+    let uploadSequence = 0;
+
+    function clearMedia() {
+        uploadedMedia.forEach(media => { if (media.previewUrl) URL.revokeObjectURL(media.previewUrl); });
+        uploadedMedia = [];
+        pendingUploads.forEach(upload => upload.controller.abort());
+        pendingUploads.clear();
+        isUploadingCount = 0;
+    }
 
     function toast(msg) {
         const t = document.getElementById('threadsGlobalToast');
@@ -831,8 +856,8 @@ document.addEventListener('DOMContentLoaded', function() {
         modalAddPollBtn.addEventListener('click', function(e) {
             e.preventDefault();
             // Clear any media if attaching poll
-            if (uploadedMedia.length > 0) {
-                uploadedMedia = [];
+            if (uploadedMedia.length > 0 || pendingUploads.size > 0) {
+                clearMedia();
                 renderPreviews();
                 toast('Chuyển sang chế độ thăm dò ý kiến');
             }
@@ -1041,6 +1066,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const attachedDocInput = document.getElementById('modalAttachedDocHtml');
         const hasAttachedDoc = !!(attachedDocInput && attachedDocInput.value && attachedDocInput.value.trim().length > 0);
         const locationVal = (document.getElementById('modalLocationInput')?.value || '').trim();
+        const hasLocation = locationVal.length > 0;
         const repostOfId = document.getElementById('modalRepostOfId')?.value;
         const hasRepost = !!(repostOfId && repostOfId.trim().length > 0);
 
@@ -1160,10 +1186,37 @@ document.addEventListener('DOMContentLoaded', function() {
 
             const thumb = document.createElement('div');
             thumb.className = 'modal-media-thumb';
-            thumb.innerHTML = `
-                <img src="${media.url}" alt="Attachment ${idx + 1}" loading="lazy">
-                <button type="button" class="modal-media-remove" data-idx="${idx}" title="Xóa ảnh">✕</button>
-            `;
+            const image = document.createElement('img');
+            image.src = media.previewUrl || media.url;
+            image.alt = `Ảnh đính kèm ${idx + 1}`;
+            const remove = document.createElement('button');
+            remove.type = 'button';
+            remove.className = 'modal-media-remove';
+            remove.dataset.idx = idx;
+            remove.title = 'Gỡ ảnh';
+            remove.textContent = '✕';
+            thumb.append(image, remove);
+            modalPreview.appendChild(thumb);
+        });
+
+        pendingUploads.forEach((upload, id) => {
+            const thumb = document.createElement('div');
+            thumb.className = 'modal-media-thumb modal-media-loading';
+            const image = document.createElement('img');
+            image.src = upload.previewUrl;
+            image.alt = 'Ảnh đang tải lên';
+            const status = document.createElement('span');
+            status.className = 'modal-media-status';
+            status.setAttribute('role', 'status');
+            status.textContent = upload.message;
+            upload.status = status;
+            const cancel = document.createElement('button');
+            cancel.type = 'button';
+            cancel.className = 'modal-media-remove';
+            cancel.dataset.uploadId = id;
+            cancel.title = 'Hủy tải ảnh';
+            cancel.textContent = '✕';
+            thumb.append(image, status, cancel);
             modalPreview.appendChild(thumb);
         });
 
@@ -1174,8 +1227,13 @@ document.addEventListener('DOMContentLoaded', function() {
         const removeBtn = e.target.closest('.modal-media-remove');
         if (!removeBtn) return;
         e.preventDefault();
+        if (removeBtn.dataset.uploadId) {
+            pendingUploads.get(Number(removeBtn.dataset.uploadId))?.controller.abort();
+            return;
+        }
         const idx = parseInt(removeBtn.getAttribute('data-idx'));
         if (!isNaN(idx) && idx >= 0 && idx < uploadedMedia.length) {
+            if (uploadedMedia[idx].previewUrl) URL.revokeObjectURL(uploadedMedia[idx].previewUrl);
             uploadedMedia.splice(idx, 1);
             renderPreviews();
         }
@@ -1203,47 +1261,33 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
 
-            isUploadingCount++;
-            modalPreview.style.display = 'grid';
-            const placeholder = document.createElement('div');
-            placeholder.className = 'modal-media-thumb modal-media-loading';
-            placeholder.innerHTML = `
-                <span class="spinner-border spinner-border-sm text-secondary" role="status"></span>
-                <span>Đang tải...</span>
-            `;
-            modalPreview.appendChild(placeholder);
-            updateSubmitState();
+            const id = ++uploadSequence;
+            const upload = { previewUrl: URL.createObjectURL(file), controller: new AbortController(), message: 'Đang chuẩn bị ảnh…', saved: false };
+            pendingUploads.set(id, upload);
+            isUploadingCount = pendingUploads.size;
+            renderPreviews();
+            const showProgress = message => {
+                upload.message = message;
+                if (upload.status) upload.status.textContent = message;
+            };
 
-            const formData = new FormData();
-            formData.append('image', file);
-
-            fetch('{{ route("threads.upload-media") }}', {
-                method: 'POST',
-                headers: {
-                    'X-CSRF-TOKEN': csrfToken,
-                    'Accept': 'application/json'
-                },
-                body: formData
-            })
-            .then(res => {
-                if (!res.ok) throw new Error('Tải ảnh thất bại');
-                return res.json();
+            window.uploadThreadImage(file, '{{ route("threads.upload-media") }}', csrfToken, {
+                signal: upload.controller.signal,
+                onProgress: percent => showProgress(percent < 100 ? `Đang tải ${percent}%` : 'Đang lưu ảnh…'),
+                onStage: stage => showProgress(({ preparing: 'Đang chuẩn bị ảnh…', uploading: 'Đang tải ảnh…', saving: 'Đang lưu ảnh…' })[stage]),
             })
             .then(data => {
-                if (data && data.id && data.url) {
-                    uploadedMedia.push({ id: data.id, url: data.url });
-                    toast('Đã tải ảnh lên thành công');
-                } else {
-                    toast('Không nhận được dữ liệu ảnh tải lên');
-                }
+                if (!pendingUploads.has(id)) return;
+                uploadedMedia.push({ id: data.id, url: data.url, previewUrl: upload.previewUrl });
+                upload.saved = true;
             })
             .catch(err => {
-                console.error(err);
-                toast(err.message || 'Tải ảnh thất bại');
+                if (err.name !== 'AbortError' && pendingUploads.has(id)) toast(err.message || 'Tải ảnh thất bại');
             })
             .finally(() => {
-                placeholder.remove();
-                isUploadingCount = Math.max(0, isUploadingCount - 1);
+                if (!upload.saved) URL.revokeObjectURL(upload.previewUrl);
+                pendingUploads.delete(id);
+                isUploadingCount = pendingUploads.size;
                 renderPreviews();
             });
         });
@@ -1252,6 +1296,10 @@ document.addEventListener('DOMContentLoaded', function() {
     // Modal Form Submission (AJAX)
     modalForm?.addEventListener('submit', function(e) {
         e.preventDefault();
+        if (isUploadingCount > 0) {
+            toast('Ảnh vẫn đang tải lên. Hãy đợi hoàn tất hoặc gỡ ảnh trước khi đăng.');
+            return;
+        }
         const content = (modalText?.value || '').trim();
         const isPollActive = pollContainer && pollContainer.style.display !== 'none';
         const pollOptions = isPollActive 
@@ -1325,8 +1373,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function resetModal() {
         if (modalForm) { modalForm.reset(); modalForm.querySelectorAll('input[name="mention_ids[]"]').forEach(input => input.remove()); }
-        uploadedMedia = [];
-        isUploadingCount = 0;
+        clearMedia();
         if (modalMediaIdsContainer) modalMediaIdsContainer.innerHTML = '';
         if (modalPreview) {
             modalPreview.innerHTML = '';

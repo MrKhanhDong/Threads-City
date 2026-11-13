@@ -23,15 +23,16 @@ test('empty feed accepts its first post', () => {
     assert.deepEqual(collectionOrder([], ['thread-1'], [], true), ['thread-1']);
 });
 
-test('polling pauses in hidden tabs and resumes on visibility changes', async () => {
+test('polling pauses in hidden tabs and open modals, then resumes when they are closed', async () => {
     const saved = Object.fromEntries(['document', 'window', 'location', 'setTimeout', 'clearTimeout'].map(key => [key, globalThis[key]]));
     const timers = new Map();
     const listeners = new Map();
     let serial = 0;
     let requests = 0;
+    let modalOpen = false;
     globalThis.document = {
         body: { dataset: { liveEnabled: '1' } }, hidden: true,
-        querySelector: selector => selector === '[data-live-region]' ? {} : null,
+        querySelector: selector => selector === '[data-live-region]' || (selector === '.modal.show, .dropdown-menu.show' && modalOpen) ? {} : null,
         querySelectorAll: () => [],
         addEventListener: (name, callback) => listeners.set(name, callback),
         dispatchEvent: () => {},
@@ -54,6 +55,17 @@ test('polling pauses in hidden tabs and resumes on visibility changes', async ()
         await task.callback();
         assert.equal(requests, 1);
         assert.equal([...timers.values()][0].delay, 8000);
+        modalOpen = true;
+        let next = [...timers.values()][0];
+        timers.clear();
+        await next.callback();
+        assert.equal(requests, 1);
+        assert.equal([...timers.values()][0].delay, 2000);
+        modalOpen = false;
+        next = [...timers.values()][0];
+        timers.clear();
+        await next.callback();
+        assert.equal(requests, 2);
         document.hidden = true;
         listeners.get('visibilitychange')();
         assert.equal(timers.size, 0);

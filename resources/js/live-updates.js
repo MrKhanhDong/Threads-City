@@ -96,7 +96,7 @@ export function setupLiveUpdates() {
 
     async function refresh() {
         if (stopped || document.hidden) return;
-        if (busy || mutations || document.querySelector('.dropdown-menu.show') || document.querySelector('[data-stream-primary]')?.dataset.loading === 'true') { schedule(2000); return; }
+        if (busy || mutations || document.querySelector('.modal.show, .dropdown-menu.show') || document.querySelector('[data-stream-primary]')?.dataset.loading === 'true') { schedule(2000); return; }
         busy = true;
         const version = revision;
         activeRequest = new AbortController();
