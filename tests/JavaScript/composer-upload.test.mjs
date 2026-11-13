@@ -15,6 +15,7 @@ async function fixture() {
         textContent = '';
         classList = { add() {}, remove() {}, toggle() {} };
         addEventListener(name, callback) { this.listeners[name] = callback; }
+        dispatchEvent(event) { this.listeners[event.type]?.(event); }
         setAttribute() {}
         getAttribute(name) { return this.attributes?.[name]; }
         append(...children) { this.children.push(...children); }
@@ -46,9 +47,10 @@ async function fixture() {
         },
     };
     const source = await readFile(new URL('../../resources/views/threads/partials/composer_modal.blade.php', import.meta.url), 'utf8');
-    const script = source.match(/<script>([\s\S]*?)<\/script>/)[1];
+    const script = source.match(/<script>([\s\S]*?)<\/script>/)[1]
+        .replace(/\{\{\s*\(int\) config\('blog\.thread_media_limit'\)\s*\}\}/g, '20');
     vm.runInNewContext(script, {
-        document: doc, window: win, AbortController, console,
+        document: doc, window: win, AbortController, Event, console,
         URL: { createObjectURL: () => `blob:preview-${++serial}`, revokeObjectURL: url => revoked.push(url) },
         setTimeout() {}, clearTimeout() {},
     });

@@ -18,7 +18,7 @@
         </p>
 
         @if(auth()->user()->hasVerifiedEmail())
-            <div class="alert alert-success py-2 px-3 rounded-3 small mb-4 border-0" style="background: rgba(34, 197, 94, 0.15); color: #86efac;">
+            <div class="alert alert-success py-2 px-3 rounded-3 small mb-4 border-0" style="background: rgba(34, 197, 94, 0.15); color: var(--journal-success);">
                 ✓ Email của bạn đã được xác minh.
             </div>
             <a class="btn-threads-primary w-100 py-3 fw-bold d-inline-block text-center" href="{{ route('home') }}">
@@ -49,11 +49,11 @@
     .auth-threads-box {
         width: 100%;
         max-width: 440px;
-        background: #181818;
+        background: var(--journal-surface);
         border: 1px solid var(--border-color);
         border-radius: 24px;
         padding: 36px 32px;
-        box-shadow: 0 16px 48px rgba(0,0,0,0.4);
+        box-shadow: var(--journal-shadow);
     }
 </style>
 @endsection

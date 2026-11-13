@@ -13,9 +13,22 @@ function listItems(element) {
     return [...element.children].filter(child => child.hasAttribute('data-live-key'));
 }
 
-function syncRegion(current, incoming, removed) {
+export function hasActiveMedia(element) {
+    return Boolean(element.ownerDocument?.fullscreenElement && element.contains(element.ownerDocument.fullscreenElement)) || Boolean(element.querySelector('[data-media-playing], [data-media-loading], [data-media-interacting]')) || [...element.querySelectorAll('video, audio')].some(media => (!media.paused && !media.ended) || media.seeking);
+}
+
+function replaceRegion(current, incoming) {
+    const galleryKey = strip => JSON.stringify([...strip.querySelectorAll('[data-lightbox], [data-clip]')].map(media => media.getAttribute('href') || media.getAttribute('src')));
+    const positions = [...current.querySelectorAll('[data-media-gallery]')].map(strip => ({ key: galleryKey(strip), left: strip.scrollLeft }));
+    current.replaceWith(incoming);
+    incoming.querySelectorAll('[data-media-gallery]').forEach((strip, index) => {
+        if (positions[index]?.key === galleryKey(strip)) strip.scrollLeft = positions[index].left;
+    });
+}
+
+export function syncRegion(current, incoming, removed) {
     if (!current.hasAttribute('data-live-list')) {
-        if (current.outerHTML !== incoming.outerHTML) current.replaceWith(incoming);
+        if (current.outerHTML !== incoming.outerHTML && !hasActiveMedia(current)) replaceRegion(current, incoming);
         return;
     }
 
@@ -51,13 +64,13 @@ function syncRegion(current, incoming, removed) {
         if (!node) node = replacement;
         else if (replacement && node.outerHTML !== replacement.outerHTML) {
             const selection = window.getSelection();
-            if (!node.contains(document.activeElement) && !(selection?.toString() && node.contains(selection.anchorNode))) {
-                node.replaceWith(replacement);
+            if (!hasActiveMedia(node) && !node.contains(document.activeElement) && !(selection?.toString() && node.contains(selection.anchorNode))) {
+                replaceRegion(node, replacement);
                 node = replacement;
             }
         }
         const position = previous ? previous.nextElementSibling : current.firstElementChild;
-        if (position !== node) current.insertBefore(node, position);
+        if (position !== node && !hasActiveMedia(node)) current.insertBefore(node, position);
         previous = node;
     }
 
@@ -96,7 +109,7 @@ export function setupLiveUpdates() {
 
     async function refresh() {
         if (stopped || document.hidden) return;
-        if (busy || mutations || document.querySelector('.modal.show, .dropdown-menu.show') || document.querySelector('[data-stream-primary]')?.dataset.loading === 'true') { schedule(2000); return; }
+        if (busy || mutations || document.querySelector('.dropdown-menu.show')) { schedule(2000); return; }
         busy = true;
         const version = revision;
         activeRequest = new AbortController();
@@ -156,7 +169,6 @@ export function setupLiveUpdates() {
     }
 
     window.addEventListener('threads:refresh', () => { revision++; schedule(150); });
-    window.addEventListener('threads:refresh-start', () => { revision++; activeRequest?.abort(); });
     document.addEventListener('visibilitychange', () => {
         if (document.hidden) { clearTimeout(timer); activeRequest?.abort(); }
         else schedule(100);

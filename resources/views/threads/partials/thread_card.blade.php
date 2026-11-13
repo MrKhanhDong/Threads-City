@@ -61,7 +61,7 @@
     <!-- Trending Indicator (Yellow pill / text matching screenshot) -->
     @if($isTrendingTag)
         <div class="thread-trend-indicator">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#facc15" stroke-width="2.5">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                 <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
                 <polyline points="17 6 23 6 23 12"></polyline>
             </svg>
@@ -353,8 +353,9 @@
                     $userPick = $votersList[$currentUserId] ?? null;
                     $totalVotes = $pollData['total_votes'] ?? 0;
                     $maxVotes = max(1, $totalVotes);
+                    $pollClosed = !empty($pollData['expires_at']) && strtotime($pollData['expires_at']) <= now()->timestamp;
                 @endphp
-                <div class="thread-poll-display-card" id="pollCard-{{ $displayThread->id }}" data-thread-id="{{ $displayThread->id }}">
+                <div class="thread-poll-display-card" id="pollCard-{{ $displayThread->id }}" data-expires-at="{{ $pollData['expires_at'] ?? '' }}" data-poll-id="{{ $displayThread->id }}" data-poll-options='@json($pollData["options"])' data-poll-total="{{ $totalVotes }}" data-poll-pick="{{ $userPick }}" data-thread-id="{{ $displayThread->id }}">
                     <div class="poll-items-wrap">
                         @foreach($pollData['options'] as $opt)
                             @php
@@ -362,7 +363,7 @@
                                 $percent = $totalVotes > 0 ? round(($optVotes / $maxVotes) * 100) : 0;
                                 $isPicked = ($userPick === $opt['id']);
                             @endphp
-                            @if($userVoted)
+                            @if($userVoted || $pollClosed)
                                 <div class="poll-display-result-row {{ $isPicked ? 'user-picked' : '' }}">
                                     <div class="poll-result-bar-bg" style="width: {{ $percent }}%;"></div>
                                     <div class="poll-result-label-row">
@@ -376,7 +377,7 @@
                                     </div>
                                 </div>
                             @else
-                                <button type="button" class="poll-display-vote-btn btn-ajax-poll-vote" data-thread-id="{{ $displayThread->id }}" data-option-id="{{ $opt['id'] }}">
+                                <button type="button" class="poll-display-vote-btn btn-ajax-poll-vote" data-vote-url="{{ route('threads.vote', $displayThread->id) }}" data-thread-id="{{ $displayThread->id }}" data-option-id="{{ $opt['id'] }}">
                                     {{ $opt['text'] }}
                                 </button>
                             @endif
@@ -385,23 +386,12 @@
                     <div class="poll-display-footer">
                         <span class="poll-total-votes-count">{{ $totalVotes }} phiếu bầu</span>
                         <span>·</span>
-                        <span>Kết thúc sau 24 giờ</span>
+                        <span class="poll-deadline">{{ $pollClosed ? 'Đã kết thúc' : 'Còn '.\Illuminate\Support\Carbon::parse($pollData['expires_at'] ?? now()->addDay())->diffForHumans(now(), true) }}</span>
                     </div>
                 </div>
             @endif
 
-            <!-- Media Gallery (Images) -->
-            @if($displayThread->media && $displayThread->media->count() > 0)
-                <div data-lightbox-gallery class="thread-media-gallery gallery-count-{{ min(4, $displayThread->media->count()) }}">
-                    @foreach($displayThread->media->take(4) as $mediaItem)
-                        <div class="gallery-media-item">
-                            <a data-lightbox-image href="{{ route('media.show', $mediaItem->id) }}" target="_blank" rel="noopener" class="gallery-media-link" onclick="event.stopPropagation();" title="Xem ảnh gốc">
-                                <img src="{{ route('media.show', $mediaItem->id) }}" alt="{{ $mediaItem->alt ?? 'Ảnh đính kèm' }}" loading="lazy">
-                            </a>
-                        </div>
-                    @endforeach
-                </div>
-            @endif
+            <x-thread-media :items="$displayThread->media"/>
 
             <!-- Quoted Post Embed (Matches Screenshot) -->
             @if($displayThread->type === 'quote' && $displayThread->repostOf)
@@ -538,7 +528,7 @@
         transition: background 0.15s ease;
     }
     .thread-card-wrapper:hover {
-        background: rgba(255, 255, 255, 0.015);
+        background: color-mix(in srgb, var(--journal-text) 2%, transparent);
     }
     .thread-trend-indicator {
         display: flex;
@@ -548,10 +538,10 @@
         margin-bottom: 10px;
         font-size: 13px;
         font-weight: 700;
-        color: #facc15;
+        color: var(--journal-text);
     }
     .trend-indicator-text {
-        color: #facc15;
+        color: var(--journal-text);
     }
     .thread-repost-banner {
         display: flex;
@@ -604,7 +594,7 @@
         max-height: 38px !important;
         border-radius: 50% !important;
         object-fit: cover !important;
-        background: #222 !important;
+        background: var(--journal-raised) !important;
         display: block !important;
         flex-shrink: 0 !important;
     }
@@ -614,14 +604,14 @@
         max-width: 38px !important;
         max-height: 38px !important;
         border-radius: 50% !important;
-        background: #242424 !important;
-        color: #fff !important;
+        background: var(--journal-raised) !important;
+        color: var(--journal-text) !important;
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
         font-weight: 700 !important;
         font-size: 15px !important;
-        border: 1px solid #333 !important;
+        border: 1px solid var(--journal-line) !important;
         flex-shrink: 0 !important;
     }
     .avatar-follow-plus-btn {
@@ -631,9 +621,9 @@
         width: 17px;
         height: 17px;
         border-radius: 50%;
-        background: #000000;
-        color: #ffffff;
-        border: 2px solid #000000;
+        background: var(--journal-surface);
+        color: var(--journal-text);
+        border: 2px solid var(--journal-line);
         display: flex;
         align-items: center;
         justify-content: center;
@@ -643,13 +633,13 @@
     }
     .avatar-follow-plus-btn:hover {
         transform: scale(1.15);
-        background: #222;
+        background: var(--journal-raised);
     }
     .thread-connecting-line {
         width: 2px;
         flex-grow: 1;
         min-height: 40px;
-        background: #262626;
+        background: var(--journal-raised);
         margin-top: 8px;
         border-radius: 2px;
     }
@@ -671,7 +661,7 @@
     }
     .author-name-text {
         font-weight: 700;
-        color: #ffffff;
+        color: var(--journal-text);
         font-size: 15px;
     }
     .author-name-text:hover {
@@ -684,7 +674,7 @@
     }
     .meta-tag-name {
         font-size: 14px;
-        color: #e5e7eb;
+        color: var(--journal-text);
         font-weight: 600;
     }
     .author-time-text {
@@ -710,7 +700,7 @@
     .thread-content-text {
         font-size: 15px;
         line-height: 1.55;
-        color: #f3f5f7;
+        color: var(--journal-text);
         word-break: break-word;
         margin-bottom: 12px;
         white-space: pre-line;
@@ -722,7 +712,7 @@
     }
     .thread-hashtag:hover, .thread-mention:hover {
         text-decoration: underline;
-        color: #38bdf8;
+        color: var(--journal-link);
     }
 
     /* Media Gallery Grid */
@@ -731,7 +721,7 @@
         overflow: hidden;
         margin-bottom: 12px;
         border: 1px solid var(--border-color);
-        background: #111111;
+        background: var(--journal-surface);
         display: grid;
         gap: 3px;
     }
@@ -770,8 +760,13 @@
     .gallery-media-item img {
         width: 100%;
         height: 100%;
-        object-fit: contain;
+        max-height: 480px;
+        object-fit: cover;
         display: block;
+        transition: transform 0.25s ease;
+    }
+    .gallery-media-item:hover img {
+        transform: scale(1.025);
     }
     .gallery-count-1 .gallery-media-item,
     .gallery-count-1 .gallery-media-link,
@@ -781,8 +776,8 @@
 
     /* Inner Quoted Thread Card (Exact match to screenshot) */
     .threads-inner-quote-card {
-        border: 1px solid #282828;
-        background: #000000;
+        border: 1px solid var(--journal-line);
+        background: var(--journal-surface);
         border-radius: 16px;
         padding: 14px 16px;
         margin: 10px 0 14px;
@@ -790,7 +785,7 @@
         transition: border-color 0.2s;
     }
     .threads-inner-quote-card:hover {
-        border-color: #383838;
+        border-color: var(--journal-line);
     }
     .inner-quote-topbar {
         display: flex;
@@ -805,7 +800,7 @@
         gap: 6px;
         font-size: 13px;
         font-weight: 600;
-        color: #ffffff;
+        color: var(--journal-text);
     }
     .inner-quote-right-tools {
         display: flex;
@@ -822,7 +817,7 @@
     .inner-quote-author-name {
         font-size: 14px;
         font-weight: 700;
-        color: #ffffff;
+        color: var(--journal-text);
     }
     .inner-quote-arrow {
         color: var(--text-muted);
@@ -830,7 +825,7 @@
     }
     .inner-quote-topic-tag {
         font-size: 13px;
-        color: #d1d5db;
+        color: var(--journal-text);
         font-weight: 600;
     }
     .inner-quote-time {
@@ -848,7 +843,7 @@
     .inner-quote-text {
         font-size: 14px;
         line-height: 1.5;
-        color: #f3f5f7;
+        color: var(--journal-text);
         margin-bottom: 12px;
         white-space: pre-line;
     }
@@ -920,20 +915,20 @@
         display: inline-flex;
         align-items: center;
         gap: 4px;
-        color: #8e8e8e;
+        color: var(--journal-muted);
         font-size: 13px;
         font-weight: 500;
         cursor: default;
         transition: color 0.15s;
     }
     .thread-location-pill:hover {
-        color: #0095f6;
+        color: var(--journal-link);
     }
 
     /* Attached Document Display Card Styling */
     .thread-attached-doc-display {
-        background: #141414;
-        border: 1px solid rgba(255, 255, 255, 0.1);
+        background: var(--journal-surface);
+        border: 1px solid var(--journal-line);
         border-radius: 14px;
         padding: 14px 18px;
         margin-top: 10px;
@@ -942,7 +937,7 @@
         transition: border-color 0.15s;
     }
     .thread-attached-doc-display:hover {
-        border-color: rgba(255, 255, 255, 0.2);
+        border-color: var(--journal-line);
     }
     .attached-doc-display-header {
         display: flex;
@@ -950,18 +945,18 @@
         justify-content: space-between;
         margin-bottom: 8px;
         padding-bottom: 6px;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        border-bottom: 1px solid var(--journal-line);
     }
     .attached-doc-display-badge {
         display: inline-flex;
         align-items: center;
         gap: 6px;
-        color: #0095f6;
+        color: var(--journal-link);
         font-size: 13px;
         font-weight: 600;
     }
     .attached-doc-display-body {
-        color: #e5e5e5;
+        color: var(--journal-text);
         font-size: 15px;
         line-height: 1.6;
         word-break: break-word;
@@ -969,7 +964,7 @@
     .attached-doc-display-body b, 
     .attached-doc-display-body strong {
         font-weight: 700;
-        color: #ffffff;
+        color: var(--journal-text);
     }
     .attached-doc-display-body i, 
     .attached-doc-display-body em {
@@ -984,10 +979,10 @@
     }
     .attached-doc-display-body code, 
     .attached-doc-display-body pre {
-        background: #202020;
+        background: var(--journal-raised);
         padding: 2px 6px;
         border-radius: 4px;
-        color: #00d26a;
+        color: var(--journal-success);
         font-family: monospace;
         font-size: 13.5px;
     }
@@ -1004,11 +999,11 @@
     }
     .poll-display-vote-btn {
         width: 100%;
-        background: #141414;
-        border: 1px solid #2e2e2e;
+        background: var(--journal-surface);
+        border: 1px solid var(--journal-line);
         border-radius: 12px;
         padding: 12px 18px;
-        color: #ffffff;
+        color: var(--journal-text);
         font-size: 14.5px;
         font-weight: 500;
         text-align: left;
@@ -1016,8 +1011,8 @@
         transition: background 0.15s, border-color 0.15s, transform 0.05s;
     }
     .poll-display-vote-btn:hover {
-        background: #1c1c1c;
-        border-color: #444444;
+        background: var(--journal-raised);
+        border-color: var(--journal-line);
     }
     .poll-display-vote-btn:active {
         transform: scale(0.99);
@@ -1025,26 +1020,26 @@
     .poll-display-result-row {
         position: relative;
         width: 100%;
-        background: #141414;
-        border: 1px solid #2a2a2a;
+        background: var(--journal-surface);
+        border: 1px solid var(--journal-line);
         border-radius: 12px;
         overflow: hidden;
         height: 44px;
     }
     .poll-display-result-row.user-picked {
-        border-color: #444444;
+        border-color: var(--journal-line);
     }
     .poll-result-bar-bg {
         position: absolute;
         top: 0;
         left: 0;
         bottom: 0;
-        background: rgba(255, 255, 255, 0.12);
+        background: color-mix(in srgb, var(--journal-text) 12%, transparent);
         border-radius: 10px;
         transition: width 0.4s ease;
     }
     .poll-display-result-row.user-picked .poll-result-bar-bg {
-        background: rgba(255, 255, 255, 0.22);
+        background: color-mix(in srgb, var(--journal-text) 22%, transparent);
     }
     .poll-result-label-row {
         position: relative;
@@ -1056,10 +1051,10 @@
         padding: 0 18px;
         font-size: 14.5px;
         font-weight: 500;
-        color: #ffffff;
+        color: var(--journal-text);
     }
     .poll-result-percent {
-        color: #aaaaaa;
+        color: var(--journal-muted);
         font-size: 13.5px;
         font-weight: 600;
     }
@@ -1067,7 +1062,7 @@
         display: flex;
         align-items: center;
         gap: 6px;
-        color: #777777;
+        color: var(--journal-faint);
         font-size: 13px;
         margin-top: 8px;
         padding-left: 2px;
@@ -1076,11 +1071,11 @@
     /* Threads Post 3-Dots Options Dropdown Menu (Exact match to screenshot) */
     .thread-options-dropdown-menu {
         min-width: 260px;
-        background: #181818 !important;
-        border: 1px solid rgba(255, 255, 255, 0.12) !important;
+        background: var(--journal-surface) !important;
+        border: 1px solid var(--journal-line) !important;
         border-radius: 18px !important;
         padding: 6px !important;
-        box-shadow: 0 16px 40px rgba(0, 0, 0, 0.8) !important;
+        box-shadow: var(--journal-shadow) !important;
         z-index: 1050;
         margin-top: 6px !important;
     }
@@ -1093,7 +1088,7 @@
         background: transparent;
         border: none;
         border-radius: 12px;
-        color: #f3f5f7;
+        color: var(--journal-text);
         font-size: 15px;
         font-weight: 600;
         cursor: pointer;
@@ -1104,19 +1099,19 @@
     }
     .thread-option-item:hover,
     .thread-option-item:focus {
-        background: rgba(255, 255, 255, 0.08);
-        color: #ffffff;
+        background: color-mix(in srgb, var(--journal-text) 8%, transparent);
+        color: var(--journal-text);
         outline: none;
     }
     .thread-option-item.thread-option-danger {
-        color: #ff3b30 !important;
+        color: var(--journal-danger) !important;
     }
     .thread-option-item.thread-option-danger .thread-option-icon svg {
-        stroke: #ff3b30 !important;
+        stroke: var(--journal-danger) !important;
     }
     .thread-option-item.thread-option-danger:hover {
         background: rgba(255, 59, 48, 0.12);
-        color: #ff3b30 !important;
+        color: var(--journal-danger) !important;
     }
     .thread-option-label {
         flex: 1;
@@ -1131,7 +1126,7 @@
     }
     .thread-option-divider {
         height: 1px;
-        background: rgba(255, 255, 255, 0.08);
+        background: color-mix(in srgb, var(--journal-text) 8%, transparent);
         margin: 4px 6px;
         border: none;
     }

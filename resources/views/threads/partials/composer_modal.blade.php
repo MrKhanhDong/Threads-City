@@ -1,15 +1,15 @@
 <!-- New Thread / Quote Modal (Meta Threads Style) -->
-<div class="modal fade" id="newThreadModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="newThreadModal" data-upload-url="{{ route('threads.upload-media') }}" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered" style="max-width: 620px;">
         <div class="modal-content threads-composer-modal-content">
-            
-            <!-- Header matching screenshot: Hủy (left) | Thread mới (center) | Icons (right) -->
+
+            <!-- Header matching screenshot: Hủy (left) | Bài viết mới (center) | Icons (right) -->
             <div class="threads-modal-header">
                 <button type="button" class="composer-header-cancel-btn" data-bs-dismiss="modal">
                     Hủy
                 </button>
                 <div class="composer-header-title-box">
-                    <span class="composer-header-title" id="newThreadModalTitle">Thread mới</span>
+                    <span class="composer-header-title" id="newThreadModalTitle">Bài viết mới</span>
                 </div>
                 <div class="composer-header-tools">
                     <button type="button" class="composer-header-icon-btn" title="Bản nháp" onclick="alert('Tính năng bản nháp đang được phát triển')">
@@ -48,7 +48,7 @@
 
                     <!-- Main Flow: Left (Avatar + Thread line) | Right (User, Textarea, Poll, Toolbar, Add Thread) -->
                     <div class="composer-flow-wrapper">
-                        
+
                         <!-- Left: Avatar, Thread Line, Sub-Avatar -->
                         <div class="composer-left-col">
                             <div class="composer-avatar-top">
@@ -74,7 +74,7 @@
 
                         <!-- Right: Main Content, Poll & Tools -->
                         <div class="composer-right-col">
-                            
+
                             <!-- User header: khanhdongisme > Cộng đồng hoặc chủ đề -->
                             <div class="composer-meta-header">
                                 <span class="composer-username">{{ auth()->user()->username ?? auth()->user()->name }}</span>
@@ -109,11 +109,11 @@
 
                             <!-- Textarea with placeholder "Có gì mới?" -->
                             <div class="composer-textarea-box position-relative">
-                                <textarea 
-                                    name="content" 
-                                    id="modalComposerText" 
-                                    class="composer-textarea" 
-                                    placeholder="Có gì mới?" 
+                                <textarea
+                                    name="content"
+                                    id="modalComposerText"
+                                    class="composer-textarea"
+                                    placeholder="Có gì mới?"
                                     maxlength="2000"
                                     rows="1"
                                 ></textarea>
@@ -130,19 +130,19 @@
                                         <input type="text" class="poll-option-input" name="poll_options[]" value="Không" placeholder="Không" maxlength="80">
                                     </div>
                                 </div>
-                                
+
                                 <div class="poll-add-option-row" id="pollAddOptionBtn" role="button">
                                     <span class="poll-add-option-text">Thêm lựa chọn khác</span>
                                 </div>
 
                                 <div class="poll-meta-row">
-                                    <span class="poll-duration-label">Kết thúc sau 24 giờ</span>
+                                    <label class="poll-duration-label">Kết thúc sau <select name="poll_duration_hours" id="pollDurationHours" aria-label="Thời hạn bình chọn"><option value="1">1 giờ</option><option value="6">6 giờ</option><option value="24" selected>24 giờ</option><option value="72">3 ngày</option><option value="168">7 ngày</option></select></label>
                                     <button type="button" class="poll-remove-action-btn" id="btnRemovePoll">Gỡ cuộc thăm dò ý kiến</button>
                                 </div>
                             </div>
 
                             <!-- Quoted preview container (when quoting another thread) -->
-                            <div id="modalQuotedThreadContainer" class="p-3 mb-2 rounded-3" style="display: none; background: #202020; border: 1px solid #333;"></div>
+                            <div id="modalQuotedThreadContainer" class="p-3 mb-2 rounded-3" style="display: none; background: var(--journal-raised); border: 1px solid var(--journal-line);"></div>
 
                             <!-- Media thumbnails preview grid -->
                             <div id="modalMediaPreview" class="modal-media-grid mb-2" style="display: none;"></div>
@@ -160,14 +160,18 @@
                             <!-- Toolbar of icons (Shows 9 icons normally, reduces to 3 when Poll is active) -->
                             <div class="composer-toolbar-strip" id="composerToolbarStrip">
                                 <!-- 1. Image / Gallery -->
-                                <button type="button" class="composer-tool-icon-btn tool-standard-only" id="modalAddImageBtn" title="Đính kèm ảnh">
+                                <button type="button" class="composer-tool-icon-btn tool-standard-only" id="modalAddImageBtn" title="Đính kèm ảnh" aria-label="Đính kèm ảnh">
                                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
                                         <rect x="3" y="3" width="18" height="18" rx="3" ry="3"></rect>
                                         <circle cx="8.5" cy="8.5" r="1.5"></circle>
                                         <polyline points="21 15 16 10 5 21"></polyline>
                                     </svg>
                                 </button>
-                                <input type="file" id="modalComposerFileInput" accept="image/jpeg,image/png,image/jpg,image/webp,image/gif" multiple hidden>
+                                <input type="file" id="modalComposerFileInput" accept="image/jpeg,image/png,image/webp,image/gif" multiple hidden>
+                                <button type="button" class="composer-tool-icon-btn tool-standard-only" id="modalAddVideoBtn" title="Video ngắn, tối đa 60 giây" aria-label="Đính kèm video ngắn">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="13" height="14" rx="3"/><path d="m16 10 5-3v10l-5-3Z"/></svg>
+                                </button>
+                                <input type="file" id="modalComposerVideoInput" accept="video/mp4,video/webm" multiple hidden>
 
                                 <!-- 2. GIF -->
                                 <button type="button" class="composer-tool-icon-btn tool-standard-only" id="modalAddGifBtn" title="Đính kèm GIF">
@@ -248,7 +252,7 @@
                                 </button>
 
                                 <!-- 9. Audio note -->
-                                <button type="button" class="composer-tool-icon-btn tool-standard-only" id="modalAddAudioBtn" title="Đính kèm âm thanh">
+                                <button type="button" class="composer-tool-icon-btn tool-standard-only" id="modalAddAudioBtn" title="Ghi âm giọng nói (tối đa 60 giây)">
                                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
                                         <path d="M9 18V5l12-2v13"></path>
                                         <circle cx="6" cy="18" r="3"></circle>
@@ -307,27 +311,27 @@
 <style>
 /* Meta Threads Modal Container */
 .threads-composer-modal-content {
-    background: #181818 !important;
-    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    background: var(--journal-surface) !important;
+    border: 1px solid var(--journal-line) !important;
     border-radius: 20px !important;
-    color: #ffffff !important;
-    box-shadow: 0 16px 50px rgba(0, 0, 0, 0.9) !important;
+    color: var(--journal-text) !important;
+    box-shadow: var(--journal-shadow) !important;
     overflow: hidden;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
-/* Modal Header: Hủy (left), Thread mới (center), Icons (right) */
+/* Modal Header: Hủy (left), Bài viết mới (center), Icons (right) */
 .threads-modal-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
     padding: 14px 20px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    border-bottom: 1px solid var(--journal-line);
 }
 .composer-header-cancel-btn {
     background: transparent;
     border: none;
-    color: #ffffff;
+    color: var(--journal-text);
     font-size: 15px;
     font-weight: 500;
     cursor: pointer;
@@ -343,7 +347,7 @@
     flex: 1;
 }
 .composer-header-title {
-    color: #ffffff;
+    color: var(--journal-text);
     font-size: 16px;
     font-weight: 700;
     letter-spacing: -0.2px;
@@ -356,7 +360,7 @@
 .composer-header-icon-btn {
     background: transparent;
     border: none;
-    color: #ffffff;
+    color: var(--journal-text);
     padding: 4px;
     display: flex;
     align-items: center;
@@ -366,7 +370,7 @@
     transition: opacity 0.15s, background 0.15s;
 }
 .composer-header-icon-btn:hover {
-    background: rgba(255, 255, 255, 0.08);
+    background: color-mix(in srgb, var(--journal-text) 8%, transparent);
 }
 
 /* Modal Body */
@@ -401,17 +405,17 @@
     width: 40px;
     height: 40px;
     border-radius: 50%;
-    background: #262626;
+    background: var(--journal-raised);
     display: flex;
     align-items: center;
     justify-content: center;
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    border: 1px solid var(--journal-line);
 }
 .composer-connecting-line {
     width: 2px;
     flex: 1;
     min-height: 46px;
-    background: #333333;
+    background: var(--journal-line);
     margin: 8px 0;
     border-radius: 1px;
 }
@@ -426,7 +430,7 @@
     width: 20px;
     height: 20px;
     border-radius: 50%;
-    background: #242424;
+    background: var(--journal-raised);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -447,30 +451,30 @@
 .composer-username {
     font-size: 15px;
     font-weight: 700;
-    color: #ffffff;
+    color: var(--journal-text);
     line-height: 1.2;
 }
 .composer-meta-separator {
-    color: #777777;
+    color: var(--journal-faint);
     font-size: 13px;
     font-weight: 400;
 }
 .composer-topic-picker {
-    color: #777777;
+    color: var(--journal-faint);
     font-size: 14px;
     cursor: pointer;
     transition: color 0.15s;
     user-select: none;
 }
 .composer-topic-picker:hover {
-    color: #a0a0a0;
+    color: var(--journal-muted);
 }
 .composer-location-badge {
     display: inline-flex;
     align-items: center;
     gap: 6px;
     background: rgba(0, 149, 246, 0.12);
-    color: #0095f6;
+    color: var(--journal-link);
     border: 1px solid rgba(0, 149, 246, 0.3);
     border-radius: 20px;
     padding: 3px 10px;
@@ -480,7 +484,7 @@
 .composer-location-remove-btn {
     background: transparent;
     border: none;
-    color: #0095f6;
+    color: var(--journal-link);
     cursor: pointer;
     padding: 0;
     line-height: 1;
@@ -502,7 +506,7 @@
     background: transparent;
     border: none !important;
     outline: none !important;
-    color: #ffffff;
+    color: var(--journal-text);
     font-size: 15px;
     line-height: 1.5;
     resize: none;
@@ -510,7 +514,7 @@
     padding: 2px 0 6px;
 }
 .composer-textarea::placeholder {
-    color: #666666;
+    color: var(--journal-faint);
     font-weight: 400;
 }
 
@@ -524,26 +528,26 @@
 }
 .poll-option-input {
     width: 100%;
-    background: #141414;
-    border: 1px solid #282828;
+    background: var(--journal-surface);
+    border: 1px solid var(--journal-line);
     border-radius: 14px;
     padding: 13px 18px;
-    color: #ffffff;
+    color: var(--journal-text);
     font-size: 15px;
     font-weight: 500;
     outline: none;
     transition: border-color 0.15s, background 0.15s;
 }
 .poll-option-input:focus {
-    border-color: #444444;
-    background: #181818;
+    border-color: var(--journal-line);
+    background: var(--journal-surface);
 }
 .poll-option-input::placeholder {
-    color: #666666;
+    color: var(--journal-faint);
 }
 .poll-add-option-row {
-    background: #141414;
-    border: 1px dashed #282828;
+    background: var(--journal-surface);
+    border: 1px dashed var(--journal-line);
     border-radius: 14px;
     padding: 13px 18px;
     margin-bottom: 12px;
@@ -551,18 +555,18 @@
     transition: border-color 0.15s, background 0.15s;
 }
 .poll-add-option-row:hover {
-    border-color: #383838;
-    background: #181818;
+    border-color: var(--journal-line);
+    background: var(--journal-surface);
 }
 .poll-add-option-text {
-    color: #666666;
+    color: var(--journal-faint);
     font-size: 15px;
     font-weight: 500;
     user-select: none;
     transition: color 0.15s;
 }
 .poll-add-option-row:hover .poll-add-option-text {
-    color: #888888;
+    color: var(--journal-muted);
 }
 .poll-meta-row {
     display: flex;
@@ -572,14 +576,14 @@
     margin-bottom: 6px;
 }
 .poll-duration-label {
-    color: #666666;
+    color: var(--journal-faint);
     font-size: 13.5px;
     font-weight: 400;
 }
 .poll-remove-action-btn {
     background: transparent;
     border: none;
-    color: #888888;
+    color: var(--journal-muted);
     font-size: 13.5px;
     font-weight: 500;
     cursor: pointer;
@@ -587,7 +591,7 @@
     transition: color 0.15s;
 }
 .poll-remove-action-btn:hover {
-    color: #ffffff;
+    color: var(--journal-text);
 }
 
 /* Toolbar Icons Strip */
@@ -607,7 +611,7 @@
 .composer-tool-icon-btn {
     background: transparent;
     border: none;
-    color: #777777;
+    color: var(--journal-faint);
     padding: 6px;
     border-radius: 8px;
     display: inline-flex;
@@ -618,8 +622,8 @@
     transition: color 0.15s, background 0.15s, transform 0.1s;
 }
 .composer-tool-icon-btn:hover {
-    color: #ffffff;
-    background: rgba(255, 255, 255, 0.08);
+    color: var(--journal-text);
+    background: color-mix(in srgb, var(--journal-text) 8%, transparent);
 }
 .tool-badge-gif {
     font-size: 10px;
@@ -637,7 +641,7 @@
     padding-top: 2px;
 }
 .composer-add-thread-text {
-    color: #555555;
+    color: var(--journal-faint);
     font-size: 14px;
     font-weight: 500;
     cursor: pointer;
@@ -645,7 +649,7 @@
     transition: color 0.15s;
 }
 .composer-add-thread-text:hover {
-    color: #888888;
+    color: var(--journal-muted);
 }
 
 /* Bottom Footer Bar */
@@ -660,7 +664,7 @@
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    color: #777777;
+    color: var(--journal-faint);
     font-size: 14px;
     font-weight: 500;
     cursor: pointer;
@@ -668,12 +672,12 @@
     transition: color 0.15s;
 }
 .composer-privacy-control:hover {
-    color: #a0a0a0;
+    color: var(--journal-muted);
 }
 .composer-publish-btn {
-    background: #1e1e1e;
-    color: #555555;
-    border: 1px solid #2a2a2a;
+    background: var(--journal-raised);
+    color: var(--journal-faint);
+    border: 1px solid var(--journal-line);
     border-radius: 9999px;
     font-size: 14px;
     font-weight: 700;
@@ -683,14 +687,14 @@
     line-height: 1.4;
 }
 .composer-publish-btn.is-active {
-    background: #ffffff !important;
-    color: #000000 !important;
-    border-color: #ffffff !important;
+    background: var(--journal-button-bg) !important;
+    color: var(--journal-button-text) !important;
+    border-color: var(--journal-text) !important;
     cursor: pointer !important;
 }
 .composer-publish-btn.is-active:hover {
-    background: #e6e6e6 !important;
-    border-color: #e6e6e6 !important;
+    background: var(--journal-button-hover) !important;
+    border-color: var(--journal-text) !important;
 }
 
 /* Media previews */
@@ -707,7 +711,7 @@
     border-radius: 12px;
     overflow: hidden;
     aspect-ratio: 1;
-    border: 1px solid #333333;
+    border: 1px solid var(--journal-line);
     background: #000000;
 }
 .modal-media-thumb img {
@@ -715,21 +719,6 @@
     height: 100%;
     object-fit: cover;
     display: block;
-}
-.modal-media-loading img {
-    position: absolute;
-    inset: 0;
-}
-.modal-media-status {
-    position: absolute;
-    right: 0;
-    bottom: 0;
-    left: 0;
-    padding: 8px 4px;
-    background: rgba(0, 0, 0, 0.75);
-    color: #ffffff;
-    text-align: center;
-    font-size: 12px;
 }
 .modal-media-remove {
     position: absolute;
@@ -739,7 +728,7 @@
     height: 22px;
     border-radius: 50%;
     background: rgba(0, 0, 0, 0.75);
-    color: #ffffff;
+    color: #fff;
     border: 1px solid rgba(255, 255, 255, 0.2);
     display: flex;
     align-items: center;
@@ -759,14 +748,14 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    background: #111111;
-    color: #888888;
+    background: var(--journal-surface);
+    color: var(--journal-muted);
     font-size: 11px;
     gap: 6px;
     height: 100%;
 }
 .modal-drop-zone-prompt {
-    border: 2px dashed #0095f6;
+    border: 2px dashed var(--journal-link);
     background: rgba(0, 149, 246, 0.08);
 }
 .emoji-opt {
@@ -777,8 +766,8 @@
     transform: scale(1.25);
 }
 .btn-close-quote-preview {
-    background: rgba(255, 255, 255, 0.1);
-    color: #a0a0a0;
+    background: color-mix(in srgb, var(--journal-text) 10%, transparent);
+    color: var(--journal-muted);
     border: none;
     border-radius: 50%;
     width: 22px;
@@ -793,8 +782,8 @@
     transition: background 0.15s, color 0.15s;
 }
 .btn-close-quote-preview:hover {
-    background: rgba(255, 255, 255, 0.2);
-    color: #ffffff;
+    background: color-mix(in srgb, var(--journal-text) 20%, transparent);
+    color: var(--journal-text);
 }
 </style>
 
@@ -826,7 +815,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const toolbarStrip = document.getElementById('composerToolbarStrip');
 
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-    const MAX_IMAGES = 4;
+    const MAX_MEDIA = {{ (int) config('blog.thread_media_limit') }};
     let uploadedMedia = []; // Array of { id, url }
     let isUploadingCount = 0;
     const pendingUploads = new Map();
@@ -855,9 +844,10 @@ document.addEventListener('DOMContentLoaded', function() {
     if (modalAddPollBtn) {
         modalAddPollBtn.addEventListener('click', function(e) {
             e.preventDefault();
+            if (isUploadingCount || modalEl.dataset.recording) { toast('Chờ tải tệp hoặc dừng ghi âm trước.'); return; }
             // Clear any media if attaching poll
-            if (uploadedMedia.length > 0 || pendingUploads.size > 0) {
-                clearMedia();
+            if (uploadedMedia.length > 0) {
+                uploadedMedia = [];
                 renderPreviews();
                 toast('Chuyển sang chế độ thăm dò ý kiến');
             }
@@ -1049,15 +1039,10 @@ document.addEventListener('DOMContentLoaded', function() {
         updateSubmitState();
     });
 
-    // Interactive Audio button
-    document.getElementById('modalAddAudioBtn')?.addEventListener('click', function() {
-        toast('Tính năng ghi âm giọng nói đang chuẩn bị ra mắt!');
-    });
-
     function updateSubmitState() {
         const textLen = (modalText?.value || '').trim().length;
         const mediaCount = uploadedMedia.length;
-        
+
         const isPollActive = pollContainer && pollContainer.style.display !== 'none';
         const pollInputs = Array.from(document.querySelectorAll('.poll-option-input'))
             .map(i => i.value.trim())
@@ -1075,7 +1060,7 @@ document.addEventListener('DOMContentLoaded', function() {
             modalCharCount.style.display = textLen > 1500 ? 'inline-block' : 'none';
         }
 
-        const canSubmit = ((textLen > 0 || mediaCount > 0 || pollValid || hasAttachedDoc || hasLocation || hasRepost)) && isUploadingCount === 0;
+        const canSubmit = ((textLen > 0 || mediaCount > 0 || pollValid || hasAttachedDoc || hasLocation || hasRepost)) && isUploadingCount === 0 && !modalEl.dataset.recording;
         if (modalSubmitBtn) {
             modalSubmitBtn.disabled = !canSubmit;
             if (canSubmit) {
@@ -1086,11 +1071,18 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         if (modalAddImageBtn) {
-            modalAddImageBtn.style.opacity = (mediaCount >= MAX_IMAGES || isUploadingCount > 0 || isPollActive) ? '0.4' : '1';
-            modalAddImageBtn.disabled = (mediaCount >= MAX_IMAGES || isUploadingCount > 0 || isPollActive);
+            modalAddImageBtn.style.opacity = (mediaCount >= MAX_MEDIA || isUploadingCount > 0 || isPollActive) ? '0.4' : '1';
+            modalAddImageBtn.disabled = (mediaCount >= MAX_MEDIA || isUploadingCount > 0 || isPollActive);
         }
+        const videoButton = document.getElementById('modalAddVideoBtn');
+        if (videoButton) videoButton.disabled = mediaCount >= MAX_MEDIA || isUploadingCount > 0 || isPollActive || !!modalEl.dataset.recording;
     }
     window.updateComposerSubmitState = updateSubmitState;
+    window.threadMediaComposer = {
+        add: media => { if (uploadedMedia.length >= MAX_MEDIA) throw new Error(`Tối đa ${MAX_MEDIA} tệp đính kèm.`); uploadedMedia.push(media); renderPreviews(); },
+        available: () => uploadedMedia.length + isUploadingCount < MAX_MEDIA && !isUploadingCount && pollContainer?.style.display === 'none',
+        upload: files => handleFilesUpload(files),
+    };
 
     // Auto-grow textarea
     if (modalText) {
@@ -1123,8 +1115,8 @@ document.addEventListener('DOMContentLoaded', function() {
     if (modalAddImageBtn && modalFileInput) {
         modalAddImageBtn.addEventListener('click', function(e) {
             e.preventDefault();
-            if (uploadedMedia.length >= MAX_IMAGES) {
-                toast(`Tối đa ${MAX_IMAGES} ảnh cho mỗi bài viết`);
+            if (uploadedMedia.length >= MAX_MEDIA) {
+                toast(`Tối đa ${MAX_MEDIA} tệp cho mỗi bài viết`);
                 return;
             }
             modalFileInput.click();
@@ -1139,6 +1131,12 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Drag and Drop
+    document.getElementById('modalAddVideoBtn')?.addEventListener('click', () => document.getElementById('modalComposerVideoInput').click());
+    document.getElementById('modalComposerVideoInput')?.addEventListener('change', function() {
+        if (this.files.length) handleFilesUpload(Array.from(this.files));
+        this.value = '';
+    });
+
     if (dropZone) {
         ['dragenter', 'dragover'].forEach(eventName => {
             dropZone.addEventListener(eventName, function(e) {
@@ -1158,7 +1156,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         dropZone.addEventListener('drop', function(e) {
             const dt = e.dataTransfer;
-            const files = Array.from(dt.files).filter(f => f.type.startsWith('image/'));
+            const files = Array.from(dt.files).filter(f => /^(image|video)\//.test(f.type));
             if (files.length > 0) {
                 handleFilesUpload(files);
             }
@@ -1186,8 +1184,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
             const thumb = document.createElement('div');
             thumb.className = 'modal-media-thumb';
-            const image = document.createElement('img');
+            const image = document.createElement(media.kind === 'video' ? 'video' : media.kind === 'audio' ? 'audio' : 'img');
             image.src = media.previewUrl || media.url;
+            if (media.kind === 'video' || media.kind === 'audio') image.controls = true;
             image.alt = `Ảnh đính kèm ${idx + 1}`;
             const remove = document.createElement('button');
             remove.type = 'button';
@@ -1202,7 +1201,7 @@ document.addEventListener('DOMContentLoaded', function() {
         pendingUploads.forEach((upload, id) => {
             const thumb = document.createElement('div');
             thumb.className = 'modal-media-thumb modal-media-loading';
-            const image = document.createElement('img');
+            const image = document.createElement(upload.kind === 'video' ? 'video' : 'img');
             image.src = upload.previewUrl;
             image.alt = 'Ảnh đang tải lên';
             const status = document.createElement('span');
@@ -1240,29 +1239,31 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     function handleFilesUpload(files) {
-        const availableSlots = MAX_IMAGES - uploadedMedia.length - isUploadingCount;
+        if (pollContainer?.style.display !== 'none' || modalEl.dataset.recording) { toast('Gỡ bình chọn hoặc dừng ghi âm trước khi đính kèm.'); return; }
+        const availableSlots = MAX_MEDIA - uploadedMedia.length - isUploadingCount;
         if (availableSlots <= 0) {
-            toast(`Bạn chỉ có thể đính kèm tối đa ${MAX_IMAGES} ảnh.`);
+            toast(`Bạn chỉ có thể đính kèm tối đa ${MAX_MEDIA} ảnh.`);
             return;
         }
 
         const filesToUpload = files.slice(0, availableSlots);
         if (files.length > availableSlots) {
-            toast(`Đã chọn quá ${MAX_IMAGES} ảnh. Chỉ tải lên ${availableSlots} ảnh đầu.`);
+            toast(`Đã chọn quá ${MAX_MEDIA} ảnh. Chỉ tải lên ${availableSlots} ảnh đầu.`);
         }
 
         filesToUpload.forEach(file => {
-            if (!file.type.startsWith('image/')) {
-                toast('Chỉ chấp nhận file định dạng hình ảnh.');
+            const isVideo = /^video\/(mp4|webm)$/.test(file.type);
+            if (!file.type.startsWith('image/') && !isVideo) {
+                toast('Chọn ảnh, video MP4 hoặc WebM.');
                 return;
             }
-            if (file.size > 5 * 1024 * 1024) {
-                toast(`File "${file.name}" vượt quá 5MB.`);
+            if (file.size > (isVideo ? 25 : 5) * 1024 * 1024) {
+                toast(`Tệp vượt quá ${isVideo ? 25 : 5} MB.`);
                 return;
             }
 
             const id = ++uploadSequence;
-            const upload = { previewUrl: URL.createObjectURL(file), controller: new AbortController(), message: 'Đang chuẩn bị ảnh…', saved: false };
+            const upload = { previewUrl: URL.createObjectURL(file), kind: isVideo ? 'video' : 'image', controller: new AbortController(), message: 'Đang chuẩn bị tệp…', saved: false };
             pendingUploads.set(id, upload);
             isUploadingCount = pendingUploads.size;
             renderPreviews();
@@ -1271,14 +1272,25 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (upload.status) upload.status.textContent = message;
             };
 
-            window.uploadThreadImage(file, '{{ route("threads.upload-media") }}', csrfToken, {
+            const task = isVideo ? (async () => {
+                const duration = await window.inspectThreadClip(file);
+                if (upload.controller.signal.aborted) throw new DOMException('Đã hủy tải tệp.', 'AbortError');
+                const body = new FormData();
+                body.append('file', file);
+                body.append('kind', 'video');
+                body.append('duration', duration);
+                const response = await fetch('{{ route("threads.upload-media") }}', { method: 'POST', headers: { 'X-CSRF-TOKEN': csrfToken, Accept: 'application/json' }, body, signal: upload.controller.signal });
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.message || 'Tải tệp thất bại.');
+                return data;
+            })() : window.uploadThreadImage(file, '{{ route("threads.upload-media") }}', csrfToken, {
                 signal: upload.controller.signal,
                 onProgress: percent => showProgress(percent < 100 ? `Đang tải ${percent}%` : 'Đang lưu ảnh…'),
                 onStage: stage => showProgress(({ preparing: 'Đang chuẩn bị ảnh…', uploading: 'Đang tải ảnh…', saving: 'Đang lưu ảnh…' })[stage]),
-            })
-            .then(data => {
+            });
+            task.then(data => {
                 if (!pendingUploads.has(id)) return;
-                uploadedMedia.push({ id: data.id, url: data.url, previewUrl: upload.previewUrl });
+                uploadedMedia.push({ ...data, kind: upload.kind, previewUrl: upload.previewUrl });
                 upload.saved = true;
             })
             .catch(err => {
@@ -1296,13 +1308,10 @@ document.addEventListener('DOMContentLoaded', function() {
     // Modal Form Submission (AJAX)
     modalForm?.addEventListener('submit', function(e) {
         e.preventDefault();
-        if (isUploadingCount > 0) {
-            toast('Ảnh vẫn đang tải lên. Hãy đợi hoàn tất hoặc gỡ ảnh trước khi đăng.');
-            return;
-        }
+        if (isUploadingCount || modalEl.dataset.recording) { toast('Chờ tải tệp hoặc hoàn tất ghi âm trước khi đăng.'); return; }
         const content = (modalText?.value || '').trim();
         const isPollActive = pollContainer && pollContainer.style.display !== 'none';
-        const pollOptions = isPollActive 
+        const pollOptions = isPollActive
             ? Array.from(document.querySelectorAll('.poll-option-input')).map(i => i.value.trim()).filter(v => v.length > 0)
             : [];
         const attachedDocInput = document.getElementById('modalAttachedDocHtml');
@@ -1336,7 +1345,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 repost_of_id: repostOfId,
                 type: postType,
                 media_ids: uploadedMedia.map(m => m.id),
-                ...(isPollActive ? { poll_options: pollOptions } : {}),
+                ...(isPollActive ? { poll_options: pollOptions, poll_duration_hours: Number(document.getElementById('pollDurationHours').value) } : {}),
                 attached_document_html: attachedDocHtml,
                 location: locationVal
             })
@@ -1372,8 +1381,11 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     function resetModal() {
-        if (modalForm) { modalForm.reset(); modalForm.querySelectorAll('input[name="mention_ids[]"]').forEach(input => input.remove()); }
         clearMedia();
+        modalEl.dispatchEvent(new Event('composer:reset'));
+        if (modalForm) modalForm.reset();
+        uploadedMedia = [];
+        isUploadingCount = 0;
         if (modalMediaIdsContainer) modalMediaIdsContainer.innerHTML = '';
         if (modalPreview) {
             modalPreview.innerHTML = '';
@@ -1407,7 +1419,7 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('modalParentId').value = '';
         document.getElementById('modalRepostOfId').value = '';
         document.getElementById('modalPostType').value = 'post';
-        document.getElementById('newThreadModalTitle').textContent = 'Thread mới';
+        document.getElementById('newThreadModalTitle').textContent = 'Bài viết mới';
         if (topicLabel) {
             topicLabel.textContent = 'Cộng đồng hoặc chủ đề';
             topicLabel.style.color = '#777777';

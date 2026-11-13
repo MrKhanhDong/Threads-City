@@ -40,11 +40,11 @@
 
 <style>
     .repost-action-modal-content {
-        background: #181818 !important;
-        border: 1px solid #2e2e2e !important;
+        background: var(--journal-surface) !important;
+        border: 1px solid var(--journal-line) !important;
         border-radius: 22px !important;
-        color: #ffffff !important;
-        box-shadow: 0 16px 40px rgba(0, 0, 0, 0.75) !important;
+        color: var(--journal-text) !important;
+        box-shadow: var(--journal-shadow) !important;
         overflow: hidden;
     }
     .repost-menu-option {
@@ -55,13 +55,32 @@
         padding: 12px 14px;
         background: transparent;
         border: none;
-        color: #fff;
+        color: var(--journal-text);
         border-radius: 16px;
         cursor: pointer;
         transition: background 0.15s, transform 0.1s;
     }
     .repost-menu-option:hover {
-        background: rgba(255, 255, 255, 0.08);
+        background: color-mix(in srgb, var(--journal-text) 8%, transparent);
+    }
+    .repost-menu-option:active {
+        transform: scale(0.99);
+    }
+    .repost-option-icon-box {
+        width: 38px;
+        height: 38px;
+        border-radius: 50%;
+        background: var(--journal-raised);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        transition: background 0.15s;
+    }
+    .repost-menu-divider {
+        height: 1px;
+        background: var(--journal-hover);
+        margin: 4px 8px;
     }
     .repost-menu-option:active {
         transform: scale(0.99);

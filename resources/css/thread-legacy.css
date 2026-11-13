@@ -68,18 +68,18 @@
             gap: 4px;
             font-weight: 800;
             font-size: 21px;
-            color: #ffffff;
+            color: var(--journal-text);
             letter-spacing: -0.5px;
         }
         .brand-threads-logo svg {
             width: 28px;
             height: 28px;
-            fill: #ffffff;
+            fill: var(--journal-text);
         }
         .menu-bars-btn {
             background: none;
             border: none;
-            color: #ffffff;
+            color: var(--journal-text);
             cursor: pointer;
             padding: 4px;
             font-size: 20px;
@@ -100,16 +100,16 @@
             border-radius: 12px;
             font-size: 15px;
             font-weight: 600;
-            color: #e5e7eb;
+            color: var(--journal-text);
             transition: background 0.15s, color 0.15s;
         }
         .sidebar-nav-item:hover {
-            background: rgba(255, 255, 255, 0.05);
-            color: #ffffff;
+            background: color-mix(in srgb, var(--journal-text) 5%, transparent);
+            color: var(--journal-text);
         }
         .sidebar-nav-item.active {
-            background: #181818;
-            color: #ffffff;
+            background: var(--journal-surface);
+            color: var(--journal-text);
             font-weight: 700;
         }
         .sidebar-nav-item svg {
@@ -122,7 +122,7 @@
             top: -5px;
             right: -7px;
             background: #ff2d55;
-            color: #ffffff;
+            color: #fff;
             font-size: 10px;
             font-weight: 700;
             min-width: 16px;
@@ -132,8 +132,8 @@
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            border: 2px solid #101010;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.5);
+            border: 2px solid var(--journal-line);
+            box-shadow: var(--journal-shadow);
             line-height: 1;
         }
 
@@ -166,16 +166,16 @@
             padding: 8px 14px;
             border-radius: 10px;
             font-size: 14px;
-            color: #d1d5db;
+            color: var(--journal-text);
             font-weight: 500;
             transition: all 0.15s;
         }
         .sub-nav-item:hover {
-            color: #ffffff;
-            background: rgba(255, 255, 255, 0.04);
+            color: var(--journal-text);
+            background: color-mix(in srgb, var(--journal-text) 4%, transparent);
         }
         .sub-nav-item.active {
-            color: #ffffff;
+            color: var(--journal-text);
             font-weight: 700;
         }
         .sub-nav-item svg {
@@ -196,7 +196,7 @@
             transition: color 0.15s;
         }
         .left-sidebar-bottom-icon:hover {
-            color: #ffffff;
+            color: var(--journal-text);
         }
 
         /* 2. Center Feed Column */
@@ -227,7 +227,7 @@
         .feed-header-title {
             font-size: 16px;
             font-weight: 700;
-            color: #ffffff;
+            color: var(--journal-text);
             display: flex;
             align-items: center;
             gap: 6px;
@@ -253,7 +253,7 @@
             transition: color 0.15s;
         }
         .feed-tool-btn:hover {
-            color: #ffffff;
+            color: var(--journal-text);
         }
 
         /* 3. Right Sidebar (Widgets) */
@@ -274,18 +274,18 @@
         }
         .threads-search-input {
             width: 100%;
-            background: #121212;
+            background: var(--journal-surface);
             border: 1px solid var(--border-color);
             border-radius: 9999px;
             padding: 10px 18px 10px 42px;
-            color: #ffffff;
+            color: var(--journal-text);
             font-size: 14px;
             outline: none;
             transition: all 0.2s;
         }
         .threads-search-input:focus {
-            background: #181818;
-            border-color: #383838;
+            background: var(--journal-surface);
+            border-color: var(--journal-line);
         }
         .threads-search-input::placeholder {
             color: var(--text-muted);
@@ -300,7 +300,7 @@
         }
         /* Trending Widget */
         .widget-box {
-            background: #121212;
+            background: var(--journal-surface);
             border: 1px solid var(--border-color);
             border-radius: 18px;
             padding: 18px 18px;
@@ -314,14 +314,14 @@
             letter-spacing: -0.2px;
         }
         .trending-header-sub {
-            color: #888888;
+            color: var(--journal-muted);
             font-size: 13px;
             line-height: 1.4;
             margin-bottom: 14px;
         }
         .trending-item {
             padding: 12px 0;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            border-bottom: 1px solid var(--journal-line);
             display: block;
             text-decoration: none;
             transition: opacity 0.15s;
@@ -335,13 +335,13 @@
         .trending-item-title {
             font-size: 15px;
             font-weight: 700;
-            color: #ffffff;
+            color: var(--journal-text);
             line-height: 1.35;
             margin-bottom: 4px;
         }
         .trending-item-desc {
             font-size: 13px;
-            color: #999999;
+            color: var(--journal-muted);
             line-height: 1.45;
             margin-bottom: 5px;
             display: -webkit-box;
@@ -351,27 +351,27 @@
         }
         .trending-item-count {
             font-size: 12.5px;
-            color: #666666;
+            color: var(--journal-faint);
             font-weight: 500;
         }
         .widget-see-more {
             display: inline-block;
             margin-top: 14px;
             font-size: 14px;
-            color: #777777;
+            color: var(--journal-faint);
             font-weight: 500;
             text-decoration: none;
             transition: color 0.15s;
         }
         .widget-see-more:hover {
-            color: #ffffff;
+            color: var(--journal-text);
         }
 
         /* Suggested Users Widget */
         .suggested-users-title {
             font-size: 16px;
             font-weight: 800;
-            color: #ffffff;
+            color: var(--journal-text);
             margin-bottom: 16px;
         }
         .suggested-user-item {
@@ -380,7 +380,7 @@
             justify-content: space-between;
             gap: 12px;
             padding: 12px 0;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            border-bottom: 1px solid var(--journal-line);
         }
         .suggested-user-item:last-child {
             border-bottom: none;
@@ -399,7 +399,7 @@
         .suggested-user-name {
             font-size: 13px;
             font-weight: 700;
-            color: #ffffff;
+            color: var(--journal-text);
             display: flex;
             align-items: center;
             gap: 4px;
@@ -416,7 +416,7 @@
         }
         .suggested-user-bio {
             font-size: 12px;
-            color: #d1d5db;
+            color: var(--journal-text);
             margin-top: 2px;
             white-space: pre-line;
             line-height: 1.35;
@@ -431,9 +431,9 @@
             margin-top: 2px;
         }
         .btn-follow-pill {
-            background: #000000;
-            color: #ffffff;
-            border: 1px solid #333333;
+            background: var(--journal-surface);
+            color: var(--journal-text);
+            border: 1px solid var(--journal-line);
             font-size: 12px;
             font-weight: 700;
             padding: 6px 16px;
@@ -443,17 +443,17 @@
             flex-shrink: 0;
         }
         .btn-follow-pill:hover {
-            border-color: #666;
-            background: #141414;
+            border-color: var(--journal-line);
+            background: var(--journal-surface);
         }
         .btn-follow-pill.following {
             background: transparent;
             color: var(--text-muted);
-            border-color: #222222;
+            border-color: var(--journal-line);
         }
         .btn-follow-pill.following:hover {
-            color: #ffffff;
-            border-color: #444444;
+            color: var(--journal-text);
+            border-color: var(--journal-line);
         }
 
         /* Buttons & Components */
@@ -464,7 +464,7 @@
             max-height: 38px !important;
             border-radius: 50% !important;
             object-fit: cover !important;
-            background: #222 !important;
+            background: var(--journal-raised) !important;
             display: block !important;
             flex-shrink: 0 !important;
         }
@@ -472,18 +472,18 @@
             width: 38px;
             height: 38px;
             border-radius: 50%;
-            background: #242424;
-            color: #fff;
+            background: var(--journal-raised);
+            color: var(--journal-text);
             display: flex;
             align-items: center;
             justify-content: center;
             font-weight: 700;
             font-size: 15px;
-            border: 1px solid #333;
+            border: 1px solid var(--journal-line);
         }
         .btn-threads-primary {
-            background: #f3f5f7;
-            color: #000000;
+            background: var(--journal-button-bg);
+            color: var(--journal-button-text);
             font-weight: 700;
             font-size: 14px;
             border-radius: 9999px;
@@ -493,11 +493,11 @@
             cursor: pointer;
         }
         .btn-threads-primary:hover {
-            background: #ffffff;
+            background: var(--journal-button-bg);
         }
         .btn-threads-outline {
             background: transparent;
-            color: #f3f5f7;
+            color: var(--journal-text);
             font-weight: 600;
             font-size: 13px;
             border-radius: 9999px;
@@ -507,8 +507,8 @@
             cursor: pointer;
         }
         .btn-threads-outline:hover {
-            border-color: #555;
-            background: rgba(255, 255, 255, 0.06);
+            border-color: var(--journal-line);
+            background: color-mix(in srgb, var(--journal-text) 6%, transparent);
         }
 
         /* Responsive Breakpoints */
@@ -534,14 +534,14 @@
             bottom: 32px;
             left: 50%;
             transform: translateX(-50%) translateY(100px);
-            background: #242424;
-            color: #ffffff;
+            background: var(--journal-raised);
+            color: var(--journal-text);
             padding: 12px 24px;
             border-radius: 9999px;
             font-size: 14px;
             font-weight: 500;
-            border: 1px solid #383838;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            border: 1px solid var(--journal-line);
+            box-shadow: var(--journal-shadow);
             z-index: 1000;
             opacity: 0;
             transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
@@ -560,10 +560,10 @@
             width: 280px;
             max-height: 220px;
             overflow-y: auto;
-            background: #1e1e1e;
-            border: 1px solid #333333;
+            background: var(--journal-raised);
+            border: 1px solid var(--journal-line);
             border-radius: 14px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.85);
+            box-shadow: var(--journal-shadow);
             z-index: 1060;
             padding: 6px 0;
         }
@@ -577,7 +577,7 @@
         }
         .mention-autocomplete-item:hover,
         .mention-autocomplete-item.selected {
-            background: #2a2a2a;
+            background: var(--journal-hover);
         }
         .mention-item-avatar {
             width: 30px;
@@ -590,8 +590,8 @@
             width: 30px;
             height: 30px;
             border-radius: 50%;
-            background: #333333;
-            color: #ffffff;
+            background: var(--journal-line);
+            color: var(--journal-text);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -602,11 +602,11 @@
         .mention-item-name {
             font-size: 13px;
             font-weight: 600;
-            color: #ffffff;
+            color: var(--journal-text);
             line-height: 1.2;
         }
         .mention-item-handle {
             font-size: 12px;
-            color: #777777;
+            color: var(--journal-faint);
             line-height: 1.2;
         }

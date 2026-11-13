@@ -54,11 +54,11 @@
 <style>
 /* Text Document Attachment Modal Container */
 .text-doc-modal-content {
-    background: #141414 !important;
-    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    background: var(--journal-surface) !important;
+    border: 1px solid var(--journal-line) !important;
     border-radius: 20px !important;
-    color: #ffffff !important;
-    box-shadow: 0 16px 50px rgba(0, 0, 0, 0.9) !important;
+    color: var(--journal-text) !important;
+    box-shadow: var(--journal-shadow) !important;
     overflow: hidden;
     height: 560px;
     display: flex;
@@ -72,13 +72,13 @@
     align-items: center;
     justify-content: space-between;
     padding: 14px 20px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    border-bottom: 1px solid var(--journal-line);
     flex-shrink: 0;
 }
 .text-doc-cancel-btn {
     background: transparent;
     border: none;
-    color: #ffffff;
+    color: var(--journal-text);
     font-size: 15px;
     font-weight: 500;
     cursor: pointer;
@@ -91,13 +91,13 @@
 .text-doc-title {
     font-size: 16px;
     font-weight: 700;
-    color: #ffffff;
+    color: var(--journal-text);
     letter-spacing: -0.2px;
 }
 .text-doc-done-btn {
     background: transparent;
     border: none;
-    color: #555555;
+    color: var(--journal-faint);
     font-size: 15px;
     font-weight: 700;
     cursor: not-allowed;
@@ -105,7 +105,7 @@
     transition: color 0.15s, opacity 0.15s;
 }
 .text-doc-done-btn.is-active {
-    color: #ffffff !important;
+    color: var(--journal-text) !important;
     cursor: pointer !important;
 }
 .text-doc-done-btn.is-active:hover {
@@ -125,20 +125,20 @@
     min-height: 100%;
     outline: none !important;
     border: none !important;
-    color: #ffffff;
+    color: var(--journal-text);
     font-size: 16px;
     line-height: 1.65;
     word-break: break-word;
 }
 .text-doc-editor:empty:before {
     content: attr(data-placeholder);
-    color: #666666;
+    color: var(--journal-faint);
     pointer-events: none;
 }
 .text-doc-editor b, 
 .text-doc-editor strong {
     font-weight: 700;
-    color: #ffffff;
+    color: var(--journal-text);
 }
 .text-doc-editor i, 
 .text-doc-editor em {
@@ -153,12 +153,12 @@
 }
 .text-doc-editor pre, 
 .text-doc-editor code {
-    background: #202020;
+    background: var(--journal-raised);
     padding: 3px 6px;
     border-radius: 4px;
     font-family: monospace;
     font-size: 14.5px;
-    color: #00d26a;
+    color: var(--journal-success);
 }
 
 /* Bottom Formatting Toolbar (B | / | U | S | Code) */
@@ -173,7 +173,7 @@
 .text-format-btn {
     background: transparent;
     border: none;
-    color: #ffffff;
+    color: var(--journal-text);
     font-size: 17px;
     padding: 6px 10px;
     cursor: pointer;
@@ -186,20 +186,20 @@
     user-select: none;
 }
 .text-format-btn:hover {
-    background: rgba(255, 255, 255, 0.08);
+    background: color-mix(in srgb, var(--journal-text) 8%, transparent);
 }
 .text-format-btn:active {
     transform: scale(0.92);
 }
 .text-format-btn.active {
-    color: #0095f6;
+    color: var(--journal-link);
     background: rgba(0, 149, 246, 0.12);
 }
 
 /* Attachment Card in Composer */
 .composer-attached-doc-card {
-    background: #1c1c1c;
-    border: 1px solid #333333;
+    background: var(--journal-raised);
+    border: 1px solid var(--journal-line);
     border-radius: 14px;
     padding: 12px 16px;
     margin-bottom: 12px;
@@ -207,7 +207,7 @@
     transition: border-color 0.15s;
 }
 .composer-attached-doc-card:hover {
-    border-color: #444444;
+    border-color: var(--journal-line);
 }
 .attached-doc-header {
     display: flex;
@@ -219,24 +219,24 @@
     display: flex;
     align-items: center;
     gap: 6px;
-    color: #0095f6;
+    color: var(--journal-link);
     font-size: 12.5px;
     font-weight: 600;
 }
 .attached-doc-remove-btn {
     background: transparent;
     border: none;
-    color: #777777;
+    color: var(--journal-faint);
     cursor: pointer;
     padding: 0;
     line-height: 1;
     transition: color 0.15s;
 }
 .attached-doc-remove-btn:hover {
-    color: #ffffff;
+    color: var(--journal-text);
 }
 .attached-doc-preview-text {
-    color: #dcdcdc;
+    color: var(--journal-text);
     font-size: 14px;
     line-height: 1.5;
     max-height: 72px;

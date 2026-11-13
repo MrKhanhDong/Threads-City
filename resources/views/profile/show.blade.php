@@ -3,7 +3,7 @@
 @section('content')
 
     <!-- Profile Header Section -->
-    <div class="profile-header-card p-4 rounded-4 mb-4" style="background: #181818; border: 1px solid var(--border-color);">
+    <div class="profile-header-card p-4 rounded-4 mb-4" style="background: var(--journal-surface); border: 1px solid var(--border-color);">
         <div class="d-flex justify-content-between align-items-start gap-3">
             <div>
                 <h3 class="text-white fw-bold mb-1 fs-4">{{ $user->name }}<x-verified-badge :user="$user"/></h3>
@@ -25,9 +25,9 @@
             </div>
             <div>
                 @if($user->avatar_path)
-                    <img src="{{ route('avatar.show', $user->id) }}" alt="{{ $user->name }}" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 2px solid #333;">
+                    <img src="{{ route('avatar.show', $user->id) }}" alt="{{ $user->name }}" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 2px solid var(--journal-line);">
                 @else
-                    <div style="width: 80px; height: 80px; border-radius: 50%; background: #262626; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: bold; border: 2px solid #333;">
+                    <div style="width: 80px; height: 80px; border-radius: 50%; background: var(--journal-raised); color: var(--journal-text); display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: bold; border: 2px solid var(--journal-line);">
                         {{ mb_substr($user->name, 0, 1) }}
                     </div>
                 @endif
@@ -87,7 +87,7 @@
     <!-- Followers & Following Modal -->
     <div class="modal fade" id="followersModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered" style="max-width: 520px;">
-            <div class="modal-content" style="background: #181818; border: 1px solid #2e2e2e; border-radius: 20px; color: #fff; box-shadow: 0 10px 40px rgba(0,0,0,0.85); overflow: hidden;">
+            <div class="modal-content" style="background: var(--journal-surface); border: 1px solid var(--journal-line); border-radius: 20px; color: var(--journal-text); box-shadow: var(--journal-shadow); overflow: hidden;">
                 <div class="modal-header border-bottom border-dark px-4 py-3">
                     <div class="d-flex w-100 gap-2">
                         <button type="button" class="followers-modal-tab flex-grow-1 active" id="tabFollowersBtn" data-tab="followers">
@@ -121,14 +121,14 @@
         transition: color 0.15s ease;
     }
     .btn-stat-link:hover {
-        color: #ffffff;
+        color: var(--journal-text);
         text-decoration: underline;
     }
     .followers-modal-tab {
         background: transparent;
         border: none;
         border-bottom: 2px solid transparent;
-        color: #777777;
+        color: var(--journal-faint);
         font-size: 14px;
         font-weight: 600;
         padding: 10px 0;
@@ -136,11 +136,11 @@
         transition: all 0.15s ease;
     }
     .followers-modal-tab:hover {
-        color: #ffffff;
+        color: var(--journal-text);
     }
     .followers-modal-tab.active {
-        color: #ffffff;
-        border-bottom-color: #ffffff;
+        color: var(--journal-text);
+        border-bottom-color: var(--journal-text);
     }
     .user-list-item-card {
         display: flex;
@@ -152,7 +152,7 @@
         transition: background 0.15s ease;
     }
     .user-list-item-card:hover {
-        background: rgba(255, 255, 255, 0.04);
+        background: color-mix(in srgb, var(--journal-text) 4%, transparent);
     }
     .user-list-item-link {
         display: flex;
@@ -168,9 +168,9 @@
         font-size: 12px;
         font-weight: 600;
         border-radius: 10px;
-        border: 1px solid #383838;
-        background: #ffffff;
-        color: #000000;
+        border: 1px solid var(--journal-line);
+        background: var(--journal-button-bg);
+        color: var(--journal-button-text);
         cursor: pointer;
         transition: all 0.15s ease;
         flex-shrink: 0;
@@ -180,8 +180,8 @@
     }
     .btn-user-modal-follow.following {
         background: transparent;
-        color: #777777;
-        border-color: #383838;
+        color: var(--journal-faint);
+        border-color: var(--journal-line);
     }
 </style>
 @endsection
@@ -189,64 +189,196 @@
 @push('threads-scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const csrf = document.querySelector('meta[name="csrf-token"]').content;
-    const modalElement = document.getElementById('followersModal');
-    const list = document.getElementById('followersModalList');
-    const loading = document.getElementById('followersModalLoading');
-    const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
-    const more = document.createElement('button');
-    more.type = 'button'; more.className = 'btn-threads-outline m-3'; more.textContent = 'Tải thêm'; more.hidden = true;
-    const listStatus = document.createElement('p'); listStatus.setAttribute('role', 'status'); list.after(listStatus); listStatus.after(more);
-    let version = 0, next = null, busy = false;
-    const urls = { followers: @json(route('users.followers', $user->username ?: $user->id)), following: @json(route('users.following', $user->username ?: $user->id)) };
-    const follow = async (id, control) => {
-        if (control.disabled || !window.checkAuth('theo dõi')) return;
-        control.disabled = true;
-        try {
-            const response = await fetch('/users/' + id + '/follow', { method: 'POST', headers: { Accept: 'application/json', 'X-CSRF-TOKEN': csrf } });
-            const data = await response.json();
-            if (!response.ok) throw new Error(data.message || 'Không theo dõi được tài khoản này.');
-            control.textContent = data.follow_label;
-            control.classList.toggle('following', data.following || data.requested);
-            if (Number(id) === @json($user->id)) document.querySelectorAll('#profileFollowersCount, #modalFollowersCount').forEach(count => count.textContent = data.followers_count);
-            if (data.viewer_id === @json($user->id)) document.querySelectorAll('#profileFollowingCount, #modalFollowingCount').forEach(count => count.textContent = data.viewer_following_count);
-        } catch (error) { window.showToast?.(error.message); }
-        finally { control.disabled = false; }
-    };
-    document.getElementById('btnFollowUser')?.addEventListener('click', event => follow(event.currentTarget.dataset.userId, event.currentTarget));
-    async function load(url, reset = false) {
-        const current = version;
-        busy = true; more.disabled = true; loading.style.display = 'block'; listStatus.textContent = '';
-        try {
-            const response = await fetch(url, { headers: { Accept: 'application/json' }, credentials: 'same-origin', cache: 'no-store' });
-            const data = await response.json();
-            if (current !== version) return;
-            if (!response.ok || !Array.isArray(data.users)) throw new Error(data.message || 'Không tải được danh sách.');
-            if (reset) list.replaceChildren();
-            list.style.display = 'block';
-            data.users.forEach(user => {
-                const row = document.createElement('div'); row.className = 'user-list-item-card';
-                const link = document.createElement('a'); link.className = 'user-list-item-link'; link.href = user.profile_url;
-                if (user.avatar_url) { const image = document.createElement('img'); image.src = user.avatar_url; image.alt = user.name; image.className = 'user-avatar-round'; image.width = 40; image.height = 40; link.append(image); }
-                const label = document.createElement('span'); label.textContent = user.name + ' · ' + user.handle; link.append(label); row.append(link);
-                if (!user.is_me) { const control = document.createElement('button'); control.type = 'button'; control.className = 'btn-user-modal-follow'; control.textContent = user.requested ? 'Đã gửi yêu cầu' : (user.is_following ? 'Đang theo dõi' : 'Theo dõi'); control.addEventListener('click', () => follow(user.id, control)); row.append(control); }
-                list.append(row);
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+    const profileUsername = @json($user->username ?: $user->id);
+    const followBtn = document.getElementById('btnFollowUser');
+
+    if (followBtn) {
+        followBtn.addEventListener('click', function() {
+            const userId = this.getAttribute('data-user-id');
+            const textSpan = document.getElementById('followBtnText');
+            const countSpan = document.getElementById('profileFollowersCount');
+
+            fetch(`/users/${userId}/follow`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                    'Accept': 'application/json'
+                }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data && data.success) {
+                    if (data.following) {
+                        textSpan.textContent = 'Đang theo dõi';
+                        followBtn.classList.remove('btn-threads-primary');
+                        followBtn.classList.add('btn-threads-outline');
+                    } else {
+                        textSpan.textContent = 'Theo dõi';
+                        followBtn.classList.remove('btn-threads-outline');
+                        followBtn.classList.add('btn-threads-primary');
+                    }
+                    if (countSpan) {
+                        countSpan.textContent = data.followers_count;
+                    }
+                    const modalCount = document.getElementById('modalFollowersCount');
+                    if (modalCount) {
+                        modalCount.textContent = data.followers_count;
+                    }
+                }
+            })
+            .catch(err => console.error(err));
+        });
+    }
+
+    // Followers & Following Modal logic
+    const followersModalEl = document.getElementById('followersModal');
+    let followersModalInstance = null;
+    if (followersModalEl && typeof bootstrap !== 'undefined') {
+        followersModalInstance = new bootstrap.Modal(followersModalEl);
+    }
+
+    const btnOpenFollowers = document.getElementById('btnOpenFollowersModal');
+    const btnOpenFollowing = document.getElementById('btnOpenFollowingModal');
+    const tabFollowersBtn = document.getElementById('tabFollowersBtn');
+    const tabFollowingBtn = document.getElementById('tabFollowingBtn');
+    const modalLoading = document.getElementById('followersModalLoading');
+    const modalList = document.getElementById('followersModalList');
+
+    let currentModalTab = 'followers';
+
+    function loadUserList(tab) {
+        currentModalTab = tab;
+        if (tab === 'followers') {
+            tabFollowersBtn.classList.add('active');
+            tabFollowingBtn.classList.remove('active');
+        } else {
+            tabFollowingBtn.classList.add('active');
+            tabFollowersBtn.classList.remove('active');
+        }
+
+        modalLoading.style.display = 'block';
+        modalList.style.display = 'none';
+        modalList.innerHTML = '';
+
+        const url = `/users/${profileUsername}/${tab}`;
+        fetch(url, { headers: { 'Accept': 'application/json' } })
+            .then(res => res.json())
+            .then(data => {
+                modalLoading.style.display = 'none';
+                modalList.style.display = 'block';
+
+                if (tab === 'followers' && data.count !== undefined) {
+                    document.getElementById('modalFollowersCount').textContent = data.count;
+                } else if (tab === 'following' && data.count !== undefined) {
+                    document.getElementById('modalFollowingCount').textContent = data.count;
+                }
+
+                if (!data.users || data.users.length === 0) {
+                    modalList.innerHTML = `
+                        <div class="text-center py-5 text-secondary">
+                            <div class="mb-2" style="font-size: 32px;">👥</div>
+                            <div class="text-white fw-bold">${tab === 'followers' ? 'Chưa có người theo dõi nào' : 'Chưa theo dõi ai'}</div>
+                            <div class="small mt-1">${tab === 'followers' ? 'Khi có người theo dõi, danh sách sẽ hiện ở đây.' : 'Các tài khoản đang theo dõi sẽ xuất hiện ở đây.'}</div>
+                        </div>
+                    `;
+                    return;
+                }
+
+                modalList.innerHTML = data.users.map(u => {
+                    const avatarHtml = u.avatar_url
+                        ? `<img src="${u.avatar_url}" class="user-avatar-round" style="width: 40px; height: 40px;" alt="${u.name}">`
+                        : `<div class="user-avatar-letter" style="width: 40px; height: 40px; font-size: 14px;">${(u.name || 'U').charAt(0).toUpperCase()}</div>`;
+
+                    let buttonHtml = '';
+                    if (!u.is_me) {
+                        buttonHtml = `
+                            <button type="button"
+                                class="btn-user-modal-follow ${u.is_following ? 'following' : ''}"
+                                data-user-id="${u.id}">
+                                ${u.is_following ? 'Đang theo dõi' : 'Theo dõi'}
+                            </button>
+                        `;
+                    }
+
+                    return `
+                        <div class="user-list-item-card">
+                            <a href="${u.profile_url}" class="user-list-item-link">
+                                ${avatarHtml}
+                                <div class="overflow-hidden">
+                                    <div class="text-white fw-bold text-truncate" style="font-size: 14px;">${u.name}</div>
+                                    <div class="text-secondary text-truncate" style="font-size: 13px;">${u.handle}</div>
+                                    ${u.bio ? `<div class="text-secondary small text-truncate mt-1" style="max-width: 280px;">${u.bio}</div>` : ''}
+                                </div>
+                            </a>
+                            ${buttonHtml}
+                        </div>
+                    `;
+                }).join('');
+
+                // Attach follow handler to buttons inside modal
+                modalList.querySelectorAll('.btn-user-modal-follow').forEach(btn => {
+                    btn.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const targetUserId = this.getAttribute('data-user-id');
+                        fetch(`/users/${targetUserId}/follow`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': csrfToken,
+                                'Accept': 'application/json'
+                            }
+                        })
+                        .then(r => r.json())
+                        .then(resp => {
+                            if (resp && resp.success) {
+                                if (resp.following) {
+                                    this.textContent = 'Đang theo dõi';
+                                    this.classList.add('following');
+                                } else {
+                                    this.textContent = 'Theo dõi';
+                                    this.classList.remove('following');
+                                }
+                            }
+                        })
+                        .catch(err => console.error(err));
+                    });
+                });
+            })
+            .catch(() => {
+                modalLoading.style.display = 'none';
+                modalList.style.display = 'block';
+                modalList.innerHTML = '<div class="text-center py-4 text-danger small">Không thể tải danh sách. Vui lòng thử lại.</div>';
             });
-            if (!list.children.length) list.textContent = 'Chưa có tài khoản nào.';
-            next = data.nextPageUrl; more.hidden = !next;
-        } catch (error) { if (current === version) { listStatus.textContent = error.message; list.style.display = 'block'; next = url; more.hidden = false; } }
-        finally { if (current === version) { busy = false; more.disabled = false; loading.style.display = 'none'; } }
     }
-    function open(tab) {
-        version++; list.replaceChildren(); more.hidden = true;
-        document.querySelectorAll('.followers-modal-tab').forEach(button => button.classList.toggle('active', button.dataset.tab === tab));
-        modal.show(); void load(urls[tab], true);
+
+    if (btnOpenFollowers) {
+        btnOpenFollowers.addEventListener('click', function() {
+            if (followersModalInstance) followersModalInstance.show();
+            loadUserList('followers');
+        });
     }
-    document.getElementById('btnOpenFollowersModal')?.addEventListener('click', () => open('followers'));
-    document.getElementById('btnOpenFollowingModal')?.addEventListener('click', () => open('following'));
-    document.querySelectorAll('.followers-modal-tab').forEach(button => button.addEventListener('click', () => open(button.dataset.tab)));
-    more.addEventListener('click', () => { if (!busy && next) void load(next); });
-    modalElement.addEventListener('hidden.bs.modal', () => { version++; busy = false; });
+
+    if (btnOpenFollowing) {
+        btnOpenFollowing.addEventListener('click', function() {
+            if (followersModalInstance) followersModalInstance.show();
+            loadUserList('following');
+        });
+    }
+
+    if (tabFollowersBtn) {
+        tabFollowersBtn.addEventListener('click', function() {
+            loadUserList('followers');
+        });
+    }
+
+    if (tabFollowingBtn) {
+        tabFollowingBtn.addEventListener('click', function() {
+            loadUserList('following');
+        });
+    }
 });
 </script>
 @endpush

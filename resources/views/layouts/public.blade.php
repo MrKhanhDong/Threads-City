@@ -47,8 +47,7 @@
     </aside>
     <div class="journal-workspace" data-column-workspace>
     <div class="journal-center" data-column-slot="primary">
-        <header class="journal-topbar">
-            <button class="journal-menu-button desktop-column-grip" type="button" draggable="true" data-column-drag="primary" aria-label="Đổi vị trí hai cột" title="Kéo để đổi vị trí cột"><x-journal-icon name="grip"/></button>
+        <header class="journal-topbar" data-column-drag="primary" tabindex="-1" aria-describedby="desktop-column-drag-help">
             <button class="journal-menu-button journal-sidebar-toggle" type="button" data-bs-toggle="offcanvas" data-bs-target="#journal-sidebar-drawer" aria-controls="journal-sidebar-drawer" aria-expanded="false" aria-label="Mở thanh bên"><x-journal-icon name="menu" :size="24"/></button>
             <a class="journal-mobile-brand" href="{{ route('home') }}" aria-label="Threads">@</a>
             @hasSection('search-bar')@yield('search-bar')@else<span>{{ $pageTitle ?? 'Dành cho bạn' }}</span>@endif
@@ -60,7 +59,7 @@
             </div>
         </header>
         <main id="main" class="journal-main" tabindex="-1">@if(!request()->routeIs('home', 'threads.index', 'blog.legacy_home'))<x-breadcrumbs :items="$breadcrumbs ?? [['label' => $pageTitle ?? 'Trang hiện tại']]"/>@endif<x-flash/>@yield('content')</main>
-        <footer class="journal-footer"><span>© {{ date('Y') }} {{ $site['site_name'] }}</span><a href="{{ route('contact') }}">Liên hệ</a><a href="{{ route('privacy') }}">Quyền riêng tư</a><a href="{{ route('terms') }}">Điều khoản</a></footer>
+        <footer class="journal-footer"><span>© {{ date('Y') }} Threads — Made by Team Thành Phố Sợi Chỉ</span></footer>
         <div class="desktop-column-shield" data-column-shield></div>
     </div>
     <x-desktop-columns/>

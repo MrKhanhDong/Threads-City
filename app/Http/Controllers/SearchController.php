@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 class SearchController extends Controller
 {
@@ -57,7 +58,11 @@ class SearchController extends Controller
 
     private function publicPosts(Builder $query): Builder
     {
-        return $query->published()->visibleTo(auth()->user())->whereNull('parent_id')->where('type', '!=', 'repost')
+        if ($viewer = request()->user()) {
+            $query->whereNotIn($query->qualifyColumn('id'), DB::table('hidden_posts')->where('user_id', $viewer->id)->select('post_id'));
+        }
+
+        return $query->published()->visibleTo(auth()->user(), true)->whereHas('author', fn (Builder $authors): Builder => $authors->where('is_locked', false))->whereNull('parent_id')->where('type', '!=', 'repost')
             ->where(fn (Builder $posts): Builder => $posts->whereNull('repost_of_id')->orWhereHas('repostOf', fn (Builder $original): Builder => $original->published()));
     }
 

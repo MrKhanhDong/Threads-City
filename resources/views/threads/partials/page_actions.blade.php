@@ -858,7 +858,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 },
                 body: JSON.stringify({
                     content: content,
-                    mention_ids: inlineText.form ? [...inlineText.form.querySelectorAll('input[name="mention_ids[]"]')].map(input => Number(input.value)) : JSON.parse(inlineText.dataset.mentionIds || '[]'),
                     media_ids: inlineMediaIds,
                     type: 'post'
                 })
@@ -868,7 +867,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (data && data.success) {
                     showToast('Đã đăng bài viết thành công!');
                     inlineText.value = '';
-                    inlineText.form?.querySelectorAll('input[name="mention_ids[]"]').forEach(input => input.remove());
                     inlineMediaIds = [];
                     inlinePreview.innerHTML = '';
                     inlinePreview.style.display = 'none';
@@ -889,6 +887,54 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // 6. Infinite Scroll / Load more
+    const btnLoadMore = document.getElementById('btnLoadMoreThreads');
+    if (btnLoadMore) {
+        btnLoadMore.addEventListener('click', function() {
+            const nextUrl = this.getAttribute('data-next-url');
+            if (!nextUrl) return;
+
+            const textSpan = document.getElementById('loadMoreText');
+            const spinner = document.getElementById('loadMoreSpinner');
+            textSpan.textContent = 'Đang tải...';
+            spinner.style.display = 'inline-block';
+            this.disabled = true;
+
+            fetch(nextUrl, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
+                }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data && data.html) {
+                    const container = document.getElementById('threadsFeedContainer');
+                    const page = document.createElement('template');
+                    page.innerHTML = data.html;
+                    page.content.querySelectorAll('[data-live-key]').forEach(card => {
+                        if (document.getElementById(card.id)) card.remove();
+                    });
+                    container.append(page.content);
+
+                    if (data.hasMore && data.nextPageUrl) {
+                        btnLoadMore.setAttribute('data-next-url', data.nextPageUrl);
+                        btnLoadMore.disabled = false;
+                        textSpan.textContent = 'Tải thêm bài viết';
+                        spinner.style.display = 'none';
+                    } else {
+                        document.getElementById('loadMoreSection')?.remove();
+                    }
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                btnLoadMore.disabled = false;
+                textSpan.textContent = 'Thử lại';
+                spinner.style.display = 'none';
+            });
+        });
+    }
 });
 </script>
 @endpush

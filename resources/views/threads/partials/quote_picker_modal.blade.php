@@ -53,11 +53,11 @@
 <style>
 /* Quote Picker Modal Container */
 .quote-picker-modal-content {
-    background: #121212 !important;
-    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    background: var(--journal-surface) !important;
+    border: 1px solid var(--journal-line) !important;
     border-radius: 20px !important;
-    color: #ffffff !important;
-    box-shadow: 0 16px 50px rgba(0, 0, 0, 0.9) !important;
+    color: var(--journal-text) !important;
+    box-shadow: var(--journal-shadow) !important;
     overflow: hidden;
     min-height: 440px;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -69,12 +69,12 @@
     align-items: center;
     justify-content: space-between;
     padding: 14px 18px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    border-bottom: 1px solid var(--journal-line);
 }
 .quote-picker-back-btn {
     background: transparent;
     border: none;
-    color: #ffffff;
+    color: var(--journal-text);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -86,25 +86,25 @@
     transition: opacity 0.15s, background 0.15s;
 }
 .quote-picker-back-btn:hover {
-    background: rgba(255, 255, 255, 0.08);
+    background: color-mix(in srgb, var(--journal-text) 8%, transparent);
 }
 .quote-picker-title {
     font-size: 16px;
     font-weight: 700;
-    color: #ffffff;
+    color: var(--journal-text);
     letter-spacing: -0.2px;
 }
 
 /* Tabs */
 .quote-picker-tabs {
     display: flex;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    border-bottom: 1px solid var(--journal-line);
 }
 .quote-tab-btn {
     flex: 1;
     background: transparent;
     border: none;
-    color: #777777;
+    color: var(--journal-faint);
     font-size: 14.5px;
     font-weight: 600;
     padding: 13px 0 11px;
@@ -115,10 +115,10 @@
     user-select: none;
 }
 .quote-tab-btn:hover {
-    color: #aaaaaa;
+    color: var(--journal-muted);
 }
 .quote-tab-btn.active {
-    color: #ffffff;
+    color: var(--journal-text);
     font-weight: 700;
 }
 .quote-tab-btn.active::after {
@@ -128,7 +128,7 @@
     left: 0;
     right: 0;
     height: 2px;
-    background: #ffffff;
+    background: var(--journal-button-bg);
 }
 
 /* Body & Empty State */
@@ -147,7 +147,7 @@
     text-align: center;
 }
 #quotePickerEmptyText {
-    color: #666666;
+    color: var(--journal-faint);
     font-size: 14.5px;
     font-weight: 400;
     user-select: none;
@@ -168,8 +168,8 @@
     margin-bottom: 6px;
 }
 .quote-item-card:hover {
-    background: rgba(255, 255, 255, 0.05);
-    border-color: rgba(255, 255, 255, 0.08);
+    background: color-mix(in srgb, var(--journal-text) 5%, transparent);
+    border-color: var(--journal-line);
 }
 .quote-item-avatar {
     width: 36px;
@@ -177,21 +177,21 @@
     border-radius: 50%;
     object-fit: cover;
     flex-shrink: 0;
-    background: #242424;
+    background: var(--journal-raised);
 }
 .quote-item-avatar-letter {
     width: 36px;
     height: 36px;
     border-radius: 50%;
-    background: #242424;
-    color: #ffffff;
+    background: var(--journal-raised);
+    color: var(--journal-text);
     display: flex;
     align-items: center;
     justify-content: center;
     font-weight: 700;
     font-size: 14px;
     flex-shrink: 0;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid var(--journal-line);
 }
 .quote-item-content {
     flex: 1;
@@ -205,15 +205,15 @@
 }
 .quote-item-name {
     font-weight: 700;
-    color: #ffffff;
+    color: var(--journal-text);
     font-size: 14px;
 }
 .quote-item-time {
-    color: #777777;
+    color: var(--journal-faint);
     font-size: 12.5px;
 }
 .quote-item-text {
-    color: #d0d0d0;
+    color: var(--journal-text);
     font-size: 13.5px;
     line-height: 1.45;
     word-break: break-word;
@@ -225,7 +225,7 @@
     object-fit: cover;
     flex-shrink: 0;
     margin-left: 8px;
-    border: 1px solid #333;
+    border: 1px solid var(--journal-line);
 }
 </style>
 
@@ -380,7 +380,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (quoteContainer) {
             const avatarHtml = thread.author_avatar 
                 ? `<img src="${thread.author_avatar}" style="width: 22px; height: 22px; border-radius: 50%; object-fit: cover;" alt="${thread.author_name}">`
-                : `<div style="width: 22px; height: 22px; border-radius: 50%; background: #333; color: #fff; font-size: 11px; display: inline-flex; align-items: center; justify-content: center;">${(thread.author_name || 'U').charAt(0).toUpperCase()}</div>`;
+                : `<div style="width: 22px; height: 22px; border-radius: 50%; background: var(--journal-line); color: var(--journal-text); font-size: 11px; display: inline-flex; align-items: center; justify-content: center;">${(thread.author_name || 'U').charAt(0).toUpperCase()}</div>`;
 
             quoteContainer.style.display = 'block';
             quoteContainer.innerHTML = `
