@@ -1,8 +1,7 @@
 .chat-folder-tabs { display: flex; gap: 5px; padding: 0 16px 15px; }
 @media (max-width: 600px) {
-    .journal-mobile-nav.has-chat { grid-template-columns: repeat(6, minmax(0, 1fr)); padding-inline: 5px; }
-    .journal-mobile-nav.has-chat > a, .journal-mobile-nav.has-chat > button { min-width: 0; width: 100%; position: relative; }
-    .journal-mobile-nav .chat-nav-badge { position: absolute; top: 0; right: 2px; min-width: 15px; height: 15px; font-size: 8px; }
+    .journal-body .journal-sidebar-drawer .journal-primary-nav { display: flex; }
+    .journal-sidebar-drawer .journal-primary-nav > :not([aria-label="Chat"]) { display: none; }
 }
 .chat-message-actions { position: relative; }
 .chat-message-actions > summary { display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 50%; color: var(--journal-muted); cursor: pointer; list-style: none; opacity: 0; }
