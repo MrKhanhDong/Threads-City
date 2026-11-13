@@ -101,6 +101,9 @@ class ThreadSocialInteractionsTest extends TestCase
             ->assertOk()
             ->assertJson(['unread' => 0]);
 
+        $emptyPreview = $this->getJson(route('notifications.index', ['preview' => 1]))->assertOk();
+        $this->assertStringContainsString('notification-preview-empty', $emptyPreview->json('html'));
+
         $thread = Post::factory()->published()->create(['user_id' => $user->id, 'status' => 'published']);
 
         // Actor likes user's thread
@@ -118,6 +121,16 @@ class ThreadSocialInteractionsTest extends TestCase
             ->assertOk()
             ->assertSee('John Doe')
             ->assertSee('đã thích bài viết của bạn');
+
+        $preview = $this->getJson(route('notifications.index', ['preview' => 1]))->assertOk()->assertJsonPath('unread', 1);
+        $this->assertStringContainsString('John Doe', $preview->json('html'));
+        $this->assertStringContainsString('đã thích bài viết của bạn.', $preview->json('html'));
+        $this->assertStringContainsString('notification-preview-unread', $preview->json('html'));
+        $this->assertStringNotContainsString('notification-preview-empty', $preview->json('html'));
+
+        $this->postJson(route('notifications.read-all'))->assertOk();
+        $readPreview = $this->getJson(route('notifications.index', ['preview' => 1]))->assertOk()->assertJsonPath('unread', 0);
+        $this->assertStringNotContainsString('notification-preview-unread', $readPreview->json('html'));
     }
 
     public function test_mention_suggestions_api(): void

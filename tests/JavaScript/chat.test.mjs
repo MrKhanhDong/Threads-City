@@ -1,7 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { chatError, insertEmoji, recordingType, setupChat } from '../../resources/js/chat.js';
+import { chatError, insertEmoji, recordingType, searchableChatText, setupChat } from '../../resources/js/chat.js';
 import { playbackDuration } from '../../resources/js/thread-media.js';
+
+test('inbox search matches Vietnamese names with or without accents', () => {
+    assert.equal(searchableChatText('  Đặng Thành Phương  '), 'dang thanh phuong');
+    assert.ok(searchableChatText('Đặng Thành Phương · Xin chào').includes(searchableChatText('thanh phuong')));
+    assert.equal(searchableChatText(''), '');
+});
 
 test('chat surfaces field errors and an expired session without losing the draft', () => {
     assert.equal(chatError({ errors: { image: ['Ảnh quá lớn.'] } }, 422), 'Ảnh quá lớn.');

@@ -14,11 +14,29 @@ export function insertEmoji(text, emoji, start, end = start) {
     return { value: text.slice(0, start) + emoji + text.slice(end), caret: start + emoji.length };
 }
 
+export function searchableChatText(value) {
+    return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[đĐ]/g, 'd').toLowerCase().trim();
+}
+
 export function setupChat(doc = document, win = window) {
     const csrf = doc.querySelector('meta[name="csrf-token"]')?.content;
     const root = doc.querySelector('[data-chat-app]');
     const badgeLink = doc.querySelector('[data-chat-unread-url]');
     if (!root && !badgeLink) return;
+    const inboxFilter = root?.querySelector('[data-chat-filter]');
+    const filterInbox = () => {
+        if (!inboxFilter) return;
+        const query = searchableChatText(inboxFilter.value);
+        let visible = 0;
+        root.querySelectorAll('.chat-conversation').forEach(link => {
+            link.hidden = !searchableChatText(link.textContent).includes(query);
+            if (!link.hidden) visible++;
+        });
+        root.querySelector('[data-chat-no-results]').hidden = !query || visible > 0;
+        const empty = root.querySelector('.chat-empty-inbox');
+        if (empty) empty.hidden = !!query;
+    };
+    inboxFilter?.addEventListener('input', filterInbox);
     const lifetime = new AbortController();
     doc.addEventListener('click', event => {
         if (win.matchMedia('(hover: none)').matches) {
@@ -125,6 +143,7 @@ export function setupChat(doc = document, win = window) {
                 inboxUrl.searchParams.set('page', new URL(win.location.href).searchParams.get('page') || '1');
                 const inbox = await request(inboxUrl);
                 root.querySelector('[data-chat-inbox]').innerHTML = inbox.html;
+                filterInbox();
                 root.querySelectorAll('.chat-conversation').forEach(link => { const active = new URL(link.href).pathname === win.location.pathname; link.classList.toggle('is-active', active); if (active) link.setAttribute('aria-current', 'page'); });
                 updateBadge(inbox.unread_count, inbox.request_count || 0);
                 root.querySelectorAll('[data-chat-request-count]').forEach(count => { count.textContent = inbox.request_count || ''; });
@@ -150,7 +169,7 @@ export function setupChat(doc = document, win = window) {
                 expired = true; messages.querySelectorAll('audio').forEach(audio => audio.pause()); messages.replaceChildren();
                 root.querySelector('[data-chat-search-results]')?.replaceChildren();
                 form.querySelectorAll('button,textarea').forEach(control => { control.disabled = true; });
-                if (status) status.textContent = 'Hội thoại không còn khả dụng. Quay lại danh sách Chat.';
+                if (status) status.textContent = 'Hội thoại không còn khả dụng. Quay lại danh sách tin nhắn.';
                 return;
             }
             if (status && error.name !== 'AbortError') status.textContent = expired ? error.message : 'Đang kết nối lại…';

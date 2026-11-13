@@ -133,7 +133,48 @@ export function inspectClip(file, doc = document, pageWindow = window) {
     });
 }
 
+export function galleryHeight(width, ratios) {
+    if (!(width > 0) || ratios.length < 2) return 240;
+    const validRatios = ratios.map(ratio => Number.isFinite(ratio) && ratio > 0 ? ratio : 1);
+    const visible = validRatios.slice(0, 3);
+    const total = visible[0] + visible[1] + (visible[2] || 0) * 0.35;
+    return Math.max(1, Math.min(340, (width - (visible.length === 2 ? 8 : 16)) / total, width * 0.95 / Math.max(...validRatios)));
+}
+
+export function setupMediaSizing(doc = document, pageWindow = window) {
+    const galleries = new Set();
+    const resize = gallery => {
+        const tiles = [...gallery.querySelectorAll('.thread-media-tile')];
+        const ratios = tiles.map(tile => {
+            const media = tile.querySelector('img, video');
+            const width = media?.naturalWidth || media?.videoWidth;
+            const height = media?.naturalHeight || media?.videoHeight;
+            const ratio = width > 0 && height > 0 ? width / height : 1;
+            tile.style.setProperty('--media-ratio', String(ratio));
+            return ratio;
+        });
+        gallery.style.setProperty('--media-height', `${galleryHeight(gallery.clientWidth, ratios)}px`);
+    };
+    const observer = pageWindow.ResizeObserver ? new pageWindow.ResizeObserver(entries => entries.forEach(entry => resize(entry.target))) : null;
+    const initialize = () => {
+        galleries.forEach(gallery => { if (!gallery.isConnected) { observer?.unobserve(gallery); galleries.delete(gallery); } });
+        doc.querySelectorAll('[data-media-gallery]').forEach(gallery => {
+            if (galleries.has(gallery)) return;
+            galleries.add(gallery); observer?.observe(gallery); resize(gallery);
+        });
+    };
+    const loaded = event => {
+        const gallery = event.target.closest?.('[data-media-gallery]');
+        if (gallery) resize(gallery);
+    };
+    doc.addEventListener('load', loaded, true);
+    doc.addEventListener('loadedmetadata', loaded, true);
+    if (!observer) pageWindow.addEventListener('resize', () => galleries.forEach(resize));
+    return initialize;
+}
+
 export function setupThreadMedia(doc = document, pageWindow = window) {
+    const sizeGalleries = setupMediaSizing(doc, pageWindow);
     setupMediaDrag(doc, pageWindow);
     pageWindow.inspectThreadClip = file => inspectClip(file, doc, pageWindow);
     const players = new Set();
@@ -158,6 +199,7 @@ export function setupThreadMedia(doc = document, pageWindow = window) {
     }, { threshold: [0, 0.25, 0.6, 0.9, 1] }) : null;
 
     function initialize() {
+        sizeGalleries();
         players.forEach(media => {
             if (!media.isConnected) {
                 media.pause(); observer?.unobserve(media); ratios.delete(media); players.delete(media);
@@ -304,7 +346,7 @@ export function setupThreadMedia(doc = document, pageWindow = window) {
     initialize();
     let queued = false;
     new pageWindow.MutationObserver(records => {
-        const changedMedia = records.some(record => [...record.addedNodes, ...record.removedNodes].some(node => node.nodeType === 1 && (node.matches('[data-player], [data-clip], [data-voice]') || node.querySelector('[data-player], [data-clip], [data-voice]'))));
+        const changedMedia = records.some(record => [...record.addedNodes, ...record.removedNodes].some(node => node.nodeType === 1 && (node.matches('[data-player], [data-clip], [data-voice], [data-media-gallery]') || node.querySelector('[data-player], [data-clip], [data-voice], [data-media-gallery]'))));
         if (changedMedia && !queued) { queued = true; pageWindow.requestAnimationFrame(() => { queued = false; initialize(); }); }
     }).observe(doc.querySelector('.journal-workspace') || doc.body, { childList: true, subtree: true });
     doc.addEventListener('visibilitychange', () => { if (doc.hidden) pauseOthers(null); });

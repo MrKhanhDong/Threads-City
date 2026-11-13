@@ -334,19 +334,24 @@
 .journal-body .notification-button { position: relative; color: var(--journal-text); background: transparent; }
 .journal-body .notification-button:hover, .journal-body .notification-button[aria-expanded="true"] { background: var(--journal-raised); }
 .notification-dot { position: absolute; top: 3px; right: 2px; width: 9px; height: 9px; border: 2px solid var(--journal-bg); border-radius: 50%; background: #ff3040; }
-.journal-body .notification-menu { width: 360px; max-width: calc(100vw - 24px); padding: 0; overflow: hidden; border-radius: 20px; background: var(--journal-menu-bg); box-shadow: var(--journal-shadow); }
+.journal-body .notification-menu { width: 380px; max-width: calc(100vw - 24px); padding: 0; overflow: hidden; border: 1px solid var(--journal-line); border-radius: 22px; background: var(--journal-surface); box-shadow: 0 12px 48px #0003; }
 .notification-menu-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 18px 18px 14px; border-bottom: 1px solid var(--journal-line); }
-.notification-menu-heading > strong { font-size: 16px; }
+.notification-menu-title { display: flex; align-items: center; gap: 8px; }
+.notification-menu-title > strong { font-size: 16px; font-weight: 650; letter-spacing: -.25px; }
+.notification-menu-title > span { display: inline-grid; place-items: center; min-width: 21px; height: 21px; padding: 0 6px; border-radius: 12px; background: var(--journal-raised); color: var(--journal-muted); font-size: 11px; font-weight: 600; }
 .notification-menu-heading form { margin: 0; }
-.notification-menu-heading button, .notification-retry { border: 0; border-radius: 8px; padding: 5px 7px; background: transparent; color: var(--journal-text); font-size: 12px !important; }
+.notification-menu-heading button, .notification-retry { border: 0; border-radius: 10px; min-height: 36px; padding: 7px 9px; background: transparent; color: var(--journal-text); font-size: 12px !important; }
 .notification-menu-heading button:hover, .notification-retry:hover { background: var(--journal-hover); }
 .notification-menu-heading button:disabled { color: var(--journal-faint); cursor: default; background: transparent; }
 .notification-status { margin: 0; padding: 14px 18px 6px; color: var(--journal-muted); font-size: 12px; }
 .notification-status:empty { display: none; }
 .notification-retry { margin: 0 11px 8px; }
 .notification-menu [data-notification-items] { max-height: min(380px, calc(100dvh - 240px)); overflow-y: auto; overscroll-behavior: contain; }
-.journal-body .notification-preview-item { display: flex; align-items: flex-start; gap: 12px; padding: 14px 18px; border-bottom: 1px solid var(--journal-line); color: var(--journal-muted); font-size: 13px; line-height: 1.5; }
-.notification-preview-item:last-child { border-bottom: 0; }
+.notification-preview-row { margin: 0; }
+.notification-preview-row + .notification-preview-row { border-top: 1px solid var(--journal-line); }
+.journal-body .notification-preview-item { display: flex; align-items: flex-start; gap: 12px; width: 100%; padding: 16px 18px; border: 0; background: transparent; color: var(--journal-muted); text-align: left; font: inherit; font-size: 13px; line-height: 1.5; }
+.notification-preview-portrait { position: relative; flex-shrink: 0; padding-bottom: 3px; }
+.notification-preview-action { position: absolute; right: -3px; bottom: 0; display: grid; place-items: center; width: 19px; height: 19px; border: 2px solid var(--journal-surface); border-radius: 50%; background: var(--journal-text); color: var(--journal-surface); }
 .journal-body .notification-preview-item:hover, .journal-body .notification-preview-item:focus-visible { color: var(--journal-text); background: var(--journal-hover); outline-offset: -3px; }
 .notification-preview-avatar { display: flex; align-items: center; justify-content: center; flex-shrink: 0; width: 38px; height: 38px; border-radius: 50%; object-fit: cover; color: var(--journal-text); background: var(--journal-raised); font-weight: 600; }
 .notification-preview-copy { flex: 1; min-width: 0; overflow-wrap: anywhere; }
@@ -355,10 +360,11 @@
 .notification-preview-copy small, .notification-preview-snippet { display: block; color: var(--journal-faint); font-size: 11px; margin-top: 5px; }
 .notification-preview-snippet { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .notification-preview-unread { flex-shrink: 0; width: 7px; height: 7px; margin-top: 7px; border-radius: 50%; background: #ff3040; }
-.notification-preview-empty { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 34px 22px; text-align: center; color: var(--journal-muted); }
+.notification-preview-empty { display: flex; flex-direction: column; align-items: center; gap: 9px; padding: 34px 24px 38px; text-align: center; color: var(--journal-muted); }
+.notification-empty-icon { display: grid; place-items: center; width: 62px; height: 62px; margin-bottom: 7px; border: 1px solid var(--journal-line); border-radius: 50%; color: var(--journal-muted); }
 .notification-preview-empty strong { font-size: 14px; color: var(--journal-text); }
-.notification-preview-empty p { font-size: 12px; margin: 0; }
-.journal-body .notification-view-all { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 14px 18px; border-top: 1px solid var(--journal-line); color: var(--journal-text); font-size: 12px; font-weight: 600; }
+.notification-preview-empty p { font-size: 13px; line-height: 1.6; margin: 0; }
+.journal-body .notification-view-all { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 52px; padding: 14px 20px; border-top: 1px solid var(--journal-line); color: var(--journal-text); font-size: 13px; font-weight: 600; }
 .journal-body .notification-view-all:hover { background: var(--journal-hover); }
 @media (max-width: 600px) {
     .journal-body .notification-menu {

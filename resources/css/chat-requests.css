@@ -1,7 +1,7 @@
 .chat-folder-tabs { display: flex; gap: 5px; padding: 0 16px 15px; }
 @media (max-width: 600px) {
     .journal-body .journal-sidebar-drawer .journal-primary-nav { display: flex; }
-    .journal-sidebar-drawer .journal-primary-nav > :not([aria-label="Chat"]) { display: none; }
+    .journal-sidebar-drawer .journal-primary-nav > :not([aria-label="Tin nhắn"]) { display: none; }
 }
 .chat-message-actions { position: relative; }
 .chat-app .chat-bubble-row { display: flex; align-items: center; gap: 6px; max-width: 100%; }
@@ -33,7 +33,7 @@
 .chat-app .chat-voice-player { width: 270px; max-width: 100%; margin: 0; padding: 0; border: 0; background: transparent; color: inherit; }
 .chat-app .chat-voice-player .media-controls { padding: 0; gap: 10px; }
 .chat-app .chat-voice-player .media-controls button { width: 36px; min-width: 36px; height: 36px; min-height: 36px; background: var(--journal-text); color: var(--journal-surface); }
-.chat-app .is-own .chat-voice-player .media-controls button { background: #fff; color: #7552e8; }
+.chat-app .is-own .chat-voice-player .media-controls button { background: var(--journal-button-text); color: var(--journal-button-bg); }
 .chat-app .chat-voice-player .media-time { font-size: 10px; min-width: 64px; text-align: right; font-variant-numeric: tabular-nums; }
 .chat-app .chat-voice-player .media-controls input { width: 100%; min-width: 40px; height: 28px; }
 .chat-app .chat-attachment-preview .voice-player { flex: 1; min-width: 0; width: 260px; padding: 5px; margin: 0; border: 0; background: transparent; }

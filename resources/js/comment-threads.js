@@ -89,6 +89,7 @@ export function setupReplyNotifications(doc = document, pageWindow = window) {
     const status = bell.querySelector('[data-notifications-status]');
     const retry = bell.querySelector('[data-notifications-retry]');
     const readAll = bell.querySelector('[data-notifications-read-all] button');
+    const unreadTotal = bell.querySelector('[data-notification-total]');
     let busy = false;
     let refreshAgain = false;
     let markingRead = false;
@@ -107,6 +108,7 @@ export function setupReplyNotifications(doc = document, pageWindow = window) {
             if (!Number.isSafeInteger(data.unread) || data.unread < 0 || (!summary && typeof data.html !== 'string')) throw new Error('Phản hồi thông báo không hợp lệ.');
             if (version !== revision) return;
             badge.hidden = data.unread === 0;
+            if (unreadTotal) { unreadTotal.hidden = data.unread === 0; unreadTotal.textContent = data.unread > 99 ? '99+' : String(data.unread); }
             readAll.disabled = data.unread === 0;
             button.setAttribute('aria-label', data.unread ? 'Thông báo: ' + data.unread + ' chưa đọc' : 'Thông báo');
             if (!summary) { items.innerHTML = data.html; status.textContent = ''; }

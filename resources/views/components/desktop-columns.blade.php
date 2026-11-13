@@ -1,7 +1,7 @@
 @php
     $columnTabs = [
         'home' => ['label' => 'Dành cho bạn', 'url' => route('home')],
-        'chat' => ['label' => 'Chat', 'url' => route('chat.index')],
+        'chat' => ['label' => 'Tin nhắn', 'url' => route('chat.index')],
         'search' => ['label' => 'Tìm kiếm', 'url' => route('search.index')],
         'activity' => ['label' => 'Hoạt động', 'url' => route('notifications.index')],
         'profile' => ['label' => 'Trang cá nhân', 'url' => auth()->check() ? route('profile.show', auth()->user()->username ?: auth()->id()) : route('login')],
