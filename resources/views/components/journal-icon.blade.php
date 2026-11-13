@@ -1,6 +1,9 @@
 @props(['name', 'size' => 22])
 <svg width="{{ $size }}" height="{{ $size }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" {{ $attributes }}>
     @switch($name)
+        @case('microphone')<rect x="9" y="2" width="6" height="13" rx="3"/><path d="M5 10v2a7 7 0 0 0 14 0v-2m-7 9v3m-4 0h8"/>@break
+        @case('smile')<circle cx="12" cy="12" r="9"/><path d="M8 14s1.5 3 4 3 4-3 4-3M8 9h.01M16 9h.01"/>@break
+        @case('send')<path d="m21 3-7 18-4-7-7-4 18-7ZM10 14 21 3"/>@break
         @case('add-column')<rect x="3" y="3" width="18" height="18" rx="4"/><path d="M9 3v18m7-12v6m-3-3h6"/>@break
         @case('grip')<path d="M8 5h.01M16 5h.01M8 12h.01M16 12h.01M8 19h.01M16 19h.01" stroke-width="3"/>@break
         @case('chevron')<path d="m9 5 7 7-7 7"/>@break

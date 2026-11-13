@@ -1,4 +1,5 @@
 @import './thread-legacy.css';
+@import './chat.css';
 @import './thread-media.css';
 .journal-body .skip-link {
     position: fixed;
