@@ -16,7 +16,7 @@ class ChatMessage extends Model
 
     protected function casts(): array
     {
-        return ['reactions' => 'array', 'edited_at' => 'datetime', 'recalled_at' => 'datetime'];
+        return ['reactions' => 'array', 'duration_ms' => 'integer', 'edited_at' => 'datetime', 'recalled_at' => 'datetime'];
     }
 
     public function conversation(): BelongsTo

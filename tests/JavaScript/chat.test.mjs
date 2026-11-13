@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { chatError, insertEmoji, recordingType, setupChat } from '../../resources/js/chat.js';
+import { playbackDuration } from '../../resources/js/thread-media.js';
 
 test('chat surfaces field errors and an expired session without losing the draft', () => {
     assert.equal(chatError({ errors: { image: ['Ảnh quá lớn.'] } }, 422), 'Ảnh quá lớn.');
@@ -22,4 +23,11 @@ test('voice recorder selects the first supported audio container including Safar
 
 test('pages without chat controls do not make network calls or start timers', () => {
     setupChat({ querySelector: () => null }, { fetch() { assert.fail('Unexpected network request'); } });
+});
+
+test('voice uses its saved length when WebM metadata is missing, zero or infinite', () => {
+    for (const duration of [NaN, Infinity, 0]) assert.equal(playbackDuration({ duration, dataset: { duration: '12.5' } }), 12.5);
+    assert.equal(playbackDuration({ duration: 90, dataset: { duration: '12.5' } }), 12.5);
+    assert.equal(playbackDuration({ duration: 10, dataset: {} }), 10);
+    assert.equal(playbackDuration({ duration: NaN, dataset: {} }), 0);
 });

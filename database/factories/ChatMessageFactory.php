@@ -19,7 +19,7 @@ class ChatMessageFactory extends Factory
     public function definition(): array
     {
         return [
-            'chat_conversation_id' => ChatConversation::factory(),
+            'chat_conversation_id' => ChatConversation::factory()->mutual(),
             'sender_id' => fn (array $attributes): int => ChatConversation::findOrFail($attributes['chat_conversation_id'])->first_user_id,
             'client_token' => fake()->uuid(),
             'kind' => 'text',

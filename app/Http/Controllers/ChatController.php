@@ -28,15 +28,20 @@ class ChatController extends Controller
     public function index(Request $request, ?ChatConversation $conversation = null): View|JsonResponse
     {
         $partner = $conversation ? $this->chat->authorize($conversation, $request->user()) : null;
-        $conversations = $this->chat->inbox($request->user())->paginate(30);
+        $filters = $request->validate(['folder' => 'nullable|in:inbox,requests']);
+        $canSend = $partner ? $this->chat->canSend($request->user(), $partner) : false;
+        $mutual = $partner ? $this->chat->mutual($request->user(), $partner) : false;
+        $folder = $partner ? ($canSend ? 'inbox' : 'requests') : ($filters['folder'] ?? 'inbox');
+        $conversations = $this->chat->inbox($request->user(), $folder)->paginate(30)->withQueryString();
+        $requestCount = $this->chat->requestCount($request->user());
         $messages = $conversation ? $conversation->messages()->with(['sender', 'replyTo'])->latest('id')->take(40)->get()->reverse()->values() : collect();
         $stickers = DirectMessages::STICKERS;
 
         if ($request->expectsJson()) {
-            return response()->json(['html' => view('chat.conversations', compact('conversations', 'conversation'))->render(), 'unread_count' => $this->chat->unreadCount($request->user())])->header('Cache-Control', 'private, no-store');
+            return response()->json(['html' => view('chat.conversations', compact('conversations', 'conversation', 'folder'))->render(), 'unread_count' => $this->chat->unreadCount($request->user()), 'request_count' => $requestCount])->header('Cache-Control', 'private, no-store');
         }
 
-        return view('chat.index', compact('conversations', 'conversation', 'partner', 'messages', 'stickers'));
+        return view('chat.index', compact('conversations', 'conversation', 'partner', 'messages', 'stickers', 'canSend', 'mutual', 'folder', 'requestCount'));
     }
 
     public function people(Request $request): JsonResponse
@@ -44,6 +49,7 @@ class ChatController extends Controller
         $data = $request->validate(['q' => 'nullable|string|max:80']);
         $term = addcslashes(trim($data['q'] ?? ''), '\\%_');
         $people = User::discoverableTo($request->user())->where('is_locked', false)->whereKeyNot($request->user()->id)
+            ->whereIn('id', $request->user()->following()->select('users.id'))
             ->when($term !== '', fn (Builder $users): Builder => $users->where(fn (Builder $names): Builder => $names->where('name', 'like', '%'.$term.'%')->orWhere('username', 'like', '%'.$term.'%')))
             ->orderBy('name')->limit(15)->get();
 
@@ -52,7 +58,7 @@ class ChatController extends Controller
 
     public function unread(Request $request): JsonResponse
     {
-        return response()->json(['unread_count' => $this->chat->unreadCount($request->user())])->header('Cache-Control', 'private, no-store');
+        return response()->json(['unread_count' => $this->chat->unreadCount($request->user()), 'request_count' => $this->chat->requestCount($request->user())])->header('Cache-Control', 'private, no-store');
     }
 
     public function start(Request $request): RedirectResponse|JsonResponse
@@ -62,6 +68,7 @@ class ChatController extends Controller
         abort_if($recipient->id === $request->user()->id, 422, 'Hãy chọn một người khác để nhắn tin.');
         $conversation = DB::transaction(function () use ($request, $recipient): ChatConversation {
             $this->chat->lockUsers($request->user(), $recipient);
+            $this->chat->authorizeSend($request->user(), $recipient);
 
             return ChatConversation::firstOrCreate(['first_user_id' => min($request->user()->id, $recipient->id), 'second_user_id' => max($request->user()->id, $recipient->id)]);
         });
@@ -71,7 +78,7 @@ class ChatController extends Controller
 
     public function messages(Request $request, ChatConversation $conversation): JsonResponse
     {
-        $this->chat->authorize($conversation, $request->user());
+        $partner = $this->chat->authorize($conversation, $request->user());
         $data = $request->validate(['after' => 'nullable|integer|min:0', 'before' => 'nullable|integer|min:1', 'refresh' => 'nullable|array|max:80', 'refresh.*' => 'integer|min:1', 'q' => 'nullable|string|max:100']);
         $incremental = array_key_exists('after', $data);
         $query = $conversation->messages()->with(['sender', 'replyTo']);
@@ -89,11 +96,15 @@ class ChatController extends Controller
             $messages = $messages->merge($conversation->messages()->with(['sender', 'replyTo'])->whereKey($data['refresh'])->get())->unique('id')->sortBy('id')->values();
         }
         $otherSide = $conversation->side($request->user()) === 'first' ? 'second' : 'first';
+        $canSend = $this->chat->canSend($request->user(), $partner);
+        $mutual = $this->chat->mutual($request->user(), $partner);
 
         return response()->json([
-            'html' => view('chat.messages', compact('messages', 'conversation'))->render(),
+            'html' => view('chat.messages', compact('messages', 'conversation', 'canSend', 'mutual'))->render(),
             'cursor' => $cursor, 'has_older' => $hasOlder, 'has_newer' => $hasNewer,
-            'typing' => $conversation->{$otherSide.'_typing_at'}?->gt(now()->subSeconds(6)) ?? false,
+            'can_send' => $this->chat->canSend($request->user(), $partner),
+            'mutual' => $this->chat->mutual($request->user(), $partner),
+            'typing' => $this->chat->mutual($request->user(), $partner) && ($conversation->{$otherSide.'_typing_at'}?->gt(now()->subSeconds(6)) ?? false),
             'read_id' => (int) $conversation->{$otherSide.'_read_id'},
         ])->header('Cache-Control', 'private, no-store');
     }
@@ -101,6 +112,7 @@ class ChatController extends Controller
     public function send(Request $request, ChatConversation $conversation): JsonResponse|RedirectResponse
     {
         $partner = $this->chat->authorize($conversation, $request->user());
+        $this->chat->authorizeSend($request->user(), $partner);
         $data = $request->validate([
             'client_token' => 'required|uuid', 'body' => 'nullable|string|max:4000',
             'kind' => ['required', Rule::in(['text', 'image', 'voice', 'sticker'])],
@@ -123,6 +135,7 @@ class ChatController extends Controller
         try {
             $message = DB::transaction(function () use ($request, $conversation, $partner, $data, $body, $file, $path): ChatMessage {
                 $this->chat->lockUsers($request->user(), $partner);
+                $this->chat->authorizeSend($request->user(), $partner);
                 $locked = ChatConversation::lockForUpdate()->findOrFail($conversation->id);
                 $message = $locked->messages()->firstOrCreate(['sender_id' => $request->user()->id, 'client_token' => $data['client_token']], [
                     'kind' => $data['kind'], 'body' => $body === '' ? null : $body, 'attachment_path' => $path, 'attachment_mime' => $file?->getMimeType(),
@@ -198,7 +211,8 @@ class ChatController extends Controller
 
     public function react(Request $request, ChatConversation $conversation, ChatMessage $message): JsonResponse
     {
-        $this->chat->authorize($conversation, $request->user());
+        $partner = $this->chat->authorize($conversation, $request->user());
+        abort_unless($this->chat->mutual($request->user(), $partner), 403, 'Theo dõi nhau để tương tác với tin nhắn.');
         abort_unless($message->chat_conversation_id === $conversation->id, 404);
         $data = $request->validate(['reaction' => ['nullable', Rule::in(DirectMessages::REACTIONS)]]);
         DB::transaction(function () use ($request, $conversation, $message, $data): void {
@@ -219,18 +233,22 @@ class ChatController extends Controller
 
     public function read(Request $request, ChatConversation $conversation): JsonResponse
     {
-        $this->chat->authorize($conversation, $request->user());
+        $partner = $this->chat->authorize($conversation, $request->user());
+        if (! $this->chat->mutual($request->user(), $partner)) {
+            return response()->json(['unread_count' => $this->chat->unreadCount($request->user()), 'request_count' => $this->chat->requestCount($request->user())]);
+        }
         $data = $request->validate(['message_id' => 'required|integer|min:1']);
         $conversation->messages()->whereKey($data['message_id'])->firstOrFail();
         $column = $conversation->side($request->user()).'_read_id';
         ChatConversation::whereKey($conversation->id)->where($column, '<', $data['message_id'])->update([$column => $data['message_id']]);
 
-        return response()->json(['unread_count' => $this->chat->unreadCount($request->user())]);
+        return response()->json(['unread_count' => $this->chat->unreadCount($request->user()), 'request_count' => $this->chat->requestCount($request->user())]);
     }
 
     public function typing(Request $request, ChatConversation $conversation): JsonResponse
     {
-        $this->chat->authorize($conversation, $request->user());
+        $partner = $this->chat->authorize($conversation, $request->user());
+        abort_unless($this->chat->mutual($request->user(), $partner), 403);
         $data = $request->validate(['typing' => 'required|boolean']);
         ChatConversation::whereKey($conversation->id)->update([$conversation->side($request->user()).'_typing_at' => $data['typing'] ? now() : null]);
 
@@ -269,7 +287,8 @@ class ChatController extends Controller
     private function messageResponse(ChatMessage $message, ChatConversation $conversation): JsonResponse
     {
         $message->load(['sender', 'replyTo']);
+        $partner = $conversation->partner(request()->user());
 
-        return response()->json(['id' => $message->id, 'html' => view('chat.messages', ['messages' => collect([$message]), 'conversation' => $conversation->fresh()])->render()])->header('Cache-Control', 'private, no-store');
+        return response()->json(['id' => $message->id, 'html' => view('chat.messages', ['messages' => collect([$message]), 'conversation' => $conversation->fresh(), 'canSend' => $this->chat->canSend(request()->user(), $partner), 'mutual' => $this->chat->mutual(request()->user(), $partner)])->render()])->header('Cache-Control', 'private, no-store');
     }
 }

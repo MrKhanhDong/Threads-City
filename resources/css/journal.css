@@ -1,6 +1,7 @@
 @import './thread-legacy.css';
 @import './chat.css';
 @import './thread-media.css';
+@import './chat-requests.css';
 .journal-body .skip-link {
     position: fixed;
     inset-block-start: 12px;

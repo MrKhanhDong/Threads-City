@@ -3,6 +3,12 @@ export function mediaTime(seconds) {
     return `${Math.floor(value / 60)}:${String(value % 60).padStart(2, '0')}`;
 }
 
+export function playbackDuration(media) {
+    const saved = Number(media.dataset?.duration);
+    if (Number.isFinite(saved) && saved > 0) return saved;
+    return Number.isFinite(media.duration) && media.duration > 0 ? media.duration : 0;
+}
+
 export function galleryIndex(index, change, count) {
     return count ? (index + change + count) % count : 0;
 }
@@ -170,14 +176,15 @@ export function setupThreadMedia(doc = document, pageWindow = window) {
             const range = controls.querySelector('input');
             const time = controls.querySelector('.media-time');
             const update = () => {
-                const duration = Number.isFinite(media.duration) ? media.duration : Number(media.dataset.duration || 0);
-                const progress = duration ? media.currentTime / duration * 100 : 0;
+                const duration = playbackDuration(media);
+                const current = media.ended && duration ? duration : media.currentTime;
+                const progress = duration ? Math.min(100, Math.max(0, current / duration * 100)) : 0;
                 range.value = String(progress);
-                const clock = `${mediaTime(media.currentTime)} / ${mediaTime(duration)}`;
+                const clock = `${mediaTime(duration ? Math.min(current, duration) : current)} / ${mediaTime(duration)}`;
                 if (!media.dataset.mediaLoading && time.textContent !== clock) time.textContent = clock;
                 player.querySelectorAll('.voice-waveform > span').forEach((bar, index, bars) => bar.classList.toggle('is-played', index / bars.length * 100 <= progress && progress > 0));
             };
-            media.addEventListener('loadedmetadata', update); media.addEventListener('timeupdate', update);
+            media.addEventListener('loadedmetadata', update); media.addEventListener('durationchange', update); media.addEventListener('timeupdate', update); media.addEventListener('ended', update);
             media.addEventListener('play', () => {
                 pauseOthers(media); media.dataset.mediaPlaying = '1';
                 toggle.innerHTML = mediaIcon('pause'); toggle.setAttribute('aria-label', 'Tạm dừng'); toggle.title = 'Tạm dừng';
@@ -191,6 +198,7 @@ export function setupThreadMedia(doc = document, pageWindow = window) {
                     delete media.dataset.userPaused; pauseOthers(media);
                     try {
                         if (voice && !media.src.startsWith('blob:')) {
+                            const resumeAt = media.currentTime;
                             toggle.disabled = true; player.setAttribute('aria-busy', 'true'); media.dataset.mediaLoading = '1';
                             time.textContent = 'Đang tải…';
                             const controller = new pageWindow.AbortController(); voiceSources.set(media, { controller });
@@ -200,7 +208,9 @@ export function setupThreadMedia(doc = document, pageWindow = window) {
                             finally { pageWindow.clearTimeout(timeout); }
                             if (!media.isConnected) return;
                             const url = pageWindow.URL.createObjectURL(blob);
-                            voiceSources.set(media, { url }); media.src = url; media.preload = 'auto'; media.load();
+                            voiceSources.set(media, { url }); media.src = url; media.preload = 'auto';
+                            if (resumeAt > 0) media.addEventListener('loadedmetadata', () => { media.currentTime = resumeAt; }, { once: true });
+                            media.load();
                         }
                         if (version === playbackVersion && media.isConnected) await media.play();
                     } catch { time.textContent = 'Chạm để thử lại'; }
@@ -208,7 +218,7 @@ export function setupThreadMedia(doc = document, pageWindow = window) {
                 }
                 else { media.dataset.userPaused = '1'; media.pause(); }
             });
-            range.addEventListener('input', () => { const duration = Number.isFinite(media.duration) ? media.duration : Number(media.dataset.duration || 0); if (duration > 0) media.currentTime = Number(range.value) / 100 * duration; });
+            range.addEventListener('input', () => { const duration = playbackDuration(media); if (duration > 0) media.currentTime = Number(range.value) / 100 * duration; });
             const muteButton = controls.querySelector('[data-media-mute]');
             const updateVolume = () => {
                 if (!muteButton) return;
@@ -236,6 +246,7 @@ export function setupThreadMedia(doc = document, pageWindow = window) {
             };
             player.addEventListener('fullscreenchange', updateFullscreen);
             controls.addEventListener('click', event => event.stopPropagation());
+            update();
             if (!voice) observer?.observe(media);
         });
     }
