@@ -30,7 +30,7 @@ class PhuongInterfaceTest extends TestCase
             ->assertSee('Bài đăng vẫn còn')->assertSee('newThreadModal', false)
             ->assertSee('data-compose="new"', false)->assertSee('sidebarNotificationBadge', false)
             ->assertSee('quotePickerModal', false)->assertSee('locationPickerModal', false)
-            ->assertSee('btn-ajax-poll-vote', false)->assertSee('action-like-btn', false)
+            ->assertSee('modalAddPollBtn', false)->assertSee('action-like-btn', false)
             ->assertSee('thread-option-', false);
         $this->assertDatabaseHas('posts', ['id' => $post->id, 'title' => 'Bài đăng vẫn còn']);
     }
@@ -40,8 +40,9 @@ class PhuongInterfaceTest extends TestCase
         $match = Post::factory()->published()->create(['title' => 'Tìm giao diện Phuong', 'content' => 'Nội dung cần tìm']);
         Post::factory()->published()->create(['title' => 'Bài khác', 'content' => 'Không trùng']);
         Post::factory()->create(['title' => 'Bản nháp Phuong', 'content' => 'Không công khai']);
-        $this->get(route('home', ['search' => 1, 'q' => 'Phuong']))->assertOk()
-            ->assertSee('journal-restored-search', false)->assertSee('Nội dung cần tìm')
+        $this->get(route('home', ['search' => 1, 'q' => 'Phuong']))->assertRedirect(route('search.index', ['q' => 'Phuong']));
+        $this->get(route('search.index', ['q' => 'Phuong']))->assertOk()
+            ->assertSee('discovery-search-form', false)->assertSee('Nội dung cần tìm')
             ->assertDontSee('Bản nháp Phuong')
             ->assertViewHas('threads', fn ($threads): bool => $threads->total() === 1 && $threads->first()->id === $match->id);
         $this->getJson(route('home', ['q' => ['invalid']]))->assertUnprocessable();

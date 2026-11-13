@@ -33,9 +33,12 @@ class ThreadController extends Controller
         return response()->json($users->map(fn (User $user): array => ['id' => $user->id, 'name' => $user->name, 'username' => $user->username, 'handle' => $user->handle(), 'url' => route('mentions.profile', $user), 'avatar_url' => $user->avatar_path ? route('avatar.show', $user) : null]))->header('Cache-Control', 'private, no-store');
     }
 
-    public function index(Request $request): View|JsonResponse
+    public function index(Request $request): View|JsonResponse|RedirectResponse
     {
         $filters = $request->validate(['tab' => 'nullable|in:for-you,following', 'q' => 'nullable|string|max:150', 'search' => 'nullable|boolean']);
+        if ($request->boolean('search')) {
+            return redirect()->route('search.index', $request->only(['q', 'type', 'period', 'scope', 'category', 'tag', 'page']));
+        }
         $tab = $filters['tab'] ?? 'for-you';
         $query = Post::published()->visibleTo($request->user(), true)
             ->whereNull('parent_id')
@@ -216,6 +219,10 @@ class ThreadController extends Controller
 
     public function store(Request $request): RedirectResponse|JsonResponse
     {
+        $mediaLimit = (int) config('blog.thread_media_limit');
+        if (is_array($request->input('poll_options'))) {
+            $request->merge(['poll_options' => array_map(fn ($option) => is_string($option) ? trim($option) : $option, $request->input('poll_options'))]);
+        }
         if ($request->input('poll_options') === []) {
             $request->merge(['poll_options' => null]);
         }
@@ -230,15 +237,20 @@ class ThreadController extends Controller
             'parent_id' => 'nullable|exists:posts,id',
             'repost_of_id' => 'nullable|exists:posts,id',
             'type' => 'nullable|in:post,reply,repost,quote',
-            'media_ids' => 'nullable|array|max:4',
+            'media_ids' => 'nullable|array|max:'.$mediaLimit,
             'media_ids.*' => ['integer', 'distinct', Rule::exists('media', 'id')->where('user_id', $request->user()?->id)],
-            'images' => 'nullable|array|max:4',
+            'images' => 'nullable|array|max:'.$mediaLimit,
             'images.*' => 'image|mimes:jpeg,png,jpg,webp,gif|max:5120',
             'poll_options' => 'nullable|array|min:2|max:4',
-            'poll_options.*' => 'required|string|max:100',
+            'poll_options.*' => 'required|string|max:100|distinct:ignore_case',
+            'poll_duration_hours' => 'nullable|integer|in:1,6,24,72,168',
             'attached_document_html' => 'nullable|string|max:50000',
             'location' => 'nullable|string|max:150',
         ]);
+
+        if (count($data['media_ids'] ?? []) + count($request->file('images', [])) > $mediaLimit) {
+            throw ValidationException::withMessages(['media_ids' => "Mỗi bài viết tối đa {$mediaLimit} tệp đính kèm."]);
+        }
 
         $type = $data['type'] ?? 'post';
         if (! empty($data['parent_id'])) {
@@ -279,8 +291,8 @@ class ThreadController extends Controller
                         'options' => $optionsList,
                         'voters' => (object) [],
                         'total_votes' => 0,
-                        'duration_hours' => 24,
-                        'expires_at' => now()->addHours(24)->toIso8601String(),
+                        'duration_hours' => (int) ($data['poll_duration_hours'] ?? 24),
+                        'expires_at' => now()->addHours((int) ($data['poll_duration_hours'] ?? 24))->toIso8601String(),
                     ];
                 }
             }
@@ -352,7 +364,7 @@ class ThreadController extends Controller
             }
 
             if (! empty($mediaIds)) {
-                $post->media()->sync(array_slice(array_unique($mediaIds), 0, 4));
+                $post->media()->sync(array_slice(array_unique($mediaIds), 0, (int) config('blog.thread_media_limit')));
             }
 
             preg_match_all('/#([\p{L}\p{N}_]+)/u', $content, $matches);
@@ -443,7 +455,8 @@ class ThreadController extends Controller
     public function update(Request $request, Post $thread): JsonResponse
     {
         abort_unless($thread->user_id === $request->user()->id, 403);
-        $data = $request->validate(['content' => 'nullable|string|max:20000', 'content_format' => 'sometimes|in:plain,html', 'media_ids' => 'sometimes|array|max:4', 'media_ids.*' => ['integer', 'distinct', Rule::exists('media', 'id')->where('user_id', $request->user()?->id)], 'mention_ids' => 'nullable|array|max:6', 'mention_ids.*' => 'integer|distinct|exists:users,id']);
+        $mediaLimit = (int) config('blog.thread_media_limit');
+        $data = $request->validate(['content' => 'nullable|string|max:20000', 'content_format' => 'sometimes|in:plain,html', 'media_ids' => 'sometimes|array|max:'.$mediaLimit, 'media_ids.*' => ['integer', 'distinct', Rule::exists('media', 'id')->where('user_id', $request->user()?->id)], 'mention_ids' => 'nullable|array|max:6', 'mention_ids.*' => 'integer|distinct|exists:users,id']);
         $post = DB::transaction(function () use ($request, $thread, $data): Post {
             $post = Post::lockForUpdate()->findOrFail($thread->id);
             $format = $data['content_format'] ?? $post->content_format ?? 'plain';
@@ -496,6 +509,38 @@ class ThreadController extends Controller
 
     public function uploadMedia(Request $request): JsonResponse
     {
+        if ($request->hasFile('file')) {
+            $data = $request->validate([
+                'kind' => 'required|in:video,audio',
+                'file' => 'required|file|mimetypes:video/mp4,video/webm,audio/webm,audio/mp4,audio/x-m4a,audio/ogg,audio/wav,audio/x-wav|max:25600',
+                'duration' => 'required|numeric|gt:0|max:60',
+                'waveform' => 'nullable|array|min:1|max:48',
+                'waveform.*' => 'required|integer|min:0|max:100',
+            ]);
+            $file = $request->file('file');
+            if ($data['kind'] === 'video' && ! in_array($file->getMimeType(), ['video/mp4', 'video/webm'], true)) {
+                throw ValidationException::withMessages(['file' => 'Video phải có định dạng MP4 hoặc WebM.']);
+            }
+            if ($data['kind'] === 'audio' && $file->getSize() > 5 * 1024 * 1024) {
+                throw ValidationException::withMessages(['file' => 'Ghi âm tối đa 5 MB.']);
+            }
+            $path = app(ImageStorage::class)->store($file, 'media');
+            try {
+                $mime = $data['kind'] === 'audio' ? str_replace('video/', 'audio/', $file->getMimeType()) : $file->getMimeType();
+                $media = Media::create([
+                    'user_id' => $request->user()->id, 'path' => $path,
+                    'original_name' => mb_substr(basename($file->getClientOriginalName()), 0, 255),
+                    'mime_type' => $mime, 'size' => $file->getSize(),
+                    'duration_ms' => (int) round($data['duration'] * 1000),
+                    'waveform' => $data['kind'] === 'audio' ? ($data['waveform'] ?? []) : null,
+                ]);
+            } catch (\Throwable $error) {
+                app(ImageStorage::class)->delete($path);
+                throw $error;
+            }
+
+            return response()->json(['id' => $media->id, 'url' => $media->url(), 'kind' => $data['kind'], 'duration' => $data['duration'], 'waveform' => $media->waveform]);
+        }
         $files = $request->file('images') ?? ($request->file('image') ? [$request->file('image')] : []);
 
         if (empty($files)) {
@@ -503,6 +548,7 @@ class ThreadController extends Controller
         }
 
         $request->validate([
+            'images' => 'nullable|array|max:'.config('blog.thread_media_limit'),
             'image' => 'nullable|image|mimes:jpeg,png,jpg,webp,gif|max:5120',
             'images.*' => 'image|mimes:jpeg,png,jpg,webp,gif|max:5120',
         ]);
@@ -551,62 +597,70 @@ class ThreadController extends Controller
             'option_id' => 'required|integer',
         ]);
 
-        $poll = json_decode($thread->excerpt ?? '', true);
-        if (! is_array($poll) || empty($poll['is_poll']) || empty($poll['options'])) {
-            return response()->json(['message' => 'Bài viết này không có cuộc thăm dò ý kiến.'], 400);
-        }
-
-        $userId = (string) $user->id;
-        $voters = $poll['voters'] ?? [];
-        if (! is_array($voters)) {
-            $voters = (array) $voters;
-        }
-
-        $chosenOptionId = (int) $validated['option_id'];
-
-        $validOption = false;
-        foreach ($poll['options'] as $opt) {
-            if ($opt['id'] === $chosenOptionId) {
-                $validOption = true;
-                break;
+        return DB::transaction(function () use ($request, $thread, $validated, $user): JsonResponse {
+            $thread = Post::published()->visibleTo($request->user())->whereNull('archived_at')->whereKey($thread->id)->lockForUpdate()->firstOrFail();
+            abort_if($thread->author->is_locked, 404);
+            $poll = json_decode($thread->excerpt ?? '', true);
+            if (! is_array($poll) || empty($poll['is_poll']) || empty($poll['options'])) {
+                return response()->json(['message' => 'Bài viết này không có cuộc thăm dò ý kiến.'], 400);
             }
-        }
-        if (! $validOption) {
-            return response()->json(['message' => 'Lựa chọn không hợp lệ.'], 400);
-        }
 
-        $previousVote = $voters[$userId] ?? null;
-        if ($previousVote === $chosenOptionId) {
-            return response()->json(['success' => true, 'poll' => $this->formatPollResponse($poll, $userId)]);
-        }
+            if (! empty($poll['expires_at']) && strtotime($poll['expires_at']) <= now()->timestamp) {
+                return response()->json(['message' => 'Cuộc bình chọn đã kết thúc.', 'poll' => $this->formatPollResponse($poll, (string) $user->id)], 409);
+            }
 
-        if ($previousVote !== null) {
+            $userId = (string) $user->id;
+            $voters = $poll['voters'] ?? [];
+            if (! is_array($voters)) {
+                $voters = (array) $voters;
+            }
+
+            $chosenOptionId = (int) $validated['option_id'];
+
+            $validOption = false;
+            foreach ($poll['options'] as $opt) {
+                if ($opt['id'] === $chosenOptionId) {
+                    $validOption = true;
+                    break;
+                }
+            }
+            if (! $validOption) {
+                return response()->json(['message' => 'Lựa chọn không hợp lệ.'], 400);
+            }
+
+            $previousVote = $voters[$userId] ?? null;
+            if ($previousVote === $chosenOptionId) {
+                return response()->json(['success' => true, 'poll' => $this->formatPollResponse($poll, $userId)]);
+            }
+
+            if ($previousVote !== null) {
+                foreach ($poll['options'] as &$opt) {
+                    if ($opt['id'] === $previousVote && $opt['votes'] > 0) {
+                        $opt['votes']--;
+                        $poll['total_votes'] = max(0, ($poll['total_votes'] ?? 1) - 1);
+                    }
+                }
+                unset($opt);
+            }
+
             foreach ($poll['options'] as &$opt) {
-                if ($opt['id'] === $previousVote && $opt['votes'] > 0) {
-                    $opt['votes']--;
-                    $poll['total_votes'] = max(0, ($poll['total_votes'] ?? 1) - 1);
+                if ($opt['id'] === $chosenOptionId) {
+                    $opt['votes']++;
+                    $poll['total_votes'] = ($poll['total_votes'] ?? 0) + 1;
                 }
             }
             unset($opt);
-        }
 
-        foreach ($poll['options'] as &$opt) {
-            if ($opt['id'] === $chosenOptionId) {
-                $opt['votes']++;
-                $poll['total_votes'] = ($poll['total_votes'] ?? 0) + 1;
-            }
-        }
-        unset($opt);
+            $voters[$userId] = $chosenOptionId;
+            $poll['voters'] = $voters;
 
-        $voters[$userId] = $chosenOptionId;
-        $poll['voters'] = $voters;
+            $thread->update(['excerpt' => json_encode($poll, JSON_UNESCAPED_UNICODE)]);
 
-        $thread->update(['excerpt' => json_encode($poll, JSON_UNESCAPED_UNICODE)]);
-
-        return response()->json([
-            'success' => true,
-            'poll' => $this->formatPollResponse($poll, $userId),
-        ]);
+            return response()->json([
+                'success' => true,
+                'poll' => $this->formatPollResponse($poll, $userId),
+            ]);
+        });
     }
 
     private function formatPollResponse(array $poll, string $userId): array
@@ -633,6 +687,8 @@ class ThreadController extends Controller
             'options' => $options,
             'total_votes' => $poll['total_votes'] ?? 0,
             'user_voted_option' => $voters[$userId] ?? null,
+            'expires_at' => $poll['expires_at'] ?? null,
+            'closed' => ! empty($poll['expires_at']) && strtotime($poll['expires_at']) <= now()->timestamp,
         ];
     }
 

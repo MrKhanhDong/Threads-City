@@ -46,7 +46,7 @@
 
 <style>
     .threads-composer-bar {
-        background: #000000;
+        background: var(--journal-surface);
         border: 1px solid var(--border-color);
         border-radius: 18px;
         padding: 12px 18px;
@@ -59,8 +59,8 @@
         transition: border-color 0.2s, background 0.2s;
     }
     .threads-composer-bar:hover {
-        border-color: #333333;
-        background: #0a0a0a;
+        border-color: var(--journal-line);
+        background: var(--journal-surface);
     }
     .composer-bar-left {
         display: flex;
@@ -73,11 +73,11 @@
         width: 36px;
         height: 36px;
         border-radius: 50%;
-        background: #242424;
+        background: var(--journal-raised);
         display: flex;
         align-items: center;
         justify-content: center;
-        border: 1px solid #333;
+        border: 1px solid var(--journal-line);
     }
     .composer-placeholder-text {
         color: var(--text-muted);
@@ -86,9 +86,9 @@
         user-select: none;
     }
     .btn-composer-post-pill {
-        background: #121212;
-        color: #777777;
-        border: 1px solid #282828;
+        background: var(--journal-surface);
+        color: var(--journal-faint);
+        border: 1px solid var(--journal-line);
         font-size: 13px;
         font-weight: 700;
         padding: 6px 18px;
@@ -97,8 +97,25 @@
         transition: all 0.15s;
     }
     .threads-composer-bar:hover .btn-composer-post-pill {
-        color: #aaaaaa;
-        border-color: #383838;
+        color: var(--journal-muted);
+        border-color: var(--journal-line);
+    }
+    .btn-composer-icon-pill {
+        background: transparent;
+        color: var(--journal-faint);
+        border: none;
+        padding: 6px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: color 0.15s, background 0.15s, transform 0.15s;
+    }
+    .btn-composer-icon-pill:hover {
+        color: var(--journal-text);
+        background: var(--journal-raised);
+        transform: scale(1.08);
     }
     .btn-composer-icon-pill {
         background: transparent;

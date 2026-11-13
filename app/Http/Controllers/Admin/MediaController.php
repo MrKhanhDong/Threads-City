@@ -55,7 +55,7 @@ class MediaController extends Controller
             return redirect()->away($url)->header('Cache-Control', 'private, no-store');
         }
 
-        abort_unless(preg_match('~^media/[A-Za-z0-9_\-]+\.(jpg|jpeg|png|webp|gif)$~i', $media->path) && Storage::disk('local')->exists($media->path), 404);
+        abort_unless(preg_match('~^media/[A-Za-z0-9_\-]+\.(jpg|jpeg|png|webp|gif|mp4|webm|m4a|ogg|wav)$~i', $media->path) && Storage::disk('local')->exists($media->path), 404);
 
         return response()->file(Storage::disk('local')->path($media->path), ['Content-Type' => $media->mime_type, 'X-Content-Type-Options' => 'nosniff', 'Cache-Control' => 'private, no-store', 'Vary' => 'Cookie']);
     }

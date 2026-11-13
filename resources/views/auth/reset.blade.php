@@ -14,7 +14,7 @@
         </div>
 
         @if($errors->any())
-            <div class="alert alert-danger py-2 px-3 rounded-3 small mb-3 border-0" style="background: rgba(239, 68, 68, 0.15); color: #fca5a5;">
+            <div class="alert alert-danger py-2 px-3 rounded-3 small mb-3 border-0" style="background: rgba(239, 68, 68, 0.15); color: var(--journal-danger);">
                 {{ $errors->first() }}
             </div>
         @endif
@@ -78,29 +78,29 @@
     .auth-threads-box {
         width: 100%;
         max-width: 420px;
-        background: #181818;
+        background: var(--journal-surface);
         border: 1px solid var(--border-color);
         border-radius: 24px;
         padding: 36px 32px;
-        box-shadow: 0 16px 48px rgba(0,0,0,0.4);
+        box-shadow: var(--journal-shadow);
     }
     .threads-form-input {
         width: 100%;
-        background: #242424;
-        border: 1px solid #333333;
+        background: var(--journal-raised);
+        border: 1px solid var(--journal-line);
         border-radius: 12px;
         padding: 14px 16px;
-        color: #ffffff;
+        color: var(--journal-text);
         font-size: 15px;
         outline: none;
         transition: border-color 0.2s, background 0.2s;
     }
     .threads-form-input:focus {
-        border-color: #555555;
-        background: #282828;
+        border-color: var(--journal-line);
+        background: var(--journal-hover);
     }
     .threads-form-input::placeholder {
-        color: #777777;
+        color: var(--journal-faint);
     }
 </style>
 @endsection

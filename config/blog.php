@@ -7,4 +7,5 @@ return [
     'author_name' => 'Threads City',
     'editor_license' => env('TINYMCE_LICENSE_KEY', 'gpl'),
     'uploads_max_kb' => 5120,
+    'thread_media_limit' => 20,
 ];

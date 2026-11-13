@@ -1,4 +1,4 @@
-@extends('layouts.public')
+@extends('layouts.threads')
 @php
     $pageTitle = 'Tìm kiếm';
     $selectedTopic = $filters['category'] !== '' ? $categories->firstWhere('slug', $filters['category'])?->name : ($filters['tag'] !== '' ? $tags->firstWhere('slug', $filters['tag'])?->name : null);
@@ -29,7 +29,7 @@
             <article class="discovery-person" data-follow-context><a class="discovery-person-avatar" href="{{ route('profile.show', $person->username ?: $person->id) }}"><x-avatar :user="$person"/></a><div class="discovery-person-copy"><a href="{{ route('profile.show', $person->username ?: $person->id) }}"><strong>{{ $person->username ?: $person->name }}<x-verified-badge :user="$person"/></strong>@if($person->username)<span>{{ $person->name }}</span>@endif</a>@if($person->bio)<p>{{ $person->bio }}</p>@endif<small><span data-followers-count>{{ $person->followers_count }}</span> người theo dõi · {{ $person->public_posts_count }} bài viết</small></div>@if(auth()->id() !== $person->id)@auth<form method="post" action="{{ route('users.follow', $person) }}" data-stream-action="follow">@csrf<button type="submit" class="btn-threads-outline" aria-pressed="{{ $person->viewer_following || $pendingRequest ? 'true' : 'false' }}" data-follow-label>{{ $pendingRequest ? 'Đã gửi yêu cầu' : ($person->viewer_following ? 'Đang theo dõi' : ($person->is_private ? 'Yêu cầu theo dõi' : 'Theo dõi')) }}</button></form>@else<a href="{{ route('login') }}" class="btn-threads-outline">Theo dõi</a>@endauth @endif</article>
             @endforeach
         @else
-            <div data-stream-feed>@include('threads.partials.thread_list', ['threads' => $threads])</div>
+            @if($threads->isNotEmpty())<div data-stream-feed>@include('threads.partials.thread_list', ['threads' => $threads])</div>@endif
         @endif
         @if($results->isEmpty())<div class="empty-state discovery-empty"><x-journal-icon name="search" :size="38"/><h2>Chưa tìm thấy {{ $people ? 'tài khoản' : 'bài viết' }}</h2><p>Thử một từ khóa khác hoặc giảm bớt bộ lọc nhé.</p><a class="btn-threads-outline" href="{{ route('search.index') }}">Khám phá chủ đề</a></div>@endif
         <div class="journal-pagination">{{ $results->links() }}</div>

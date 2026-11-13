@@ -1,10 +1,10 @@
 @import "bootstrap/dist/css/bootstrap.min.css";
 
 body.threads-body {
-    --bs-body-color: #f3f5f7;
-    --bs-body-bg: #000;
-    --bs-secondary-color: #999;
-    --bs-border-color: #202020;
+    --bs-body-color: var(--journal-text);
+    --bs-body-bg: var(--journal-bg);
+    --bs-secondary-color: var(--journal-muted);
+    --bs-border-color: var(--journal-line);
 }
 
 .threads-logo-svg {

@@ -26,7 +26,7 @@
     </div>
 
     <!-- Quick Reply Box for this Thread -->
-    <div id="replyBox" class="reply-composer-section p-3 rounded-4 my-3" style="background: #181818; border: 1px solid var(--border-color);">
+    <div id="replyBox" class="reply-composer-section p-3 rounded-4 my-3" style="background: var(--journal-surface); border: 1px solid var(--border-color);">
         @auth
             <form action="{{ route('threads.store') }}" method="post" id="replyForm">
                 @csrf
@@ -108,6 +108,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const replySubmit = document.getElementById('replySubmitBtn');
     const replyStatus = document.getElementById('replyStatusText');
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+    const maxMedia = {{ (int) config('blog.thread_media_limit') }};
 
     let uploadedMedia = [];
     let isUploading = 0;
@@ -153,8 +154,13 @@ document.addEventListener('DOMContentLoaded', function() {
         replyAddBtn.addEventListener('click', () => replyFileInput.click());
         replyFileInput.addEventListener('change', function() {
             if (!this.files || this.files.length === 0) return;
-            const files = Array.from(this.files).slice(0, 4 - uploadedMedia.length);
+            const availableSlots = Math.max(0, maxMedia - uploadedMedia.length - isUploading);
+            const files = Array.from(this.files);
             this.value = '';
+            if (files.length > availableSlots) {
+                if (replyStatus) replyStatus.textContent = `Tối đa ${maxMedia} ảnh cho mỗi câu trả lời. Còn ${availableSlots} chỗ đính kèm.`;
+                return;
+            }
 
             files.forEach(file => {
                 if (!file.type.startsWith('image/')) return;

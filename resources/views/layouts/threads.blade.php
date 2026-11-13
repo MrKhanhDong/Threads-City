@@ -45,7 +45,7 @@
         @if(!empty($trendingTopics))
         <details class="journal-sidebar-trending"><summary>Chủ đề thịnh hành</summary>
             @foreach($trendingTopics as $topic)
-                <a href="{{ route('home', ['q' => data_get($topic, 'tag')]) }}"><strong>{{ data_get($topic, 'title') }}</strong><small>{{ data_get($topic, 'count') }} bài viết</small></a>
+                <a href="{{ route('search.index', ['q' => data_get($topic, 'tag')]) }}"><strong>{{ data_get($topic, 'title') }}</strong><small>{{ data_get($topic, 'count') }} bài viết</small></a>
             @endforeach
         </details>
         @endif
@@ -67,32 +67,28 @@
         </details>
         @endif
     </aside>
-    <div class="journal-workspace" data-column-workspace>
+    <div class="journal-workspace" data-column-workspace data-column-count="1">
     <div class="journal-center" data-column-slot="primary">
-        <header class="journal-topbar">
-            <button class="journal-menu-button desktop-column-grip" type="button" draggable="true" data-column-drag="primary" aria-label="Đổi vị trí hai cột" title="Kéo để đổi vị trí cột"><x-journal-icon name="grip"/></button>
+        <header class="journal-topbar" data-column-drag="primary" tabindex="-1" aria-describedby="desktop-column-drag-help">
             <button class="journal-menu-button journal-sidebar-toggle" type="button" data-bs-toggle="offcanvas" data-bs-target="#journal-sidebar-drawer" aria-controls="journal-sidebar-drawer" aria-expanded="false" aria-label="Mở thanh bên"><x-journal-icon name="menu" :size="24"/></button>
             <a class="journal-mobile-brand" href="{{ route('home') }}" aria-label="Threads">@</a>
             @hasSection('search-bar')@yield('search-bar')@else<span>{{ $pageTitle ?? 'Dành cho bạn' }}</span>@endif
             <div class="journal-topbar-actions">
+                <x-notification-bell/>
                 @auth
-                @php($unreadNavCount = app(\App\Services\UserNotifications::class)->forUser(auth()->user())->whereNull('read_at')->count())
-                <a href="{{ route('notifications.index') }}" class="journal-menu-button journal-notification-link" aria-label="Thông báo"><x-journal-icon name="heart"/><span id="sidebarNotificationBadge" class="sidebar-badge-count" data-live-region="badge" style="{{ $unreadNavCount ? '' : 'display: none;' }}">{{ $unreadNavCount > 99 ? '99+' : $unreadNavCount }}</span></a>
-                @endauth
-                @auth
-                <div class="dropdown journal-header-account"><button type="button" class="journal-account-button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Menu tài khoản"><x-avatar :user="auth()->user()"/></button><ul class="dropdown-menu dropdown-menu-end"><li><a class="dropdown-item" href="{{ route('account.edit') }}">Tài khoản của bạn</a></li><li><a class="dropdown-item" href="{{ route('saved') }}">Bài viết đã lưu</a></li><li><a class="dropdown-item" href="{{ route('safety.index') }}">Quyền riêng tư và ứng dụng</a></li>@if(auth()->user()->isAdmin())<li><a class="dropdown-item" href="{{ route('admin.index') }}">Quản trị</a></li>@endif<li><form method="post" action="{{ route('logout') }}">@csrf<button type="submit" class="dropdown-item">Đăng xuất</button></form></li></ul></div>
+                <div class="dropdown journal-header-account"><button type="button" class="journal-account-button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Menu tài khoản"><x-avatar :user="auth()->user()"/></button><ul class="dropdown-menu dropdown-menu-end"><li><a class="dropdown-item" href="{{ route('account.edit') }}">Tài khoản của bạn</a></li><li><a class="dropdown-item" href="{{ route('saved') }}">Bài viết đã lưu</a></li>@if(auth()->user()->isAdmin())<li><a class="dropdown-item" href="{{ route('admin.index') }}">Quản trị</a></li>@endif<li><form method="post" action="{{ route('logout') }}">@csrf<button type="submit" class="dropdown-item">Đăng xuất</button></form></li></ul></div>
                 @endauth
             </div>
         </header>
         <main id="main" class="journal-main" tabindex="-1"><x-flash/>@yield('content')</main>
-        <footer class="journal-footer"><span>© {{ date('Y') }} {{ $site['site_name'] }}</span><a href="{{ route('contact') }}">Liên hệ</a><a href="{{ route('privacy') }}">Quyền riêng tư</a><a href="{{ route('terms') }}">Điều khoản</a></footer>
+        <footer class="journal-footer"><span>© {{ date('Y') }} Threads — Made by Team Thành Phố Sợi Chỉ</span></footer>
         <div class="desktop-column-shield" data-column-shield></div>
     </div>
     <x-desktop-columns/>
     </div>
 </div>
 <x-sidebar-drawer/>
-<nav class="journal-mobile-nav" aria-label="Điều hướng trên điện thoại"><a href="{{ route('home') }}" aria-label="Dành cho bạn"><x-journal-icon name="home"/><span>Bảng tin</span></a><a href="{{ route('home', ['search' => 1]) }}" aria-label="Tìm kiếm" @class(['is-active' => request()->routeIs('search.index')])><x-journal-icon name="search"/><span>Tìm kiếm</span></a>@auth<button type="button" data-compose="new" aria-label="Bài viết mới"><x-journal-icon name="plus"/><span>Bài viết mới</span></button>@else<a href="{{ route('login') }}" aria-label="Đăng nhập để đăng bài"><x-journal-icon name="plus"/><span>Bài viết mới</span></a>@endauth<a href="{{ route('notifications.index') }}" aria-label="Hoạt động" @class(['is-active' => request()->routeIs('activity.*', 'notifications.*')])><x-journal-icon name="heart"/><span>Hoạt động</span></a><a href="{{ auth()->check() ? route('profile.show', auth()->user()->username ?: auth()->id()) : route('login') }}" aria-label="Trang cá nhân"><x-journal-icon name="person"/><span>Cá nhân</span></a></nav>
+<nav class="journal-mobile-nav" aria-label="Điều hướng trên điện thoại"><a href="{{ route('home') }}" aria-label="Dành cho bạn"><x-journal-icon name="home"/><span>Bảng tin</span></a><a href="{{ route('search.index') }}" aria-label="Tìm kiếm" @class(['is-active' => request()->routeIs('search.index')])><x-journal-icon name="search"/><span>Tìm kiếm</span></a>@auth<button type="button" data-compose="new" aria-label="Bài viết mới"><x-journal-icon name="plus"/><span>Bài viết mới</span></button>@else<a href="{{ route('login') }}" aria-label="Đăng nhập để đăng bài"><x-journal-icon name="plus"/><span>Bài viết mới</span></a>@endauth<a href="{{ route('notifications.index') }}" aria-label="Hoạt động" @class(['is-active' => request()->routeIs('activity.*', 'notifications.*')])><x-journal-icon name="heart"/><span>Hoạt động</span></a><a href="{{ auth()->check() ? route('profile.show', auth()->user()->username ?: auth()->id()) : route('login') }}" aria-label="Trang cá nhân"><x-journal-icon name="person"/><span>Cá nhân</span></a></nav>
 @auth<button type="button" class="stream-floating-compose" data-compose="new" aria-label="Tạo Bài viết mới"><x-journal-icon name="plus" :size="30"/></button>@endauth
 <div id="threadsGlobalToast" class="threads-toast" role="status" aria-live="polite">Thông báo</div>
     <!-- Modal Create Thread -->
@@ -117,8 +113,6 @@
     @stack('threads-scripts')
 
 
-<x-mobile-dialogs/>
-<div hidden data-pwa-config data-worker-url="{{ asset('sw.js') }}" data-user-id="{{ auth()->id() }}" data-public-key="{{ app(\App\Services\PushSubscriptions::class)->configured() ? config('services.webpush.public_key') : '' }}" data-push-url="{{ route('push.store') }}" data-logout-url="{{ route('logout') }}"></div>
 @stack('scripts')
     <script>
     // Global sidebar follow button handler
@@ -193,32 +187,6 @@
             .catch(err => console.error(err));
         });
 
-        // Real-time notification unread badge polling
-        @auth
-        function pollUnreadNotifications() {
-            fetch('{{ route("notifications.unread") }}', {
-                headers: { 'Accept': 'application/json' }
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data && typeof data.unread !== 'undefined') {
-                    const badge = document.getElementById('sidebarNotificationBadge');
-                    if (badge) {
-                        if (data.unread > 0) {
-                            badge.textContent = data.unread > 99 ? '99+' : data.unread;
-                            badge.style.display = 'inline-flex';
-                        } else {
-                            badge.style.display = 'none';
-                        }
-                    }
-                }
-            })
-            .catch(() => {});
-        }
-        @unless(request()->routeIs('home', 'threads.index', 'threads.show', 'profile.show', 'saved', 'notifications.index'))
-        setInterval(pollUnreadNotifications, 30000);
-        @endunless
-        @endauth
     });
 
     // Global Mention Autocomplete Helper
@@ -229,11 +197,8 @@
         let suggestions = [];
         let queryTerm = '';
         let atIndex = -1;
-        let mentionRevision = 0;
-        textarea.form?.addEventListener('reset', () => { textarea.form.querySelectorAll('input[name="mention_ids[]"]').forEach(input => input.remove()); textarea.dataset.mentionIds = '[]'; });
 
         function closeDropdown() {
-            mentionRevision++;
             dropdown.style.display = 'none';
             dropdown.innerHTML = '';
             suggestions = [];
@@ -245,7 +210,7 @@
             const cursorPos = textarea.selectionStart;
             const textBeforeCursor = val.slice(0, cursorPos);
 
-            const match = textBeforeCursor.match(/(?<![\\p{L}\\p{N}_@-])@([\\p{L}\\p{N}_-]*)$/u);
+            const match = textBeforeCursor.match(/@([A-Za-z0-9_]*)$/);
             if (!match) {
                 closeDropdown();
                 return;
@@ -254,13 +219,11 @@
             atIndex = cursorPos - match[0].length;
             queryTerm = match[1];
 
-            const requestRevision = ++mentionRevision;
             fetch(`/api/users/mention-suggestions?q=${encodeURIComponent(queryTerm)}`, {
                 headers: { 'Accept': 'application/json' }
             })
             .then(res => res.json())
             .then(users => {
-                if (requestRevision !== mentionRevision) return;
                 if (!users || users.length === 0) {
                     closeDropdown();
                     return;
@@ -278,34 +241,27 @@
                 const item = document.createElement('div');
                 item.className = 'mention-autocomplete-item' + (i === 0 ? ' selected' : '');
                 
-                const safe = value => { const span = document.createElement('span'); span.textContent = value || ''; return span.innerHTML; };
                 const avatarHtml = u.avatar_url 
                     ? `<img src="${u.avatar_url}" class="mention-item-avatar">`
-                    : `<div class="mention-item-letter">${safe((u.name || 'U').charAt(0).toUpperCase())}</div>`;
+                    : `<div class="mention-item-letter">${(u.name || 'U').charAt(0).toUpperCase()}</div>`;
                 
                 item.innerHTML = `
                     ${avatarHtml}
                     <div class="d-flex flex-column overflow-hidden">
-                        <span class="mention-item-name text-truncate">${safe(u.name)}</span>
-                        <span class="mention-item-handle text-truncate">${safe(u.handle)}</span>
+                        <span class="mention-item-name text-truncate">${u.name}</span>
+                        <span class="mention-item-handle text-truncate">${u.handle}</span>
                     </div>
                 `;
                 item.addEventListener('mousedown', function(e) {
                     e.preventDefault();
-                    insertMention(u);
+                    insertMention(u.username);
                 });
                 dropdown.appendChild(item);
             });
             dropdown.style.display = 'block';
         }
 
-        function insertMention(user) {
-            const username = user.username;
-            textarea.dataset.mentionIds = JSON.stringify([...new Set([...JSON.parse(textarea.dataset.mentionIds || '[]'), user.id])]);
-            if (textarea.form) {
-                let selected = [...textarea.form.querySelectorAll('input[name="mention_ids[]"]')].find(input => input.value === String(user.id));
-                if (!selected) { selected = document.createElement('input'); selected.type = 'hidden'; selected.name = 'mention_ids[]'; selected.value = String(user.id); textarea.form.append(selected); }
-            }
+        function insertMention(username) {
             const val = textarea.value;
             const cursorPos = textarea.selectionStart;
             const before = val.slice(0, atIndex);
@@ -333,7 +289,7 @@
             } else if (e.key === 'Enter' || e.key === 'Tab') {
                 if (activeIndex >= 0 && suggestions[activeIndex]) {
                     e.preventDefault();
-                    insertMention(suggestions[activeIndex]);
+                    insertMention(suggestions[activeIndex].username);
                 }
             } else if (e.key === 'Escape') {
                 closeDropdown();
@@ -359,5 +315,7 @@
     };
     </script>
 
+<x-mobile-dialogs/>
+<div hidden data-pwa-config data-worker-url="{{ asset('sw.js') }}" data-user-id="{{ auth()->id() }}" data-public-key="{{ app(\App\Services\PushSubscriptions::class)->configured() ? config('services.webpush.public_key') : '' }}" data-push-url="{{ route('push.store') }}" data-logout-url="{{ route('logout') }}"></div>
 </body>
 </html>

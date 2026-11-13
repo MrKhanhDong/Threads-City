@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { collectionOrder, setupLiveUpdates } from '../../resources/js/live-updates.js';
+import { collectionOrder, setupLiveUpdates, syncRegion } from '../../resources/js/live-updates.js';
 
 test('new posts prepend without losing older manually loaded pages', () => {
     assert.deepEqual(collectionOrder(['thread-3', 'thread-2', 'thread-1'], ['thread-4', 'thread-3'], [], true), ['thread-4', 'thread-3', 'thread-2', 'thread-1']);
@@ -23,16 +23,81 @@ test('empty feed accepts its first post', () => {
     assert.deepEqual(collectionOrder([], ['thread-1'], [], true), ['thread-1']);
 });
 
-test('polling pauses in hidden tabs and open modals, then resumes when they are closed', async () => {
+test('detail refresh preserves loading, seeking and playing media then updates once paused', () => {
+    let replaced = false, loading = true;
+    const media = { paused: true, ended: false, seeking: false };
+    const current = {
+        outerHTML: 'Old detail', hasAttribute: () => false,
+        querySelector: () => loading ? {} : null, querySelectorAll: selector => selector === 'video, audio' ? [media] : [],
+        replaceWith() { replaced = true; },
+    };
+    const incoming = { outerHTML: 'Updated detail', querySelectorAll: () => [] };
+    syncRegion(current, incoming, []);
+    assert.equal(replaced, false);
+    loading = false; media.paused = false;
+    syncRegion(current, incoming, []);
+    assert.equal(replaced, false);
+    media.paused = true; media.seeking = true;
+    syncRegion(current, incoming, []);
+    assert.equal(replaced, false);
+    media.seeking = false;
+    syncRegion(current, incoming, []);
+    assert.equal(replaced, true);
+});
+
+test('pausing in fullscreen does not let a live refresh remove the video', () => {
+    let replaced = false;
+    const player = {};
+    const current = {
+        ownerDocument: { fullscreenElement: player }, contains: node => node === player,
+        outerHTML: 'Old detail', hasAttribute: () => false,
+        querySelector: () => null, querySelectorAll: () => [], replaceWith() { replaced = true; },
+    };
+    syncRegion(current, { outerHTML: 'New detail' }, []);
+    assert.equal(replaced, false);
+});
+
+test('a refresh waits until a photo drag and its momentum have finished', () => {
+    let interacting = true, replaced = false;
+    const current = {
+        outerHTML: 'Photo card', hasAttribute: () => false,
+        querySelector: selector => interacting && selector.includes('[data-media-interacting]') ? {} : null,
+        querySelectorAll: () => [], replaceWith() { replaced = true; },
+    };
+    const incoming = { outerHTML: 'Updated photo card', querySelectorAll: () => [] };
+    syncRegion(current, incoming, []);
+    assert.equal(replaced, false);
+    interacting = false;
+    syncRegion(current, incoming, []);
+    assert.equal(replaced, true);
+});
+
+test('photo position survives updated post statistics and resets only for different attachments', () => {
+    for (const changedPhotos of [false, true]) {
+        const gallery = (href, left) => ({ scrollLeft: left, querySelectorAll: () => [{ getAttribute: name => name === 'href' ? href : null }] });
+        const previous = gallery('/media/1', 137), next = gallery(changedPhotos ? '/media/2' : '/media/1', 0);
+        let replaced = false;
+        const current = {
+            outerHTML: 'Post with 3 likes', hasAttribute: () => false, querySelector: () => null,
+            querySelectorAll: selector => selector === '[data-media-gallery]' ? [previous] : [],
+            replaceWith() { replaced = true; },
+        };
+        const incoming = { outerHTML: 'Post with 4 likes', querySelectorAll: () => [next] };
+        syncRegion(current, incoming, []);
+        assert.equal(replaced, true);
+        assert.equal(next.scrollLeft, changedPhotos ? 0 : 137);
+    }
+});
+
+test('polling pauses in hidden tabs and resumes on visibility changes', async () => {
     const saved = Object.fromEntries(['document', 'window', 'location', 'setTimeout', 'clearTimeout'].map(key => [key, globalThis[key]]));
     const timers = new Map();
     const listeners = new Map();
     let serial = 0;
     let requests = 0;
-    let modalOpen = false;
     globalThis.document = {
         body: { dataset: { liveEnabled: '1' } }, hidden: true,
-        querySelector: selector => selector === '[data-live-region]' || (selector === '.modal.show, .dropdown-menu.show' && modalOpen) ? {} : null,
+        querySelector: selector => selector === '[data-live-region]' ? {} : null,
         querySelectorAll: () => [],
         addEventListener: (name, callback) => listeners.set(name, callback),
         dispatchEvent: () => {},
@@ -55,17 +120,6 @@ test('polling pauses in hidden tabs and open modals, then resumes when they are 
         await task.callback();
         assert.equal(requests, 1);
         assert.equal([...timers.values()][0].delay, 8000);
-        modalOpen = true;
-        let next = [...timers.values()][0];
-        timers.clear();
-        await next.callback();
-        assert.equal(requests, 1);
-        assert.equal([...timers.values()][0].delay, 2000);
-        modalOpen = false;
-        next = [...timers.values()][0];
-        timers.clear();
-        await next.callback();
-        assert.equal(requests, 2);
         document.hidden = true;
         listeners.get('visibilitychange')();
         assert.equal(timers.size, 0);

@@ -47,6 +47,24 @@ class ImageStorageTest extends TestCase
         app(ImageStorage::class)->store(UploadedFile::fake()->image('photo.jpg'), 'media');
     }
 
+    public function test_video_and_voice_storage_use_cloudinary_video_resource_and_can_be_deleted(): void
+    {
+        Http::fake(function (Request $request) {
+            if (str_ends_with($request->url(), '/destroy')) {
+                return Http::response(['result' => 'ok']);
+            }
+            $parameters = collect($request->data())->pluck('contents', 'name');
+
+            return Http::response(['secure_url' => 'https://res.cloudinary.com/test-cloud/video/upload/v123/'.$parameters['public_id'].'.webm']);
+        });
+        $storage = app(ImageStorage::class);
+        $url = $storage->store(UploadedFile::fake()->create('voice.webm', 1, 'audio/webm'), 'media');
+        $this->assertStringContainsString('/video/upload/', $url);
+        $this->assertTrue($storage->delete($url));
+        Http::assertSent(fn (Request $request): bool => $request->url() === 'https://api.cloudinary.com/v1_1/test-cloud/video/upload');
+        Http::assertSent(fn (Request $request): bool => $request->url() === 'https://api.cloudinary.com/v1_1/test-cloud/video/destroy');
+    }
+
     public function test_vercel_requires_cloudinary_instead_of_using_temporary_files(): void
     {
         config(['services.cloudinary' => ['cloud_name' => null, 'api_key' => null, 'api_secret' => null]]);
