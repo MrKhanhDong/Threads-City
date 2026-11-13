@@ -212,7 +212,7 @@ class ChatController extends Controller
     public function react(Request $request, ChatConversation $conversation, ChatMessage $message): JsonResponse
     {
         $partner = $this->chat->authorize($conversation, $request->user());
-        abort_unless($this->chat->mutual($request->user(), $partner), 403, 'Theo dõi nhau để tương tác với tin nhắn.');
+        $this->chat->authorizeSend($request->user(), $partner);
         abort_unless($message->chat_conversation_id === $conversation->id, 404);
         $data = $request->validate(['reaction' => ['nullable', Rule::in(DirectMessages::REACTIONS)]]);
         DB::transaction(function () use ($request, $conversation, $message, $data): void {
