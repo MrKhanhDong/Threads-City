@@ -89,6 +89,30 @@ class ImageStorageTest extends TestCase
         app(ImageStorage::class)->store(UploadedFile::fake()->image('photo.jpg'), 'media');
     }
 
+    public function test_serverless_runtime_marker_never_allows_local_upload_fallback(): void
+    {
+        config(['services.cloudinary' => []]);
+        Storage::fake('local');
+        $previous = $_SERVER['VERCEL'] ?? null;
+        $_SERVER['VERCEL'] = '1';
+        try {
+            try {
+                app(ImageStorage::class)->store(UploadedFile::fake()->image('ephemeral.jpg'), 'media');
+                $this->fail('Serverless uploads must use durable storage.');
+            } catch (ValidationException $error) {
+                $this->assertArrayHasKey('image', $error->errors());
+                $this->assertSame([], Storage::disk('local')->allFiles());
+                Http::assertNothingSent();
+            }
+        } finally {
+            if ($previous === null) {
+                unset($_SERVER['VERCEL']);
+            } else {
+                $_SERVER['VERCEL'] = $previous;
+            }
+        }
+    }
+
     public function test_connection_failure_is_a_validation_error(): void
     {
         Http::fake(['*' => Http::failedConnection()]);

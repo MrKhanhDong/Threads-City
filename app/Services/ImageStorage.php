@@ -15,7 +15,8 @@ class ImageStorage
     {
         $credentials = config('services.cloudinary');
         $configured = count(array_filter($credentials ?? []));
-        if ($configured === 0 && ! env('VERCEL')) {
+        $onVercel = isset($_ENV['VERCEL']) || isset($_SERVER['VERCEL']) || env('VERCEL');
+        if ($configured === 0 && ! $onVercel) {
             $extension = match ($file->getMimeType()) {
                 'video/mp4' => 'mp4',
                 'audio/mp4', 'audio/x-m4a' => 'm4a',
