@@ -8,7 +8,7 @@
 @auth<meta name="mention-suggestions" content="{{ route('mentions.suggestions') }}">@endauth
 <title>{{ $pageTitle ?? $site['site_name'] }}{{ isset($pageTitle) ? ' — '.$site['site_name'] : '' }}</title>
 <meta name="description" content="{{ $seo['description'] ?? $site['site_description'] }}">
-<meta name="robots" content="{{ ($preview ?? false) || request()->routeIs('auth.*','login','register','saved','liked.*','archives.*','insights.*','activity.*','account.*','password.*','verification.*','notifications.*') || request()->has('q') ? 'noindex,nofollow' : 'index,follow' }}">
+<meta name="robots" content="{{ ($preview ?? false) || request()->routeIs('auth.*','login','register','saved','liked.*','archives.*','insights.*','chat.*','activity.*','account.*','password.*','verification.*','notifications.*') || request()->has('q') ? 'noindex,nofollow' : 'index,follow' }}">
 <link rel="canonical" href="{{ $seo['canonical'] ?? url()->current() }}">
 <meta property="og:type" content="{{ isset($post) ? 'article' : 'website' }}">
 <meta property="og:title" content="{{ $seo['og_title'] ?? $pageTitle ?? $site['site_name'] }}">

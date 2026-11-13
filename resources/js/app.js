@@ -1,5 +1,6 @@
 import { Dropdown, Offcanvas, Modal } from 'bootstrap';
 import { setupJournalTheme } from './journal-theme';
+import { setupChat } from './chat.js';
 import { setupDesktopColumns } from './desktop-columns';
 import { setupSidebarFeeds } from './sidebar-feeds';
 import { setupSidebarDrawer } from './sidebar-drawer';
@@ -187,6 +188,7 @@ function setupEditor() {
 }
 
 function init() {
+    setupChat();
     setupJournalTheme();
     setupDesktopColumns(document, window, Dropdown);
     setupSidebarFeeds();
