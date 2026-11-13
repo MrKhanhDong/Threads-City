@@ -353,8 +353,9 @@
                     $userPick = $votersList[$currentUserId] ?? null;
                     $totalVotes = $pollData['total_votes'] ?? 0;
                     $maxVotes = max(1, $totalVotes);
+                    $pollClosed = !empty($pollData['expires_at']) && strtotime($pollData['expires_at']) <= now()->timestamp;
                 @endphp
-                <div class="thread-poll-display-card" id="pollCard-{{ $displayThread->id }}" data-thread-id="{{ $displayThread->id }}">
+                <div class="thread-poll-display-card" id="pollCard-{{ $displayThread->id }}" data-expires-at="{{ $pollData['expires_at'] ?? '' }}" data-poll-id="{{ $displayThread->id }}" data-poll-options='@json($pollData["options"])' data-poll-total="{{ $totalVotes }}" data-poll-pick="{{ $userPick }}" data-thread-id="{{ $displayThread->id }}">
                     <div class="poll-items-wrap">
                         @foreach($pollData['options'] as $opt)
                             @php
@@ -362,7 +363,7 @@
                                 $percent = $totalVotes > 0 ? round(($optVotes / $maxVotes) * 100) : 0;
                                 $isPicked = ($userPick === $opt['id']);
                             @endphp
-                            @if($userVoted)
+                            @if($userVoted || $pollClosed)
                                 <div class="poll-display-result-row {{ $isPicked ? 'user-picked' : '' }}">
                                     <div class="poll-result-bar-bg" style="width: {{ $percent }}%;"></div>
                                     <div class="poll-result-label-row">
@@ -376,7 +377,7 @@
                                     </div>
                                 </div>
                             @else
-                                <button type="button" class="poll-display-vote-btn btn-ajax-poll-vote" data-thread-id="{{ $displayThread->id }}" data-option-id="{{ $opt['id'] }}">
+                                <button type="button" class="poll-display-vote-btn btn-ajax-poll-vote" data-vote-url="{{ route('threads.vote', $displayThread->id) }}" data-thread-id="{{ $displayThread->id }}" data-option-id="{{ $opt['id'] }}">
                                     {{ $opt['text'] }}
                                 </button>
                             @endif
@@ -385,23 +386,12 @@
                     <div class="poll-display-footer">
                         <span class="poll-total-votes-count">{{ $totalVotes }} phiếu bầu</span>
                         <span>·</span>
-                        <span>Kết thúc sau 24 giờ</span>
+                        <span class="poll-deadline">{{ $pollClosed ? 'Đã kết thúc' : 'Còn '.\Illuminate\Support\Carbon::parse($pollData['expires_at'] ?? now()->addDay())->diffForHumans(now(), true) }}</span>
                     </div>
                 </div>
             @endif
 
-            <!-- Media Gallery (Images) -->
-            @if($displayThread->media && $displayThread->media->count() > 0)
-                <div data-lightbox-gallery class="thread-media-gallery gallery-count-{{ min(4, $displayThread->media->count()) }}">
-                    @foreach($displayThread->media->take(4) as $mediaItem)
-                        <div class="gallery-media-item">
-                            <a data-lightbox-image href="{{ route('media.show', $mediaItem->id) }}" target="_blank" rel="noopener" class="gallery-media-link" onclick="event.stopPropagation();" title="Xem ảnh gốc">
-                                <img src="{{ route('media.show', $mediaItem->id) }}" alt="{{ $mediaItem->alt ?? 'Ảnh đính kèm' }}" loading="lazy">
-                            </a>
-                        </div>
-                    @endforeach
-                </div>
-            @endif
+            <x-thread-media :items="$displayThread->media"/>
 
             <!-- Quoted Post Embed (Matches Screenshot) -->
             @if($displayThread->type === 'quote' && $displayThread->repostOf)

@@ -34,7 +34,7 @@ class CommentThreads
         $sql = "WITH RECURSIVE visible AS (
             SELECT c.id, c.id AS root_id, c.post_id FROM comments c
             JOIN posts p ON p.id = c.post_id
-            WHERE c.parent_id IS NULL AND p.deleted_at IS NULL AND p.archived_at IS NULL
+            WHERE c.parent_id IS NULL AND p.deleted_at IS NULL
               AND p.status IN ('published', 'scheduled') AND p.published_at <= ?
               AND {$status}{$seed}
             UNION DISTINCT

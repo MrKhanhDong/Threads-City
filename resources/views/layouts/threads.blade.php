@@ -69,8 +69,7 @@
     </aside>
     <div class="journal-workspace" data-column-workspace>
     <div class="journal-center" data-column-slot="primary">
-        <header class="journal-topbar">
-            <button class="journal-menu-button desktop-column-grip" type="button" draggable="true" data-column-drag="primary" aria-label="Đổi vị trí hai cột" title="Kéo để đổi vị trí cột"><x-journal-icon name="grip"/></button>
+        <header class="journal-topbar" data-column-drag="primary" tabindex="-1" aria-describedby="desktop-column-drag-help">
             <button class="journal-menu-button journal-sidebar-toggle" type="button" data-bs-toggle="offcanvas" data-bs-target="#journal-sidebar-drawer" aria-controls="journal-sidebar-drawer" aria-expanded="false" aria-label="Mở thanh bên"><x-journal-icon name="menu" :size="24"/></button>
             <a class="journal-mobile-brand" href="{{ route('home') }}" aria-label="Threads">@</a>
             @hasSection('search-bar')@yield('search-bar')@else<span>{{ $pageTitle ?? 'Dành cho bạn' }}</span>@endif
@@ -92,7 +91,7 @@
     </div>
 </div>
 <x-sidebar-drawer/>
-<nav class="journal-mobile-nav" aria-label="Điều hướng trên điện thoại"><a href="{{ route('home') }}" aria-label="Dành cho bạn"><x-journal-icon name="home"/><span>Bảng tin</span></a><a href="{{ route('home', ['search' => 1]) }}" aria-label="Tìm kiếm" @class(['is-active' => request()->routeIs('search.index')])><x-journal-icon name="search"/><span>Tìm kiếm</span></a>@auth<button type="button" data-compose="new" aria-label="Bài viết mới"><x-journal-icon name="plus"/><span>Bài viết mới</span></button>@else<a href="{{ route('login') }}" aria-label="Đăng nhập để đăng bài"><x-journal-icon name="plus"/><span>Bài viết mới</span></a>@endauth<a href="{{ route('notifications.index') }}" aria-label="Hoạt động" @class(['is-active' => request()->routeIs('activity.*', 'notifications.*')])><x-journal-icon name="heart"/><span>Hoạt động</span></a><a href="{{ auth()->check() ? route('profile.show', auth()->user()->username ?: auth()->id()) : route('login') }}" aria-label="Trang cá nhân"><x-journal-icon name="person"/><span>Cá nhân</span></a></nav>
+<nav class="journal-mobile-nav" aria-label="Điều hướng trên điện thoại"><a href="{{ route('home') }}" aria-label="Dành cho bạn"><x-journal-icon name="home"/><span>Bảng tin</span></a><a href="{{ route('search.index') }}" aria-label="Tìm kiếm" @class(['is-active' => request()->routeIs('search.index')])><x-journal-icon name="search"/><span>Tìm kiếm</span></a>@auth<button type="button" data-compose="new" aria-label="Bài viết mới"><x-journal-icon name="plus"/><span>Bài viết mới</span></button>@else<a href="{{ route('login') }}" aria-label="Đăng nhập để đăng bài"><x-journal-icon name="plus"/><span>Bài viết mới</span></a>@endauth<a href="{{ route('notifications.index') }}" aria-label="Hoạt động" @class(['is-active' => request()->routeIs('activity.*', 'notifications.*')])><x-journal-icon name="heart"/><span>Hoạt động</span></a><a href="{{ auth()->check() ? route('profile.show', auth()->user()->username ?: auth()->id()) : route('login') }}" aria-label="Trang cá nhân"><x-journal-icon name="person"/><span>Cá nhân</span></a></nav>
 @auth<button type="button" class="stream-floating-compose" data-compose="new" aria-label="Tạo Bài viết mới"><x-journal-icon name="plus" :size="30"/></button>@endauth
 <div id="threadsGlobalToast" class="threads-toast" role="status" aria-live="polite">Thông báo</div>
     <!-- Modal Create Thread -->

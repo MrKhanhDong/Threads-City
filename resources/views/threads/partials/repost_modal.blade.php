@@ -61,7 +61,26 @@
         transition: background 0.15s, transform 0.1s;
     }
     .repost-menu-option:hover {
-        background: rgba(255, 255, 255, 0.08);
+        background: color-mix(in srgb, var(--journal-text) 8%, transparent);
+    }
+    .repost-menu-option:active {
+        transform: scale(0.99);
+    }
+    .repost-option-icon-box {
+        width: 38px;
+        height: 38px;
+        border-radius: 50%;
+        background: var(--journal-raised);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        transition: background 0.15s;
+    }
+    .repost-menu-divider {
+        height: 1px;
+        background: var(--journal-hover);
+        margin: 4px 8px;
     }
     .repost-menu-option:active {
         transform: scale(0.99);

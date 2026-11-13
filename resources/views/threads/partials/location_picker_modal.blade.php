@@ -52,13 +52,16 @@
 </div>
 
 <style>
+.location-gps-btn:disabled { opacity: 0.5; cursor: wait; }
+.location-picker-hint { margin: 8px 0 0; color: var(--journal-muted); font-size: 12px; }
+.location-picker-hint:empty { display: none; }
 /* Location Picker Modal Container */
 .location-picker-modal-content {
-    background: #121212 !important;
-    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    background: var(--journal-surface) !important;
+    border: 1px solid var(--journal-line) !important;
     border-radius: 20px !important;
-    color: #ffffff !important;
-    box-shadow: 0 16px 50px rgba(0, 0, 0, 0.9) !important;
+    color: var(--journal-text) !important;
+    box-shadow: var(--journal-shadow) !important;
     overflow: hidden;
     height: 560px;
     display: flex;
@@ -72,13 +75,13 @@
     align-items: center;
     justify-content: space-between;
     padding: 16px 20px 14px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    border-bottom: 1px solid var(--journal-line);
     flex-shrink: 0;
 }
 .location-picker-back-btn {
     background: transparent;
     border: none;
-    color: #ffffff;
+    color: var(--journal-text);
     cursor: pointer;
     padding: 4px;
     line-height: 1;
@@ -89,13 +92,13 @@
     transition: opacity 0.15s, background 0.15s;
 }
 .location-picker-back-btn:hover {
-    background: rgba(255, 255, 255, 0.1);
+    background: color-mix(in srgb, var(--journal-text) 10%, transparent);
     opacity: 0.9;
 }
 .location-picker-title {
     font-size: 16px;
     font-weight: 700;
-    color: #ffffff;
+    color: var(--journal-text);
     letter-spacing: -0.2px;
 }
 
@@ -108,15 +111,15 @@
     position: relative;
     display: flex;
     align-items: center;
-    background: #1e1e1e;
-    border: 1px solid #2c2c2c;
+    background: var(--journal-raised);
+    border: 1px solid var(--journal-line);
     border-radius: 12px;
     padding: 0 14px;
     transition: border-color 0.15s, background 0.15s;
 }
 .location-search-bar:focus-within {
-    border-color: #444444;
-    background: #242424;
+    border-color: var(--journal-line);
+    background: var(--journal-raised);
 }
 .location-search-icon {
     flex-shrink: 0;
@@ -127,17 +130,17 @@
     background: transparent;
     border: none !important;
     outline: none !important;
-    color: #ffffff;
+    color: var(--journal-text);
     font-size: 15px;
     padding: 10px 0;
 }
 .location-search-input::placeholder {
-    color: #777777;
+    color: var(--journal-faint);
 }
 .location-gps-btn {
     background: transparent;
     border: none;
-    color: #888888;
+    color: var(--journal-muted);
     cursor: pointer;
     padding: 6px;
     line-height: 1;
@@ -148,20 +151,8 @@
     transition: color 0.15s, background 0.15s;
 }
 .location-gps-btn:hover {
-    color: #0095f6;
+    color: var(--journal-link);
     background: rgba(0, 149, 246, 0.1);
-}
-.location-gps-btn:disabled {
-    opacity: 0.5;
-    cursor: wait;
-}
-.location-picker-hint {
-    margin: 8px 0 0;
-    color: #aaaaaa;
-    font-size: 12px;
-}
-.location-picker-hint:empty {
-    display: none;
 }
 
 /* Body & List */
@@ -185,30 +176,30 @@
     user-select: none;
 }
 .location-item:hover {
-    background: #1c1c1c;
+    background: var(--journal-raised);
 }
 .location-item:active {
-    background: #252525;
+    background: var(--journal-raised);
 }
 .location-item-icon-box {
     width: 38px;
     height: 38px;
     border-radius: 50%;
-    background: #202020;
+    background: var(--journal-raised);
     display: flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-    color: #aaaaaa;
+    color: var(--journal-muted);
     transition: background 0.12s, color 0.12s;
 }
 .location-item:hover .location-item-icon-box {
-    background: #282828;
-    color: #ffffff;
+    background: var(--journal-hover);
+    color: var(--journal-text);
 }
 .location-item-custom .location-item-icon-box {
     background: rgba(0, 149, 246, 0.15);
-    color: #0095f6;
+    color: var(--journal-link);
 }
 .location-item-content {
     flex: 1;
@@ -217,7 +208,7 @@
 .location-item-name {
     font-size: 15px;
     font-weight: 600;
-    color: #ffffff;
+    color: var(--journal-text);
     margin-bottom: 2px;
     white-space: nowrap;
     overflow: hidden;
@@ -225,7 +216,7 @@
 }
 .location-item-address {
     font-size: 13px;
-    color: #777777;
+    color: var(--journal-faint);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -233,7 +224,7 @@
 .location-empty-state {
     padding: 40px 20px;
     text-align: center;
-    color: #777777;
+    color: var(--journal-faint);
     font-size: 14.5px;
 }
 </style>
@@ -245,6 +236,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const searchInput = document.getElementById('locationSearchInput');
     const listContainer = document.getElementById('locationPickerList');
     const btnBack = document.getElementById('btnLocationPickerBack');
+
     const modalAddLocationBtn = document.getElementById('modalAddLocationBtn');
 
     if (!locationModalEl) return;

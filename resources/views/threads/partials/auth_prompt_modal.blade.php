@@ -43,11 +43,11 @@
 
 <style>
 .auth-prompt-modal-content {
-    background: #181818 !important;
-    border: 1px solid #2e2e2e !important;
+    background: var(--journal-surface) !important;
+    border: 1px solid var(--journal-line) !important;
     border-radius: 24px !important;
-    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.7) !important;
-    color: #ffffff;
+    box-shadow: var(--journal-shadow) !important;
+    color: var(--journal-text);
     position: relative;
     overflow: hidden;
 }
@@ -57,7 +57,7 @@
     right: 16px;
     background: transparent;
     border: none;
-    color: #777777;
+    color: var(--journal-faint);
     cursor: pointer;
     padding: 6px;
     border-radius: 50%;
@@ -65,8 +65,8 @@
     line-height: 1;
 }
 .auth-prompt-close:hover {
-    color: #ffffff;
-    background: rgba(255, 255, 255, 0.1);
+    color: var(--journal-text);
+    background: color-mix(in srgb, var(--journal-text) 10%, transparent);
 }
 .auth-prompt-logo-wrap {
     display: inline-flex;
@@ -75,20 +75,20 @@
     width: 68px;
     height: 68px;
     border-radius: 50%;
-    background: #101010;
-    border: 1px solid #282828;
+    background: var(--journal-surface);
+    border: 1px solid var(--journal-line);
 }
 .auth-prompt-title {
     font-size: 20px;
     font-weight: 700;
-    color: #ffffff;
+    color: var(--journal-text);
     margin-bottom: 8px;
     letter-spacing: -0.3px;
 }
 .auth-prompt-desc {
     font-size: 14px;
     line-height: 1.5;
-    color: #999999;
+    color: var(--journal-muted);
     margin-bottom: 0;
     padding: 0 12px;
 }
@@ -100,8 +100,8 @@
 .btn-auth-prompt-primary {
     display: block;
     width: 100%;
-    background: #ffffff;
-    color: #000000 !important;
+    background: var(--journal-button-bg);
+    color: var(--journal-button-text) !important;
     font-weight: 700;
     font-size: 15px;
     padding: 12px 20px;
@@ -112,31 +112,31 @@
     border: none;
 }
 .btn-auth-prompt-primary:hover {
-    background: #e0e0e0;
+    background: var(--journal-button-hover);
     transform: scale(0.99);
 }
 .btn-auth-prompt-secondary {
     display: block;
     width: 100%;
-    background: #101010;
-    color: #ffffff !important;
+    background: var(--journal-surface);
+    color: var(--journal-text) !important;
     font-weight: 600;
     font-size: 14px;
     padding: 11px 20px;
     border-radius: 9999px;
     text-decoration: none;
     text-align: center;
-    border: 1px solid #333333;
+    border: 1px solid var(--journal-line);
     transition: background 0.15s, border-color 0.15s;
 }
 .btn-auth-prompt-secondary:hover {
-    background: #202020;
-    border-color: #555555;
+    background: var(--journal-raised);
+    border-color: var(--journal-line);
 }
 .btn-auth-prompt-dismiss {
     background: transparent;
     border: none;
-    color: #777777;
+    color: var(--journal-faint);
     font-size: 13px;
     font-weight: 500;
     padding: 6px;
@@ -144,7 +144,7 @@
     transition: color 0.15s;
 }
 .btn-auth-prompt-dismiss:hover {
-    color: #cccccc;
+    color: var(--journal-text);
 }
 </style>
 

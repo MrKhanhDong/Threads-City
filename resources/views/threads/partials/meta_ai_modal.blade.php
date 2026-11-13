@@ -79,10 +79,10 @@
 
 <style>
 .meta-ai-modal-content {
-    background: #141414;
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: var(--journal-surface);
+    border: 1px solid var(--journal-line);
     border-radius: 20px;
-    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.85);
+    box-shadow: var(--journal-shadow);
     overflow: hidden;
 }
 .meta-ai-header {
@@ -90,7 +90,7 @@
     align-items: center;
     justify-content: space-between;
     padding: 18px 20px 14px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+    border-bottom: 1px solid var(--journal-line);
 }
 .meta-ai-header-left {
     display: flex;
@@ -110,17 +110,17 @@
 .meta-ai-title {
     font-size: 16px;
     font-weight: 700;
-    color: #ffffff;
+    color: var(--journal-text);
     letter-spacing: -0.2px;
 }
 .meta-ai-subtitle {
     font-size: 12.5px;
-    color: #8e8e8e;
+    color: var(--journal-muted);
 }
 .btn-close-meta-ai {
     background: transparent;
     border: none;
-    color: #888888;
+    color: var(--journal-muted);
     font-size: 18px;
     line-height: 1;
     padding: 6px;
@@ -129,11 +129,11 @@
     transition: color 0.15s;
 }
 .btn-close-meta-ai:hover {
-    color: #ffffff;
+    color: var(--journal-text);
 }
 .meta-ai-context-box {
-    background: #1c1c1c;
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: var(--journal-raised);
+    border: 1px solid var(--journal-line);
     border-radius: 12px;
     margin: 14px 20px 10px;
     padding: 10px 14px;
@@ -141,12 +141,12 @@
 .meta-ai-context-author {
     font-size: 12px;
     font-weight: 600;
-    color: #0095f6;
+    color: var(--journal-link);
     margin-bottom: 4px;
 }
 .meta-ai-context-snippet {
     font-size: 13.5px;
-    color: #d1d5db;
+    color: var(--journal-text);
     line-height: 1.45;
     max-height: 60px;
     overflow-y: auto;
@@ -163,9 +163,9 @@
     display: none;
 }
 .meta-ai-chip-btn {
-    background: #202020;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    color: #e5e5e5;
+    background: var(--journal-raised);
+    border: 1px solid var(--journal-line);
+    color: var(--journal-text);
     font-size: 12.5px;
     font-weight: 500;
     padding: 6px 12px;
@@ -175,9 +175,9 @@
     transition: all 0.15s ease;
 }
 .meta-ai-chip-btn:hover {
-    background: #2a2a2a;
+    background: var(--journal-hover);
     border-color: rgba(127, 63, 252, 0.5);
-    color: #ffffff;
+    color: var(--journal-text);
 }
 .meta-ai-chat-body {
     padding: 10px 20px 16px;
@@ -189,7 +189,7 @@
     gap: 12px;
 }
 .meta-ai-welcome-msg {
-    background: rgba(255, 255, 255, 0.03);
+    background: color-mix(in srgb, var(--journal-text) 3%, transparent);
     border-radius: 12px;
     padding: 12px 14px;
 }
@@ -203,15 +203,15 @@
 }
 .meta-ai-msg-user {
     align-self: flex-end;
-    background: #0080fb;
-    color: #ffffff;
+    background: #0064c8;
+    color: #fff;
     border-bottom-right-radius: 4px;
 }
 .meta-ai-msg-bot {
     align-self: flex-start;
-    background: #222222;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    color: #f3f5f7;
+    background: var(--journal-raised);
+    border: 1px solid var(--journal-line);
+    color: var(--journal-text);
     border-bottom-left-radius: 4px;
 }
 .meta-ai-typing-indicator {
@@ -219,7 +219,7 @@
     align-items: center;
     gap: 4px;
     padding: 10px 14px;
-    background: #222222;
+    background: var(--journal-raised);
     border-radius: 14px;
     width: fit-content;
 }
@@ -238,14 +238,14 @@
 }
 .meta-ai-footer {
     padding: 12px 20px 18px;
-    border-top: 1px solid rgba(255, 255, 255, 0.07);
+    border-top: 1px solid var(--journal-line);
 }
 .meta-ai-input-form {
     display: flex;
     align-items: center;
     gap: 8px;
-    background: #1e1e1e;
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: var(--journal-raised);
+    border: 1px solid var(--journal-line);
     border-radius: 9999px;
     padding: 4px 6px 4px 16px;
     transition: border-color 0.15s;
@@ -258,11 +258,11 @@
     background: transparent;
     border: none;
     outline: none;
-    color: #ffffff;
+    color: var(--journal-text);
     font-size: 14px;
 }
 .meta-ai-input::placeholder {
-    color: #777777;
+    color: var(--journal-faint);
 }
 .meta-ai-send-btn {
     width: 34px;
@@ -270,7 +270,7 @@
     border-radius: 50%;
     background: #7f3ffc;
     border: none;
-    color: #ffffff;
+    color: #fff;
     display: flex;
     align-items: center;
     justify-content: center;

@@ -23,13 +23,13 @@
     </div>
 
     @if($errors->any())
-        <div class="alert alert-danger py-2 px-3 rounded-3 small mb-4 border-0" style="background: rgba(239, 68, 68, 0.15); color: #fca5a5;">
+        <div class="alert alert-danger py-2 px-3 rounded-3 small mb-4 border-0" style="background: rgba(239, 68, 68, 0.15); color: var(--journal-danger);">
             {{ $errors->first() }}
         </div>
     @endif
 
     <!-- Profile Information Panel -->
-    <div class="p-4 rounded-4 mb-4" style="background: #181818; border: 1px solid var(--border-color);">
+    <div class="p-4 rounded-4 mb-4" style="background: var(--journal-surface); border: 1px solid var(--border-color);">
         <h5 class="text-white fw-bold mb-3 fs-6">Hồ sơ cá nhân</h5>
         
         <form action="{{ route('account.update') }}" method="post" enctype="multipart/form-data">
@@ -39,9 +39,9 @@
             <!-- Avatar Section -->
             <div class="d-flex align-items-center gap-3 mb-4">
                 @if($user->avatar_path)
-                    <img src="{{ route('avatar.show', $user->id) }}" alt="{{ $user->name }}" style="width: 64px; height: 64px; border-radius: 50%; object-fit: cover; border: 2px solid #333;">
+                    <img src="{{ route('avatar.show', $user->id) }}" alt="{{ $user->name }}" style="width: 64px; height: 64px; border-radius: 50%; object-fit: cover; border: 2px solid var(--journal-line);">
                 @else
-                    <div style="width: 64px; height: 64px; border-radius: 50%; background: #262626; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold; border: 2px solid #333;">
+                    <div style="width: 64px; height: 64px; border-radius: 50%; background: var(--journal-raised); color: var(--journal-text); display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold; border: 2px solid var(--journal-line);">
                         {{ mb_substr($user->name, 0, 1) }}
                     </div>
                 @endif
@@ -162,18 +162,18 @@
 <style>
     .threads-form-input {
         width: 100%;
-        background: #242424;
-        border: 1px solid #333333;
+        background: var(--journal-raised);
+        border: 1px solid var(--journal-line);
         border-radius: 12px;
         padding: 12px 16px;
-        color: #ffffff;
+        color: var(--journal-text);
         font-size: 14px;
         outline: none;
         transition: border-color 0.2s, background 0.2s;
     }
     .threads-form-input:focus {
-        border-color: #555555;
-        background: #282828;
+        border-color: var(--journal-line);
+        background: var(--journal-hover);
     }
     .cursor-pointer {
         cursor: pointer;

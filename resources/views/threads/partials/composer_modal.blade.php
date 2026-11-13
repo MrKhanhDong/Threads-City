@@ -1,5 +1,5 @@
 <!-- New Thread / Quote Modal (Meta Threads Style) -->
-<div class="modal fade" id="newThreadModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="newThreadModal" data-upload-url="{{ route('threads.upload-media') }}" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered" style="max-width: 620px;">
         <div class="modal-content threads-composer-modal-content">
             
@@ -136,7 +136,7 @@
                                 </div>
 
                                 <div class="poll-meta-row">
-                                    <span class="poll-duration-label">Kết thúc sau 24 giờ</span>
+                                    <label class="poll-duration-label">Kết thúc sau <select name="poll_duration_hours" id="pollDurationHours" aria-label="Thời hạn bình chọn"><option value="1">1 giờ</option><option value="6">6 giờ</option><option value="24" selected>24 giờ</option><option value="72">3 ngày</option><option value="168">7 ngày</option></select></label>
                                     <button type="button" class="poll-remove-action-btn" id="btnRemovePoll">Gỡ cuộc thăm dò ý kiến</button>
                                 </div>
                             </div>
@@ -168,6 +168,10 @@
                                     </svg>
                                 </button>
                                 <input type="file" id="modalComposerFileInput" accept="image/jpeg,image/png,image/jpg,image/webp,image/gif" multiple hidden>
+                                <button type="button" class="composer-tool-icon-btn tool-standard-only" id="modalAddVideoBtn" title="Video ngắn, tối đa 60 giây" aria-label="Đính kèm video ngắn">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="13" height="14" rx="3"/><path d="m16 10 5-3v10l-5-3Z"/></svg>
+                                </button>
+                                <input type="file" id="modalComposerVideoInput" accept="video/mp4,video/webm" multiple hidden>
 
                                 <!-- 2. GIF -->
                                 <button type="button" class="composer-tool-icon-btn tool-standard-only" id="modalAddGifBtn" title="Đính kèm GIF">
@@ -716,6 +720,11 @@
     object-fit: cover;
     display: block;
 }
+.modal-media-thumb video, .modal-media-thumb audio {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
 .modal-media-loading img {
     position: absolute;
     inset: 0;
@@ -826,7 +835,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const toolbarStrip = document.getElementById('composerToolbarStrip');
 
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-    const MAX_IMAGES = 4;
+    const MAX_MEDIA = 20;
     let uploadedMedia = []; // Array of { id, url }
     let isUploadingCount = 0;
     const pendingUploads = new Map();
@@ -1011,7 +1020,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Interactive GIF button
     document.getElementById('modalAddGifBtn')?.addEventListener('click', function() {
-        toast('Tính năng chọn GIF đang chuẩn bị ra mắt!');
+        if (modalFileInput) { modalFileInput.accept = 'image/gif'; modalFileInput.click(); }
     });
 
     // Interactive Sticker button
@@ -1049,11 +1058,6 @@ document.addEventListener('DOMContentLoaded', function() {
         updateSubmitState();
     });
 
-    // Interactive Audio button
-    document.getElementById('modalAddAudioBtn')?.addEventListener('click', function() {
-        toast('Tính năng ghi âm giọng nói đang chuẩn bị ra mắt!');
-    });
-
     function updateSubmitState() {
         const textLen = (modalText?.value || '').trim().length;
         const mediaCount = uploadedMedia.length;
@@ -1075,7 +1079,7 @@ document.addEventListener('DOMContentLoaded', function() {
             modalCharCount.style.display = textLen > 1500 ? 'inline-block' : 'none';
         }
 
-        const canSubmit = ((textLen > 0 || mediaCount > 0 || pollValid || hasAttachedDoc || hasLocation || hasRepost)) && isUploadingCount === 0;
+        const canSubmit = ((textLen > 0 || mediaCount > 0 || pollValid || hasAttachedDoc || hasLocation || hasRepost)) && isUploadingCount === 0 && !modalEl.dataset.recording;
         if (modalSubmitBtn) {
             modalSubmitBtn.disabled = !canSubmit;
             if (canSubmit) {
@@ -1086,11 +1090,26 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         if (modalAddImageBtn) {
-            modalAddImageBtn.style.opacity = (mediaCount >= MAX_IMAGES || isUploadingCount > 0 || isPollActive) ? '0.4' : '1';
-            modalAddImageBtn.disabled = (mediaCount >= MAX_IMAGES || isUploadingCount > 0 || isPollActive);
+            modalAddImageBtn.style.opacity = (mediaCount >= MAX_MEDIA || isUploadingCount > 0 || isPollActive) ? '0.4' : '1';
+            modalAddImageBtn.disabled = (mediaCount >= MAX_MEDIA || isUploadingCount > 0 || isPollActive);
         }
     }
     window.updateComposerSubmitState = updateSubmitState;
+    window.threadMediaComposer = {
+        add: media => {
+            if (uploadedMedia.length + isUploadingCount >= MAX_MEDIA) throw new Error(`Tối đa ${MAX_MEDIA} tệp đính kèm.`);
+            uploadedMedia.push(media);
+            renderPreviews();
+        },
+        available: () => uploadedMedia.length + isUploadingCount < MAX_MEDIA && !isUploadingCount && pollContainer?.style.display === 'none',
+        upload: files => handleFilesUpload(files),
+    };
+    const videoInput = document.getElementById('modalComposerVideoInput');
+    document.getElementById('modalAddVideoBtn')?.addEventListener('click', () => videoInput?.click());
+    videoInput?.addEventListener('change', function() {
+        if (this.files?.length) handleFilesUpload(Array.from(this.files));
+        this.value = '';
+    });
 
     // Auto-grow textarea
     if (modalText) {
@@ -1123,10 +1142,11 @@ document.addEventListener('DOMContentLoaded', function() {
     if (modalAddImageBtn && modalFileInput) {
         modalAddImageBtn.addEventListener('click', function(e) {
             e.preventDefault();
-            if (uploadedMedia.length >= MAX_IMAGES) {
-                toast(`Tối đa ${MAX_IMAGES} ảnh cho mỗi bài viết`);
+            if (uploadedMedia.length >= MAX_MEDIA) {
+                toast(`Tối đa ${MAX_MEDIA} ảnh cho mỗi bài viết`);
                 return;
             }
+            modalFileInput.accept = 'image/jpeg,image/png,image/webp,image/gif';
             modalFileInput.click();
         });
 
@@ -1139,6 +1159,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Drag and Drop
+
     if (dropZone) {
         ['dragenter', 'dragover'].forEach(eventName => {
             dropZone.addEventListener(eventName, function(e) {
@@ -1158,7 +1179,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         dropZone.addEventListener('drop', function(e) {
             const dt = e.dataTransfer;
-            const files = Array.from(dt.files).filter(f => f.type.startsWith('image/'));
+            const files = Array.from(dt.files).filter(f => /^(image\/|video\/(mp4|webm)$)/.test(f.type));
             if (files.length > 0) {
                 handleFilesUpload(files);
             }
@@ -1186,9 +1207,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
             const thumb = document.createElement('div');
             thumb.className = 'modal-media-thumb';
-            const image = document.createElement('img');
+            const image = document.createElement(media.kind === 'video' ? 'video' : media.kind === 'audio' ? 'audio' : 'img');
             image.src = media.previewUrl || media.url;
             image.alt = `Ảnh đính kèm ${idx + 1}`;
+            if (media.kind === 'video' || media.kind === 'audio') {
+                image.controls = true;
+                image.preload = 'metadata';
+                image.playsInline = true;
+            }
             const remove = document.createElement('button');
             remove.type = 'button';
             remove.className = 'modal-media-remove';
@@ -1202,7 +1228,7 @@ document.addEventListener('DOMContentLoaded', function() {
         pendingUploads.forEach((upload, id) => {
             const thumb = document.createElement('div');
             thumb.className = 'modal-media-thumb modal-media-loading';
-            const image = document.createElement('img');
+            const image = document.createElement(upload.kind === 'video' ? 'video' : 'img');
             image.src = upload.previewUrl;
             image.alt = 'Ảnh đang tải lên';
             const status = document.createElement('span');
@@ -1240,29 +1266,34 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     function handleFilesUpload(files) {
-        const availableSlots = MAX_IMAGES - uploadedMedia.length - isUploadingCount;
+        if (modalEl.dataset.recording || (pollContainer && pollContainer.style.display !== 'none')) {
+            toast('Gỡ bình chọn hoặc dừng ghi âm trước khi đính kèm.');
+            return;
+        }
+        const availableSlots = MAX_MEDIA - uploadedMedia.length - isUploadingCount;
         if (availableSlots <= 0) {
-            toast(`Bạn chỉ có thể đính kèm tối đa ${MAX_IMAGES} ảnh.`);
+            toast(`Bạn chỉ có thể đính kèm tối đa ${MAX_MEDIA} ảnh.`);
             return;
         }
 
         const filesToUpload = files.slice(0, availableSlots);
         if (files.length > availableSlots) {
-            toast(`Đã chọn quá ${MAX_IMAGES} ảnh. Chỉ tải lên ${availableSlots} ảnh đầu.`);
+            toast(`Đã chọn quá ${MAX_MEDIA} ảnh. Chỉ tải lên ${availableSlots} ảnh đầu.`);
         }
 
         filesToUpload.forEach(file => {
-            if (!file.type.startsWith('image/')) {
-                toast('Chỉ chấp nhận file định dạng hình ảnh.');
+            const isVideo = file.type.startsWith('video/');
+            if (!/^(image\/|video\/(mp4|webm)$)/.test(file.type)) {
+                toast('Chọn ảnh, video MP4 hoặc WebM.');
                 return;
             }
-            if (file.size > 5 * 1024 * 1024) {
-                toast(`File "${file.name}" vượt quá 5MB.`);
+            if (file.size > (isVideo ? 25 : 5) * 1024 * 1024) {
+                toast(`Tệp vượt quá ${isVideo ? 25 : 5} MB.`);
                 return;
             }
 
             const id = ++uploadSequence;
-            const upload = { previewUrl: URL.createObjectURL(file), controller: new AbortController(), message: 'Đang chuẩn bị ảnh…', saved: false };
+            const upload = { previewUrl: URL.createObjectURL(file), controller: new AbortController(), message: 'Đang chuẩn bị tệp…', saved: false, kind: isVideo ? 'video' : 'image' };
             pendingUploads.set(id, upload);
             isUploadingCount = pendingUploads.size;
             renderPreviews();
@@ -1271,14 +1302,26 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (upload.status) upload.status.textContent = message;
             };
 
-            window.uploadThreadImage(file, '{{ route("threads.upload-media") }}', csrfToken, {
+            const transfer = isVideo ? (async () => {
+                const duration = await window.inspectThreadClip(file);
+                if (upload.controller.signal.aborted) throw new DOMException('Đã hủy tải video.', 'AbortError');
+                const body = new FormData();
+                body.append('file', file);
+                body.append('kind', 'video');
+                body.append('duration', duration);
+                const response = await fetch('{{ route("threads.upload-media") }}', { method: 'POST', body, signal: upload.controller.signal, headers: { 'X-CSRF-TOKEN': csrfToken, Accept: 'application/json' } });
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.message || 'Không tải được video.');
+                return data;
+            })() : window.uploadThreadImage(file, '{{ route("threads.upload-media") }}', csrfToken, {
                 signal: upload.controller.signal,
                 onProgress: percent => showProgress(percent < 100 ? `Đang tải ${percent}%` : 'Đang lưu ảnh…'),
                 onStage: stage => showProgress(({ preparing: 'Đang chuẩn bị ảnh…', uploading: 'Đang tải ảnh…', saving: 'Đang lưu ảnh…' })[stage]),
-            })
+            });
+            transfer
             .then(data => {
                 if (!pendingUploads.has(id)) return;
-                uploadedMedia.push({ id: data.id, url: data.url, previewUrl: upload.previewUrl });
+                uploadedMedia.push({ id: data.id, url: data.url, previewUrl: upload.previewUrl, kind: upload.kind });
                 upload.saved = true;
             })
             .catch(err => {
@@ -1296,7 +1339,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Modal Form Submission (AJAX)
     modalForm?.addEventListener('submit', function(e) {
         e.preventDefault();
-        if (isUploadingCount > 0) {
+        if (isUploadingCount > 0 || modalEl.dataset.recording) {
             toast('Ảnh vẫn đang tải lên. Hãy đợi hoàn tất hoặc gỡ ảnh trước khi đăng.');
             return;
         }
@@ -1336,7 +1379,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 repost_of_id: repostOfId,
                 type: postType,
                 media_ids: uploadedMedia.map(m => m.id),
-                ...(isPollActive ? { poll_options: pollOptions } : {}),
+                ...(isPollActive ? { poll_options: pollOptions, poll_duration_hours: Number(document.getElementById('pollDurationHours').value) } : {}),
                 attached_document_html: attachedDocHtml,
                 location: locationVal
             })

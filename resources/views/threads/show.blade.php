@@ -26,7 +26,7 @@
     </div>
 
     <!-- Quick Reply Box for this Thread -->
-    <div id="replyBox" class="reply-composer-section p-3 rounded-4 my-3" style="background: #181818; border: 1px solid var(--border-color);">
+    <div id="replyBox" class="reply-composer-section p-3 rounded-4 my-3" style="background: var(--journal-surface); border: 1px solid var(--border-color);">
         @auth
             <form action="{{ route('threads.store') }}" method="post" id="replyForm">
                 @csrf
@@ -108,6 +108,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const replySubmit = document.getElementById('replySubmitBtn');
     const replyStatus = document.getElementById('replyStatusText');
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+
 
     let uploadedMedia = [];
     let isUploading = 0;

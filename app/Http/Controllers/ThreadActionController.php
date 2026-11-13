@@ -334,7 +334,6 @@ class ThreadActionController extends Controller
         if ($currentUser->id === $user->id) {
             return response()->json(['success' => false, 'message' => 'Không thể hạn chế chính mình.'], 422);
         }
-
         $restricted = DB::transaction(function () use ($currentUser, $user): bool {
             $exists = DB::table('user_restrictions')
                 ->where('user_id', $currentUser->id)

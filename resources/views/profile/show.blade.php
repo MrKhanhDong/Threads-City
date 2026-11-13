@@ -3,7 +3,7 @@
 @section('content')
 
     <!-- Profile Header Section -->
-    <div class="profile-header-card p-4 rounded-4 mb-4" style="background: #181818; border: 1px solid var(--border-color);">
+    <div class="profile-header-card p-4 rounded-4 mb-4" style="background: var(--journal-surface); border: 1px solid var(--border-color);">
         <div class="d-flex justify-content-between align-items-start gap-3">
             <div>
                 <h3 class="text-white fw-bold mb-1 fs-4">{{ $user->name }}<x-verified-badge :user="$user"/></h3>
@@ -25,9 +25,9 @@
             </div>
             <div>
                 @if($user->avatar_path)
-                    <img src="{{ route('avatar.show', $user->id) }}" alt="{{ $user->name }}" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 2px solid #333;">
+                    <img src="{{ route('avatar.show', $user->id) }}" alt="{{ $user->name }}" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 2px solid var(--journal-line);">
                 @else
-                    <div style="width: 80px; height: 80px; border-radius: 50%; background: #262626; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: bold; border: 2px solid #333;">
+                    <div style="width: 80px; height: 80px; border-radius: 50%; background: var(--journal-raised); color: var(--journal-text); display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: bold; border: 2px solid var(--journal-line);">
                         {{ mb_substr($user->name, 0, 1) }}
                     </div>
                 @endif

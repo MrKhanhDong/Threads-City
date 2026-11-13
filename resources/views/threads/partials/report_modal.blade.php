@@ -67,10 +67,10 @@
 
 <style>
 .report-modal-content {
-    background: #181818;
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: var(--journal-surface);
+    border: 1px solid var(--journal-line);
     border-radius: 18px;
-    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8);
+    box-shadow: var(--journal-shadow);
     overflow: hidden;
 }
 .report-modal-header {
@@ -78,27 +78,27 @@
     justify-content: space-between;
     align-items: flex-start;
     padding: 20px 22px 14px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+    border-bottom: 1px solid var(--journal-line);
 }
 .report-modal-title {
-    color: #ffffff;
+    color: var(--journal-text);
     font-size: 16.5px;
     font-weight: 700;
 }
 .report-modal-subtitle {
-    color: #8e8e8e;
+    color: var(--journal-muted);
     font-size: 13px;
 }
 .btn-close-report {
     background: transparent;
     border: none;
-    color: #888888;
+    color: var(--journal-muted);
     font-size: 18px;
     padding: 4px;
     cursor: pointer;
 }
 .btn-close-report:hover {
-    color: #ffffff;
+    color: var(--journal-text);
 }
 .report-modal-body {
     padding: 14px 20px;
@@ -112,14 +112,14 @@
     gap: 12px;
     padding: 10px 12px;
     border-radius: 12px;
-    background: #121212;
-    border: 1px solid rgba(255, 255, 255, 0.06);
+    background: var(--journal-surface);
+    border: 1px solid var(--journal-line);
     cursor: pointer;
     transition: background 0.15s, border-color 0.15s;
 }
 .report-option-label:hover {
-    background: #202020;
-    border-color: rgba(255, 255, 255, 0.15);
+    background: var(--journal-raised);
+    border-color: var(--journal-line);
 }
 .report-radio {
     margin-top: 3px;
@@ -131,12 +131,12 @@
     flex-direction: column;
 }
 .report-option-title {
-    color: #f3f5f7;
+    color: var(--journal-text);
     font-size: 14px;
     font-weight: 600;
 }
 .report-option-desc {
-    color: #888888;
+    color: var(--journal-muted);
     font-size: 12px;
     margin-top: 2px;
 }
@@ -146,12 +146,12 @@
     justify-content: flex-end;
     gap: 10px;
     padding: 14px 22px 18px;
-    border-top: 1px solid rgba(255, 255, 255, 0.07);
+    border-top: 1px solid var(--journal-line);
 }
 .btn-report-cancel {
     background: transparent;
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    color: #d1d5db;
+    border: 1px solid var(--journal-line);
+    color: var(--journal-text);
     font-size: 14px;
     font-weight: 600;
     padding: 8px 18px;
@@ -160,13 +160,13 @@
     transition: all 0.15s;
 }
 .btn-report-cancel:hover {
-    background: rgba(255, 255, 255, 0.06);
-    color: #ffffff;
+    background: color-mix(in srgb, var(--journal-text) 6%, transparent);
+    color: var(--journal-text);
 }
 .btn-report-submit {
     background: #ff3b30;
     border: none;
-    color: #ffffff;
+    color: #fff;
     font-size: 14px;
     font-weight: 600;
     padding: 8px 20px;
