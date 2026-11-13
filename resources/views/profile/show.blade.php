@@ -36,7 +36,7 @@
 
         <!-- Action Button: Follow/Unfollow or Edit Profile -->
         @auth
-            @if(auth()->id() !== $user->id && !auth()->user()->isBlockedWith($user) && !$user->is_locked)
+            @if(auth()->id() !== $user->id && auth()->user()->isFollowing($user) && !auth()->user()->isBlockedWith($user) && !$user->is_locked)
                 <form method="post" action="{{ route('chat.start') }}" class="mt-3">@csrf<input type="hidden" name="recipient_id" value="{{ $user->id }}"><button type="submit" class="btn-threads-outline w-100 text-center py-2">Nhắn tin</button></form>
             @endif
         @endauth

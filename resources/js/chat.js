@@ -20,12 +20,34 @@ export function setupChat(doc = document, win = window) {
     const badgeLink = doc.querySelector('[data-chat-unread-url]');
     if (!root && !badgeLink) return;
     const lifetime = new AbortController();
+    doc.addEventListener('click', event => {
+        if (win.matchMedia('(hover: none)').matches) {
+            const selected = event.target.closest('[data-chat-message]');
+            root?.querySelectorAll('[data-chat-message].is-selected').forEach(item => {
+                if (item !== selected) item.classList.remove('is-selected');
+            });
+            selected?.classList.add('is-selected');
+        }
+        root?.querySelectorAll('[data-chat-actions][open]').forEach(menu => {
+            if (!menu.contains(event.target)) menu.removeAttribute('open');
+        });
+    }, { signal: lifetime.signal });
+    root?.addEventListener('keydown', event => {
+        if (event.key !== 'Escape') return;
+        root.querySelectorAll('[data-chat-actions][open]').forEach(menu => {
+            menu.removeAttribute('open');
+            menu.querySelector('summary').focus();
+        });
+    }, { signal: lifetime.signal });
     let timer, expired = false;
-    const updateBadge = count => doc.querySelectorAll('[data-chat-unread]').forEach(badge => {
-        badge.hidden = !count;
-        badge.textContent = count > 99 ? '99+' : String(count);
-        badge.setAttribute('aria-label', `${count} tin nhắn chưa đọc`);
-    });
+    const updateBadge = (count, requests = 0) => {
+        const total = count + requests;
+        doc.querySelectorAll('[data-chat-unread]').forEach(badge => {
+            badge.hidden = !total;
+            badge.textContent = total > 99 ? '99+' : String(total);
+            badge.setAttribute('aria-label', `${total} tin nhắn chưa đọc hoặc đang chờ`);
+        });
+    };
     const request = async (url, options = {}) => {
         const response = await win.fetch(url, { credentials: 'same-origin', cache: 'no-store', signal: lifetime.signal, ...options,
             headers: { Accept: 'application/json', 'X-CSRF-TOKEN': csrf, ...(options.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }), ...options.headers } });
@@ -38,7 +60,7 @@ export function setupChat(doc = document, win = window) {
         return data;
     };
     const refreshBadge = async () => {
-        if (badgeLink) updateBadge((await request(badgeLink.dataset.chatUnreadUrl)).unread_count);
+        if (badgeLink) { const data = await request(badgeLink.dataset.chatUnreadUrl); updateBadge(data.unread_count, data.request_count || 0); }
     };
     const messages = root?.querySelector('[data-chat-messages]');
     const form = root?.querySelector('[data-chat-form]');
@@ -66,7 +88,13 @@ export function setupChat(doc = document, win = window) {
             if (existing) {
                 const audio = existing.querySelector('audio');
                 const editing = existing.contains(doc.activeElement) || existing.querySelector('details[open]');
-                if (existing.outerHTML !== incoming.outerHTML && (incoming.classList.contains('is-recalled') || (!editing && (!audio || audio.paused)))) existing.replaceWith(incoming);
+                const changed = existing.dataset.chatRevision !== incoming.dataset.chatRevision;
+                if (changed && (incoming.classList.contains('is-recalled') || (!editing && (!audio || (audio.paused && !audio.dataset.mediaLoading))))) {
+                    const player = existing.querySelector('.chat-voice-player');
+                    const replacementPlayer = incoming.querySelector('.chat-voice-player');
+                    if (player && replacementPlayer && !incoming.classList.contains('is-recalled')) replacementPlayer.replaceWith(player);
+                    existing.replaceWith(incoming);
+                }
             } else {
                 const next = messageElements().find(item => Number(item.dataset.chatMessage) > Number(id));
                 messages.insertBefore(incoming, next || root.querySelector('[data-chat-empty]'));
@@ -80,9 +108,9 @@ export function setupChat(doc = document, win = window) {
     let lastRead = 0, reading = false;
     const markRead = async () => {
         const id = latestId();
-        if (!messages || doc.hidden || !doc.hasFocus() || !nearBottom() || id <= lastRead || reading || expired) return;
+        if (!messages || root.dataset.chatMutual !== '1' || doc.hidden || !doc.hasFocus() || !nearBottom() || id <= lastRead || reading || expired) return;
         reading = true;
-        try { updateBadge((await request(root.dataset.readUrl, { method: 'POST', body: JSON.stringify({ message_id: id }) })).unread_count); lastRead = id; }
+        try { const data = await request(root.dataset.readUrl, { method: 'POST', body: JSON.stringify({ message_id: id }) }); updateBadge(data.unread_count, data.request_count || 0); lastRead = id; }
         catch (error) { showError(error); }
         finally { reading = false; }
     };
@@ -93,16 +121,19 @@ export function setupChat(doc = document, win = window) {
         try {
             if (root) {
                 const inboxUrl = new URL(root.dataset.inboxUrl, win.location.href);
+                inboxUrl.searchParams.set('folder', root.dataset.chatFolder || 'inbox');
                 inboxUrl.searchParams.set('page', new URL(win.location.href).searchParams.get('page') || '1');
                 const inbox = await request(inboxUrl);
                 root.querySelector('[data-chat-inbox]').innerHTML = inbox.html;
                 root.querySelectorAll('.chat-conversation').forEach(link => { const active = new URL(link.href).pathname === win.location.pathname; link.classList.toggle('is-active', active); if (active) link.setAttribute('aria-current', 'page'); });
-                updateBadge(inbox.unread_count);
+                updateBadge(inbox.unread_count, inbox.request_count || 0);
+                root.querySelectorAll('[data-chat-request-count]').forEach(count => { count.textContent = inbox.request_count || ''; });
                 if (messages) {
                     const url = new URL(root.dataset.messagesUrl, win.location.href);
                     url.searchParams.set('after', latestId());
                     messageElements().slice(-80).forEach(item => url.searchParams.append('refresh[]', item.dataset.chatMessage));
                     const data = await request(url);
+                    if (String(Number(data.can_send)) !== root.dataset.chatCanSend || String(Number(data.mutual)) !== root.dataset.chatMutual) { win.location.reload(); return; }
                     merge(data.html);
                     root.querySelector('[data-chat-typing]').hidden = !data.typing;
                     messageElements().filter(item => item.dataset.own === '1').forEach(item => {
@@ -171,13 +202,17 @@ export function setupChat(doc = document, win = window) {
         form.elements.kind.value = 'text'; root.querySelector('[data-chat-file]').value = '';
         root.querySelector('[data-chat-attachment]').hidden = true;
         const audio = root.querySelector('[data-chat-voice-preview]'); audio.pause(); audio.removeAttribute('src');
+        root.querySelector('[data-chat-voice-preview-player]').hidden = true;
     }
     const attachFile = (file, kind, duration = 0) => {
         releaseFile(); if (editUrl) resetContext(); attachment = file; voiceDuration = duration;
         form.elements.kind.value = kind; previewUrl = win.URL.createObjectURL(file);
         const image = root.querySelector('[data-chat-image-preview]'); const audio = root.querySelector('[data-chat-voice-preview]');
         image.hidden = kind !== 'image'; audio.hidden = kind !== 'voice';
+        root.querySelector('[data-chat-voice-preview-player]').hidden = kind !== 'voice';
+        audio.dataset.duration = String(duration / 1000);
         (kind === 'image' ? image : audio).src = previewUrl;
+        audio.dispatchEvent(new Event('durationchange'));
         root.querySelector('[data-chat-file-name]').textContent = kind === 'voice' ? `Ghi âm ${Math.ceil(duration / 1000)} giây` : file.name;
         root.querySelector('[data-chat-attachment]').hidden = false;
     };
@@ -192,7 +227,7 @@ export function setupChat(doc = document, win = window) {
     let typingAt = 0;
     text.addEventListener('input', () => {
         autoSize(); saveDraft(); errorBox.hidden = true;
-        if (Date.now() - typingAt > 3000 && text.value.trim()) { typingAt = Date.now(); request(root.dataset.typingUrl, { method: 'POST', body: JSON.stringify({ typing: true }) }).catch(() => {}); }
+        if (root.dataset.chatMutual === '1' && Date.now() - typingAt > 3000 && text.value.trim()) { typingAt = Date.now(); request(root.dataset.typingUrl, { method: 'POST', body: JSON.stringify({ typing: true }) }).catch(() => {}); }
     });
     text.addEventListener('keydown', event => { if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) { event.preventDefault(); form.requestSubmit(); } });
     const picker = root.querySelector('[data-chat-picker]');
@@ -227,6 +262,7 @@ export function setupChat(doc = document, win = window) {
         if (emoji) { const inserted = insertEmoji(text.value, emoji.dataset.chatEmoji, text.selectionStart, text.selectionEnd); text.value = inserted.value; text.focus(); text.setSelectionRange(inserted.caret, inserted.caret); autoSize(); saveDraft(); }
         const sticker = event.target.closest('[data-chat-sticker]'); if (sticker) { if (editUrl || attachment || text.value.trim()) { showError(new Error('Gửi hoặc hủy nội dung đang soạn trước khi gửi sticker.')); return; } send(sticker.dataset.chatSticker); }
         const item = event.target.closest('[data-chat-message]'); if (!item) return;
+        if (event.target.closest('[data-chat-edit], [data-chat-recall]')) item.querySelector('[data-chat-actions]')?.removeAttribute('open');
         if (event.target.closest('[data-chat-reply], [data-chat-edit]')) {
             if (busy) { showError(new Error('Đang gửi tin nhắn. Chờ một chút rồi thử lại.')); return; }
             const editing = !!event.target.closest('[data-chat-edit]'); resetContext();
