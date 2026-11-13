@@ -89,6 +89,30 @@ class ImageStorageTest extends TestCase
         app(ImageStorage::class)->store(UploadedFile::fake()->image('photo.jpg'), 'media');
     }
 
+    public function test_serverless_runtime_marker_never_allows_local_upload_fallback(): void
+    {
+        config(['services.cloudinary' => []]);
+        Storage::fake('local');
+        $previous = $_SERVER['VERCEL'] ?? null;
+        $_SERVER['VERCEL'] = '1';
+        try {
+            try {
+                app(ImageStorage::class)->store(UploadedFile::fake()->image('ephemeral.jpg'), 'media');
+                $this->fail('Serverless uploads must use durable storage.');
+            } catch (ValidationException $error) {
+                $this->assertArrayHasKey('image', $error->errors());
+                $this->assertSame([], Storage::disk('local')->allFiles());
+                Http::assertNothingSent();
+            }
+        } finally {
+            if ($previous === null) {
+                unset($_SERVER['VERCEL']);
+            } else {
+                $_SERVER['VERCEL'] = $previous;
+            }
+        }
+    }
+
     public function test_connection_failure_is_a_validation_error(): void
     {
         Http::fake(['*' => Http::failedConnection()]);
@@ -137,5 +161,36 @@ class ImageStorageTest extends TestCase
         $storage = app(ImageStorage::class);
         $this->assertNull($storage->remoteUrl('https://example.com/photo.jpg'));
         $this->assertNull($storage->remoteUrl('https://res.cloudinary.com.evil.example/test-cloud/image/upload/v123/threads-city/media/photo.jpg'));
+    }
+
+    public function test_public_ids_and_urls_without_a_version_or_extension_resolve_without_local_files(): void
+    {
+        $storage = app(ImageStorage::class);
+        $publicId = 'threads-city/media/ad3e66b2-52aa-45b6-8c88-dbb8c1a5e31f';
+        $url = 'https://res.cloudinary.com/test-cloud/image/upload/'.$publicId;
+        $this->assertSame($url, $storage->remoteUrl($publicId));
+        $this->assertSame($url, $storage->remoteUrl($url));
+        $this->assertSame($url.'.png', $storage->remoteUrl($url.'.png'));
+        $user = new User;
+        $user->id = 123;
+        $request = \Illuminate\Http\Request::create('/media/1');
+        $request->setUserResolver(fn () => $user);
+        $media = new Media(['path' => $publicId, 'user_id' => 123]);
+        $this->assertSame($url, app(MediaController::class)->show($request, $media)->getTargetUrl());
+    }
+
+    public function test_public_ids_use_the_configured_cloud_and_are_deleted_with_the_original_identifier(): void
+    {
+        Http::fake(['*' => Http::response(['result' => 'ok'])]);
+        $storage = app(ImageStorage::class);
+        $this->assertTrue($storage->delete('threads-city/media/photo-id'));
+        Http::assertSent(fn (Request $request): bool => $request->url() === 'https://api.cloudinary.com/v1_1/test-cloud/image/destroy' && $request['public_id'] === 'threads-city/media/photo-id');
+        $this->assertTrue($storage->delete('https://res.cloudinary.com/test-cloud/video/upload/threads-city/media/voice-id.webm'));
+        Http::assertSent(fn (Request $request): bool => $request->url() === 'https://api.cloudinary.com/v1_1/test-cloud/video/destroy' && $request['public_id'] === 'threads-city/media/voice-id');
+        config(['services.cloudinary.cloud_name' => null]);
+        $this->assertNull($storage->remoteUrl('threads-city/media/photo-id'));
+        foreach (['threads-city/media/../private', 'threads-city/media/photo-id?redirect=evil', '//evil.example/threads-city/media/photo-id', 'media/local-file.jpg'] as $invalid) {
+            $this->assertNull($storage->remoteUrl($invalid));
+        }
     }
 }

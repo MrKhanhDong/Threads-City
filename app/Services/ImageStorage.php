@@ -11,11 +11,16 @@ use Illuminate\Validation\ValidationException;
 
 class ImageStorage
 {
+    private const PUBLIC_ID = 'threads-city/(?:media|avatars)/[A-Za-z0-9_-]+';
+
+    private const FORMAT = 'jpg|jpeg|png|webp|gif|mp4|webm|m4a|ogg|wav';
+
     public function store(UploadedFile $file, string $folder): string
     {
         $credentials = config('services.cloudinary');
         $configured = count(array_filter($credentials ?? []));
-        if ($configured === 0 && ! env('VERCEL')) {
+        $onVercel = isset($_ENV['VERCEL']) || isset($_SERVER['VERCEL']) || env('VERCEL');
+        if ($configured === 0 && ! $onVercel) {
             $extension = match ($file->getMimeType()) {
                 'video/mp4' => 'mp4',
                 'audio/mp4', 'audio/x-m4a' => 'm4a',
@@ -60,17 +65,30 @@ class ImageStorage
 
     public function remoteUrl(?string $path): ?string
     {
-        return $path && preg_match('~^https://res\.cloudinary\.com/[A-Za-z0-9_-]+/(?:image|video)/upload/v\d+/threads-city/(?:media|avatars)/[A-Za-z0-9_-]+\.(?:jpg|jpeg|png|webp|gif|mp4|webm|m4a|ogg|wav)$~D', $path) ? $path : null;
+        if (! $path) {
+            return null;
+        }
+        $asset = self::PUBLIC_ID.'(?:\.(?:'.self::FORMAT.'))?';
+        if (preg_match('~^https://res\.cloudinary\.com/[A-Za-z0-9_-]+/(?:image|video)/upload/(?:v\d+/)?'.$asset.'$~D', $path)) {
+            return $path;
+        }
+        $cloud = (string) config('services.cloudinary.cloud_name');
+        if (preg_match('~^'.$asset.'$~D', $path) && preg_match('/^[A-Za-z0-9_-]+$/D', $cloud)) {
+            return 'https://res.cloudinary.com/'.$cloud.'/image/upload/'.$path;
+        }
+
+        return null;
     }
 
     public function delete(string $path): bool
     {
-        if (! $this->remoteUrl($path)) {
+        $remote = $this->remoteUrl($path);
+        if (! $remote) {
             return Storage::disk('local')->delete($path);
         }
 
         $cloud = preg_quote((string) config('services.cloudinary.cloud_name'), '~');
-        if (! preg_match('~^https://res\.cloudinary\.com/'.$cloud.'/(image|video)/upload/v\d+/(.+)\.[a-z0-9]+$~D', $path, $matches)) {
+        if (! preg_match('~^https://res\.cloudinary\.com/'.$cloud.'/(image|video)/upload/(?:v\d+/)?('.self::PUBLIC_ID.')(?:\.(?:'.self::FORMAT.'))?$~D', $remote, $matches)) {
             return false;
         }
 
