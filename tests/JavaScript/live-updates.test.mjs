@@ -2,6 +2,23 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { collectionOrder, setupLiveUpdates, syncRegion } from '../../resources/js/live-updates.js';
 
+test('live refresh preserves loaded GIFs with unchanged IDs while refreshing post statistics', () => {
+    const image = { cloneNode: () => ({ src: 'https://media.giphy.com/a.gif' }) };
+    const loaded = { dataset: { giphyId: 'hello', giphyLoaded: '1' }, childNodes: [image] };
+    const placeholder = { dataset: { giphyId: 'hello' }, replaceChildren(...nodes) { this.nodes = nodes; } };
+    let replaced = false;
+    const current = {
+        outerHTML: 'Post with old likes', hasAttribute: () => false, querySelector: () => null,
+        querySelectorAll: selector => selector === '[data-giphy-id][data-giphy-loaded]' ? [loaded] : [],
+        replaceWith() { replaced = true; },
+    };
+    const incoming = { outerHTML: 'Post with new likes', querySelectorAll: selector => selector === '[data-giphy-id]' ? [placeholder] : [] };
+    syncRegion(current, incoming, []);
+    assert.equal(replaced, true);
+    assert.equal(placeholder.dataset.giphyLoaded, '1');
+    assert.equal(placeholder.nodes[0].src, 'https://media.giphy.com/a.gif');
+});
+
 test('new posts prepend without losing older manually loaded pages', () => {
     assert.deepEqual(collectionOrder(['thread-3', 'thread-2', 'thread-1'], ['thread-4', 'thread-3'], [], true), ['thread-4', 'thread-3', 'thread-2', 'thread-1']);
 });
@@ -21,6 +38,60 @@ test('unbookmarked posts and removed notifications leave their filtered lists', 
 
 test('empty feed accepts its first post', () => {
     assert.deepEqual(collectionOrder([], ['thread-1'], [], true), ['thread-1']);
+});
+
+test('polling pauses in hidden tabs and open modals, then resumes when they are closed', async () => {
+    const saved = Object.fromEntries(['document', 'window', 'location', 'setTimeout', 'clearTimeout'].map(key => [key, globalThis[key]]));
+    const timers = new Map();
+    const listeners = new Map();
+    let serial = 0;
+    let requests = 0;
+    let modalOpen = false;
+    globalThis.document = {
+        body: { dataset: { liveEnabled: '1' } }, hidden: true,
+        querySelector: selector => selector === '[data-live-region]' || (selector === '.modal.show, .dropdown-menu.show' && modalOpen) ? {} : null,
+        querySelectorAll: () => [],
+        addEventListener: (name, callback) => listeners.set(name, callback),
+        dispatchEvent: () => {},
+    };
+    globalThis.window = {
+        fetch: async () => { requests++; return { ok: true, status: 200, headers: new Headers({ 'content-type': 'application/json' }), json: async () => ({ regions: [], removed: [] }) }; },
+        addEventListener: (name, callback) => listeners.set(name, callback),
+    };
+    globalThis.location = new URL('https://example.com/');
+    globalThis.setTimeout = (callback, delay) => { const id = ++serial; timers.set(id, { callback, delay }); return id; };
+    globalThis.clearTimeout = id => timers.delete(id);
+    try {
+        setupLiveUpdates();
+        assert.equal(timers.size, 0);
+        document.hidden = false;
+        listeners.get('visibilitychange')();
+        const task = [...timers.values()][0];
+        assert.equal(task.delay, 100);
+        timers.clear();
+        await task.callback();
+        assert.equal(requests, 1);
+        assert.equal([...timers.values()][0].delay, 8000);
+        modalOpen = true;
+        let next = [...timers.values()][0];
+        timers.clear();
+        await next.callback();
+        assert.equal(requests, 1);
+        assert.equal([...timers.values()][0].delay, 2000);
+        modalOpen = false;
+        next = [...timers.values()][0];
+        timers.clear();
+        await next.callback();
+        assert.equal(requests, 2);
+        document.hidden = true;
+        listeners.get('visibilitychange')();
+        assert.equal(timers.size, 0);
+    } finally {
+        for (const [key, value] of Object.entries(saved)) {
+            if (value === undefined) delete globalThis[key];
+            else globalThis[key] = value;
+        }
+    }
 });
 
 test('detail refresh preserves loading, seeking and playing media then updates once paused', () => {
@@ -86,47 +157,5 @@ test('photo position survives updated post statistics and resets only for differ
         syncRegion(current, incoming, []);
         assert.equal(replaced, true);
         assert.equal(next.scrollLeft, changedPhotos ? 0 : 137);
-    }
-});
-
-test('polling pauses in hidden tabs and resumes on visibility changes', async () => {
-    const saved = Object.fromEntries(['document', 'window', 'location', 'setTimeout', 'clearTimeout'].map(key => [key, globalThis[key]]));
-    const timers = new Map();
-    const listeners = new Map();
-    let serial = 0;
-    let requests = 0;
-    globalThis.document = {
-        body: { dataset: { liveEnabled: '1' } }, hidden: true,
-        querySelector: selector => selector === '[data-live-region]' ? {} : null,
-        querySelectorAll: () => [],
-        addEventListener: (name, callback) => listeners.set(name, callback),
-        dispatchEvent: () => {},
-    };
-    globalThis.window = {
-        fetch: async () => { requests++; return { ok: true, status: 200, headers: new Headers({ 'content-type': 'application/json' }), json: async () => ({ regions: [], removed: [] }) }; },
-        addEventListener: (name, callback) => listeners.set(name, callback),
-    };
-    globalThis.location = new URL('https://example.com/');
-    globalThis.setTimeout = (callback, delay) => { const id = ++serial; timers.set(id, { callback, delay }); return id; };
-    globalThis.clearTimeout = id => timers.delete(id);
-    try {
-        setupLiveUpdates();
-        assert.equal(timers.size, 0);
-        document.hidden = false;
-        listeners.get('visibilitychange')();
-        const task = [...timers.values()][0];
-        assert.equal(task.delay, 100);
-        timers.clear();
-        await task.callback();
-        assert.equal(requests, 1);
-        assert.equal([...timers.values()][0].delay, 8000);
-        document.hidden = true;
-        listeners.get('visibilitychange')();
-        assert.equal(timers.size, 0);
-    } finally {
-        for (const [key, value] of Object.entries(saved)) {
-            if (value === undefined) delete globalThis[key];
-            else globalThis[key] = value;
-        }
     }
 });

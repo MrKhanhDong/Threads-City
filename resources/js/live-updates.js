@@ -27,6 +27,16 @@ function replaceRegion(current, incoming) {
 }
 
 export function syncRegion(current, incoming, removed) {
+    const loadedGifs = new Map([...current.querySelectorAll('[data-giphy-id][data-giphy-loaded]')].map(node => [node.dataset.giphyId, node]));
+    if (loadedGifs.size) {
+        incoming.querySelectorAll('[data-giphy-id]').forEach(node => {
+            const loaded = loadedGifs.get(node.dataset.giphyId);
+            if (loaded) {
+                node.replaceChildren(...[...loaded.childNodes].map(child => child.cloneNode(true)));
+                node.dataset.giphyLoaded = loaded.dataset.giphyLoaded;
+            }
+        });
+    }
     if (!current.hasAttribute('data-live-list')) {
         if (current.outerHTML !== incoming.outerHTML && !hasActiveMedia(current)) replaceRegion(current, incoming);
         return;
@@ -109,7 +119,7 @@ export function setupLiveUpdates() {
 
     async function refresh() {
         if (stopped || document.hidden) return;
-        if (busy || mutations || document.querySelector('.dropdown-menu.show')) { schedule(2000); return; }
+        if (busy || mutations || document.querySelector('.modal.show, .dropdown-menu.show') || document.querySelector('[data-stream-primary]')?.dataset.loading === 'true') { schedule(2000); return; }
         busy = true;
         const version = revision;
         activeRequest = new AbortController();
@@ -169,6 +179,7 @@ export function setupLiveUpdates() {
     }
 
     window.addEventListener('threads:refresh', () => { revision++; schedule(150); });
+    window.addEventListener('threads:refresh-start', () => { revision++; activeRequest?.abort(); });
     document.addEventListener('visibilitychange', () => {
         if (document.hidden) { clearTimeout(timer); activeRequest?.abort(); }
         else schedule(100);

@@ -38,19 +38,22 @@
 
             <!-- Avatar Section -->
             <div class="d-flex align-items-center gap-3 mb-4">
-                @if($user->avatar_path)
-                    <img src="{{ route('avatar.show', $user->id) }}" alt="{{ $user->name }}" style="width: 64px; height: 64px; border-radius: 50%; object-fit: cover; border: 2px solid var(--journal-line);">
-                @else
-                    <div style="width: 64px; height: 64px; border-radius: 50%; background: var(--journal-raised); color: var(--journal-text); display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold; border: 2px solid var(--journal-line);">
-                        {{ mb_substr($user->name, 0, 1) }}
-                    </div>
-                @endif
+                <div data-avatar-preview class="account-avatar-preview">
+                    @if($user->avatar_path)
+                        <img src="{{ route('avatar.show', $user->id) }}" alt="{{ $user->name }}" style="width: 64px; height: 64px; border-radius: 50%; object-fit: cover; border: 2px solid var(--journal-line);">
+                    @else
+                        <div style="width: 64px; height: 64px; border-radius: 50%; background: var(--journal-raised); color: var(--journal-text); display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold; border: 2px solid var(--journal-line);">
+                            {{ mb_substr($user->name, 0, 1) }}
+                        </div>
+                    @endif
+                </div>
                 <div>
                     <label for="avatarInput" class="btn-threads-outline px-3 py-1 cursor-pointer">
                         Đổi ảnh đại diện
                     </label>
-                    <input type="file" name="avatar" id="avatarInput" accept="image/jpeg,image/png,image/webp" hidden>
-                    <div class="text-secondary small mt-1">JPEG, PNG, WebP tối đa 2 MB</div>
+                    <input type="file" name="avatar" id="avatarInput" data-avatar-input accept="image/jpeg,image/png,image/webp" aria-describedby="avatarHelp avatarStatus" hidden>
+                    <div id="avatarHelp" class="text-secondary small mt-1">JPEG, PNG, WebP tối đa 2 MB. Chọn ảnh rồi bấm “Lưu thay đổi”.</div>
+                    <div id="avatarStatus" data-avatar-status class="text-secondary small mt-1" role="status" aria-live="polite"></div>
                 </div>
             </div>
 
@@ -160,6 +163,18 @@
 </div>
 
 <style>
+    .account-avatar-preview {
+        width: 64px;
+        height: 64px;
+        flex-shrink: 0;
+    }
+    .account-avatar-preview img {
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 2px solid var(--journal-line);
+    }
     .threads-form-input {
         width: 100%;
         background: var(--journal-raised);

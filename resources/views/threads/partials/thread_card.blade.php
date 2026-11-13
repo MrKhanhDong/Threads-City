@@ -392,6 +392,8 @@
             @endif
 
             <x-thread-media :items="$displayThread->media"/>
+            <x-thread-gifs :ids="(json_decode($displayThread->excerpt ?? '', true) ?: [])['giphy_ids'] ?? []"/>
+            <x-thread-music :track="(json_decode($displayThread->excerpt ?? '', true) ?: [])['music'] ?? null"/>
 
             <!-- Quoted Post Embed (Matches Screenshot) -->
             @if($displayThread->type === 'quote' && $displayThread->repostOf)
@@ -437,6 +439,8 @@
                         <div class="inner-quote-text">
                             {!! nl2br(e(preg_replace('/<br\s*\/?>/i', "\n", $quoted->content ?? ''))) !!}
                         </div>
+                        <x-thread-gifs :ids="(json_decode($quoted->excerpt ?? '', true) ?: [])['giphy_ids'] ?? []"/>
+                        <x-thread-music :track="(json_decode($quoted->excerpt ?? '', true) ?: [])['music'] ?? null"/>
                         <div class="inner-quote-action-counts">
                             <span class="inner-count-item">
                                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
@@ -760,13 +764,8 @@
     .gallery-media-item img {
         width: 100%;
         height: 100%;
-        max-height: 480px;
-        object-fit: cover;
+        object-fit: contain;
         display: block;
-        transition: transform 0.25s ease;
-    }
-    .gallery-media-item:hover img {
-        transform: scale(1.025);
     }
     .gallery-count-1 .gallery-media-item,
     .gallery-count-1 .gallery-media-link,

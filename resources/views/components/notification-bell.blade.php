@@ -1,5 +1,5 @@
 @auth
-@php($unreadCount = auth()->user()->unreadNotifications()->count())
+@php($unreadCount = app(\App\Services\UserNotifications::class)->forUser(auth()->user())->whereNull('read_at')->count())
 <div class="dropdown notification-bell" data-notification-bell data-url="{{ route('notifications.index', ['preview' => 1]) }}">
     <button type="button" class="journal-menu-button notification-button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false" aria-controls="notification-popup" aria-label="Thông báo{{ $unreadCount ? ': '.$unreadCount.' chưa đọc' : '' }}">
         <x-journal-icon name="heart"/>

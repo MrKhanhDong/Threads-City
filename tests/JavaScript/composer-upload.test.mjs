@@ -56,7 +56,7 @@ async function fixture() {
     });
     ready();
     return {
-        element, uploads, revoked,
+        element, uploads, revoked, win,
         choose(count = 1) {
             const input = element('modalComposerFileInput');
             input.files = Array.from({ length: count }, (_, index) => ({ name: `photo-${index}.jpg`, type: 'image/jpeg', size: 1024 }));
@@ -110,4 +110,15 @@ test('a failed upload removes only the failed thumbnail and successful images re
     assert.equal(ui.element('modalSubmitBtn').disabled, false);
     assert.deepEqual(ui.revoked, ['blob:preview-2']);
     assert.match(ui.element('threadsGlobalToast').textContent, /Tải ảnh quá lâu/);
+});
+
+test('a selected song enables music-only posts and composer reset clears the selection', async () => {
+    const ui = await fixture();
+    ui.element('modalMusicId').value = 'song123';
+    ui.win.updateComposerSubmitState();
+    assert.equal(ui.element('modalSubmitBtn').disabled, false);
+    ui.element('newThreadModal').addEventListener('composer:reset', () => { ui.element('modalMusicId').value = ''; });
+    ui.close();
+    assert.equal(ui.element('modalMusicId').value, '');
+    assert.equal(ui.element('modalSubmitBtn').disabled, true);
 });

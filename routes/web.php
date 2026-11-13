@@ -8,6 +8,7 @@ use App\Http\Controllers\ChatController;
 use App\Http\Controllers\CommentThreadController;
 use App\Http\Controllers\GoogleAuthController;
 use App\Http\Controllers\MentionController;
+use App\Http\Controllers\MusicController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PushSubscriptionController;
 use App\Http\Controllers\ReaderController;
@@ -78,6 +79,7 @@ Route::get('/dat-lai-mat-khau/{token}', [AuthController::class, 'reset'])->name(
 Route::post('/dat-lai-mat-khau', [AuthController::class, 'updatePassword'])->middleware('throttle:password-reset')->name('password.update');
 
 Route::middleware('auth')->group(function (): void {
+    Route::get('/music/search', [MusicController::class, 'index'])->middleware('throttle:30,1')->name('music.search');
     Route::get('/mentions/suggestions', [MentionController::class, 'index'])->middleware('throttle:120,1')->name('mentions.suggestions');
     Route::patch('/account/mentions', [SafetyController::class, 'mentions'])->name('safety.mentions');
     Route::post('/push/subscriptions', [PushSubscriptionController::class, 'store'])->middleware('throttle:30,1')->name('push.store');

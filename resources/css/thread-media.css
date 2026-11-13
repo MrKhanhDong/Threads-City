@@ -17,13 +17,13 @@
 .thread-media-strip .media-controls button { cursor: pointer; }
 .thread-media-tile { flex: 0 0 calc((100% - 16px) / var(--media-visible-items)); min-width: 0; height: var(--media-height); overflow: hidden; border: 1px solid var(--journal-line); border-radius: 14px; background: var(--journal-raised); }
 .thread-media-tile .gallery-media-link { display: block; width: 100%; height: 100%; }
-.thread-media-tile img { display: block; width: 100%; height: 100%; max-width: 100%; object-fit: cover; -webkit-user-drag: none; }
+.thread-media-tile img { display: block; width: 100%; height: 100%; max-width: 100%; object-fit: contain; -webkit-user-drag: none; }
 .thread-media-tile:has(video) { flex-basis: min(420px, 88%); width: min(420px, 88%); }
 .thread-media-strip[data-media-count="2"] { --media-visible-items: 2; }
 .thread-media-strip[data-media-count="2"] .thread-media-tile:not(:has(video)) { flex-basis: calc((100% - 8px) / 2); }
 .thread-media-strip[data-media-count="1"] .thread-media-tile { flex: 0 1 auto; width: auto; height: auto; max-width: 100%; }
 .thread-media-strip[data-media-count="1"] .thread-media-tile:has(video) { flex: 1; width: 100%; }
-.thread-media-strip[data-media-count="1"] img { width: auto; height: auto; max-height: 480px; object-fit: contain; }
+.thread-media-strip[data-media-count="1"] img { width: 100%; height: auto; object-fit: contain; }
 .journal-body .clip-player { position: relative; width: 100%; height: 100%; min-width: 0; background: #080808; color: #fff; container-type: inline-size; }
 .journal-body .clip-player video { display: block; width: 100%; height: 100%; max-height: 560px; min-height: 200px; object-fit: contain; }
 .media-controls { display: flex; align-items: center; gap: 8px; padding: 8px; min-width: 0; }

@@ -8,6 +8,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Threads">
 <meta name="csrf-token" content="{{ csrf_token() }}">
+<meta name="giphy-api-key" content="{{ config('services.giphy.api_key') }}">
 @auth<meta name="mention-suggestions" content="{{ route('mentions.suggestions') }}">@endauth
 <title>{{ $pageTitle ?? $site['site_name'] }}{{ isset($pageTitle) ? ' — '.$site['site_name'] : '' }}</title>
 <meta name="description" content="{{ $seo['description'] ?? $site['site_description'] }}">

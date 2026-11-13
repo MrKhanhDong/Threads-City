@@ -1,0 +1,36 @@
+.gif-picker {
+    width: min(520px, calc(100vw - 24px));
+    max-height: min(650px, 85dvh);
+    padding: 18px;
+    margin: auto;
+    overflow: auto;
+    border: 1px solid var(--journal-line);
+    border-radius: 20px;
+    background: var(--journal-surface);
+    color: var(--journal-text);
+}
+.gif-picker::backdrop { background: #0009; }
+.gif-picker-heading, .gif-picker-footer, .gif-picker form { display: flex; align-items: center; gap: 10px; }
+.gif-picker-heading, .gif-picker-footer { justify-content: space-between; }
+.gif-picker-heading h2 { font-size: 18px; margin: 0; }
+.gif-picker button, .thread-gif button { border: 1px solid var(--journal-line); border-radius: 12px; padding: 8px 12px; background: var(--journal-raised); color: var(--journal-text); cursor: pointer; }
+.gif-picker button:disabled { opacity: .5; cursor: wait; }
+.gif-picker button:focus-visible, .gif-picker input:focus-visible { outline: 2px solid var(--journal-text); outline-offset: 2px; }
+.gif-picker form { margin-top: 16px; }
+.gif-picker input { flex: 1; width: 0; padding: 10px 12px; border: 1px solid var(--journal-line); border-radius: 12px; background: var(--journal-bg); color: var(--journal-text); }
+.gif-picker-status { color: var(--journal-muted); font-size: 13px; margin: 12px 0; }
+.gif-picker-results { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.gif-picker-results button { padding: 0; overflow: hidden; aspect-ratio: 1; }
+.gif-picker-results img { width: 100%; height: 100%; object-fit: contain; }
+.gif-picker-more { display: block; margin: 14px auto; }
+.gif-picker-more[hidden] { display: none; }
+.gif-picker-footer { margin-top: 16px; flex-wrap: wrap; font-size: 12px; }
+.giphy-attribution { color: inherit; font-size: 11px; font-weight: 700; text-decoration: none; }
+.giphy-attribution { display: inline-block; background: #111; border-radius: 3px; }
+.giphy-attribution img { width: 130px; height: auto; border-radius: 0; }
+.thread-gif-gallery { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+.thread-gif { margin: 0; max-width: 100%; min-width: 120px; }
+.thread-gif > a { display: block; }
+.thread-gif img { display: block; max-width: 100%; max-height: 540px; object-fit: contain; border-radius: 14px; }
+.thread-gif figcaption { margin-top: 4px; color: var(--journal-muted); }
+@media (max-width: 380px) { .gif-picker-results { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

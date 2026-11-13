@@ -38,6 +38,8 @@
             </div>
 
             <!-- Body Area -->
+            @include('threads.partials.gif_picker')
+            @include('threads.partials.music_picker')
             <div class="threads-modal-body" id="modalDropZone">
                 <form id="modalThreadForm" action="{{ route('threads.store') }}" method="post" enctype="multipart/form-data">
                     @csrf
@@ -145,6 +147,8 @@
                             <div id="modalQuotedThreadContainer" class="p-3 mb-2 rounded-3" style="display: none; background: var(--journal-raised); border: 1px solid var(--journal-line);"></div>
 
                             <!-- Media thumbnails preview grid -->
+                            <input type="hidden" id="modalMusicId" name="music_id" value="">
+                            <div data-selected-music hidden></div>
                             <div id="modalMediaPreview" class="modal-media-grid mb-2" style="display: none;"></div>
 
                             <!-- Drag & Drop Overlay indicator -->
@@ -169,7 +173,7 @@
                                 </button>
                                 <input type="file" id="modalComposerFileInput" accept="image/jpeg,image/png,image/webp,image/gif" multiple hidden>
                                 <button type="button" class="composer-tool-icon-btn tool-standard-only" id="modalAddVideoBtn" title="Video ngắn, tối đa 60 giây" aria-label="Đính kèm video ngắn">
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="13" height="14" rx="3"/><path d="m16 10 5-3v10l-5-3Z"/></svg>
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="13" height="14" rx="3"/><path d="m16 10 5-3v10l-5-3Z"/></svg>
                                 </button>
                                 <input type="file" id="modalComposerVideoInput" accept="video/mp4,video/webm" multiple hidden>
 
@@ -251,12 +255,18 @@
                                     </svg>
                                 </button>
 
-                                <!-- 9. Audio note -->
-                                <button type="button" class="composer-tool-icon-btn tool-standard-only" id="modalAddAudioBtn" title="Ghi âm giọng nói (tối đa 60 giây)">
+                                <!-- 9. Music -->
+                                <button type="button" class="composer-tool-icon-btn tool-standard-only" id="modalAddMusicBtn" title="Thêm nhạc" aria-label="Thêm nhạc">
                                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
                                         <path d="M9 18V5l12-2v13"></path>
                                         <circle cx="6" cy="18" r="3"></circle>
                                         <circle cx="18" cy="16" r="3"></circle>
+                                    </svg>
+                                </button>
+                                <button type="button" class="composer-tool-icon-btn tool-standard-only" id="modalAddAudioBtn" title="Ghi âm giọng nói" aria-label="Ghi âm giọng nói">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                                        <rect x="9" y="2" width="6" height="12" rx="3"></rect>
+                                        <path d="M5 10v2a7 7 0 0 0 14 0v-2M12 19v3M8 22h8"></path>
                                     </svg>
                                 </button>
                             </div>
@@ -720,6 +730,26 @@
     object-fit: cover;
     display: block;
 }
+.modal-media-thumb video, .modal-media-thumb audio {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+.modal-media-loading img {
+    position: absolute;
+    inset: 0;
+}
+.modal-media-status {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    padding: 8px 4px;
+    background: rgba(0, 0, 0, 0.75);
+    color: #fff;
+    text-align: center;
+    font-size: 12px;
+}
 .modal-media-remove {
     position: absolute;
     top: 5px;
@@ -847,7 +877,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (isUploadingCount || modalEl.dataset.recording) { toast('Chờ tải tệp hoặc dừng ghi âm trước.'); return; }
             // Clear any media if attaching poll
             if (uploadedMedia.length > 0) {
-                uploadedMedia = [];
+                clearMedia();
                 renderPreviews();
                 toast('Chuyển sang chế độ thăm dò ý kiến');
             }
@@ -999,11 +1029,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Interactive GIF button
-    document.getElementById('modalAddGifBtn')?.addEventListener('click', function() {
-        toast('Tính năng chọn GIF đang chuẩn bị ra mắt!');
-    });
-
     // Interactive Sticker button
     document.getElementById('modalAddStickerBtn')?.addEventListener('click', function() {
         toast('Bộ sưu tập nhãn dán đang chuẩn bị ra mắt!');
@@ -1060,7 +1085,8 @@ document.addEventListener('DOMContentLoaded', function() {
             modalCharCount.style.display = textLen > 1500 ? 'inline-block' : 'none';
         }
 
-        const canSubmit = ((textLen > 0 || mediaCount > 0 || pollValid || hasAttachedDoc || hasLocation || hasRepost)) && isUploadingCount === 0 && !modalEl.dataset.recording;
+        const hasMusic = !!document.getElementById('modalMusicId')?.value;
+        const canSubmit = ((textLen > 0 || mediaCount > 0 || pollValid || hasAttachedDoc || hasLocation || hasRepost || hasMusic)) && isUploadingCount === 0 && !modalEl.dataset.recording;
         if (modalSubmitBtn) {
             modalSubmitBtn.disabled = !canSubmit;
             if (canSubmit) {
@@ -1079,7 +1105,12 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     window.updateComposerSubmitState = updateSubmitState;
     window.threadMediaComposer = {
-        add: media => { if (uploadedMedia.length >= MAX_MEDIA) throw new Error(`Tối đa ${MAX_MEDIA} tệp đính kèm.`); uploadedMedia.push(media); renderPreviews(); },
+        add: media => {
+            if (uploadedMedia.length + isUploadingCount >= MAX_MEDIA) throw new Error(`Tối đa ${MAX_MEDIA} tệp đính kèm.`);
+            if (media.kind === 'giphy' && uploadedMedia.some(item => item.kind === 'giphy' && item.id === media.id)) throw new Error('GIF này đã có trong bài viết.');
+            uploadedMedia.push(media);
+            renderPreviews();
+        },
         available: () => uploadedMedia.length + isUploadingCount < MAX_MEDIA && !isUploadingCount && pollContainer?.style.display === 'none',
         upload: files => handleFilesUpload(files),
     };
@@ -1119,6 +1150,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 toast(`Tối đa ${MAX_MEDIA} tệp cho mỗi bài viết`);
                 return;
             }
+            modalFileInput.accept = 'image/jpeg,image/png,image/webp,image/gif';
             modalFileInput.click();
         });
 
@@ -1178,7 +1210,7 @@ document.addEventListener('DOMContentLoaded', function() {
         uploadedMedia.forEach((media, idx) => {
             const input = document.createElement('input');
             input.type = 'hidden';
-            input.name = 'media_ids[]';
+            input.name = media.kind === 'giphy' ? 'giphy_ids[]' : 'media_ids[]';
             input.value = media.id;
             modalMediaIdsContainer.appendChild(input);
 
@@ -1186,8 +1218,12 @@ document.addEventListener('DOMContentLoaded', function() {
             thumb.className = 'modal-media-thumb';
             const image = document.createElement(media.kind === 'video' ? 'video' : media.kind === 'audio' ? 'audio' : 'img');
             image.src = media.previewUrl || media.url;
-            if (media.kind === 'video' || media.kind === 'audio') image.controls = true;
             image.alt = `Ảnh đính kèm ${idx + 1}`;
+            if (media.kind === 'video' || media.kind === 'audio') {
+                image.controls = true;
+                image.preload = 'metadata';
+                image.playsInline = true;
+            }
             const remove = document.createElement('button');
             remove.type = 'button';
             remove.className = 'modal-media-remove';
@@ -1322,7 +1358,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const repostOfId = document.getElementById('modalRepostOfId')?.value || null;
         const postType = document.getElementById('modalPostType')?.value || 'post';
 
-        if (!content && uploadedMedia.length === 0 && pollOptions.length === 0 && !attachedDocHtml && !locationVal && !repostOfId) {
+        if (!content && uploadedMedia.length === 0 && pollOptions.length === 0 && !attachedDocHtml && !locationVal && !repostOfId && !document.getElementById('modalMusicId')?.value) {
             toast('Vui lòng nhập nội dung, đính kèm ảnh, cuộc thăm dò hoặc vị trí');
             return;
         }
@@ -1344,7 +1380,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 parent_id: parentId,
                 repost_of_id: repostOfId,
                 type: postType,
-                media_ids: uploadedMedia.map(m => m.id),
+                media_ids: uploadedMedia.filter(m => m.kind !== 'giphy').map(m => m.id),
+                giphy_ids: uploadedMedia.filter(m => m.kind === 'giphy').map(m => m.id),
+                music_id: document.getElementById('modalMusicId')?.value || null,
                 ...(isPollActive ? { poll_options: pollOptions, poll_duration_hours: Number(document.getElementById('pollDurationHours').value) } : {}),
                 attached_document_html: attachedDocHtml,
                 location: locationVal
@@ -1381,11 +1419,9 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     function resetModal() {
-        clearMedia();
         modalEl.dispatchEvent(new Event('composer:reset'));
-        if (modalForm) modalForm.reset();
-        uploadedMedia = [];
-        isUploadingCount = 0;
+        if (modalForm) { modalForm.reset(); modalForm.querySelectorAll('input[name="mention_ids[]"]').forEach(input => input.remove()); }
+        clearMedia();
         if (modalMediaIdsContainer) modalMediaIdsContainer.innerHTML = '';
         if (modalPreview) {
             modalPreview.innerHTML = '';
