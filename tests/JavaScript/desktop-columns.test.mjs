@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { setupDesktopColumns } from '../../resources/js/desktop-columns.js';
 
-function fixture({ desktop = true, saved = null, blockedStorage = false } = {}) {
+function fixture({ desktop = true, saved = null, blockedStorage = false, hasLimitMessage = true } = {}) {
     const element = (dataset = {}) => {
         const item = Object.assign(new EventTarget(), {
             dataset, hidden: false, textContent: '', attributes: {}, scrollTop: 0, style: {}, classes: new Set(),
@@ -47,7 +47,7 @@ function fixture({ desktop = true, saved = null, blockedStorage = false } = {}) 
     });
     workspace.querySelector = selector => ({ '[data-column-slot="primary"]': primary, '.desktop-column-add': add,
         '[data-column-announcement]': announcement, '[data-column-feed-group]': feedGroup,
-        '[data-column-count-label]': count, '[data-column-limit]': limit,
+        '[data-column-count-label]': count, '[data-column-limit]': hasLimitMessage ? limit : null,
         ...Object.fromEntries(panels.map(panel => [`[data-column-slot="${panel.element.dataset.columnSlot}"]`, panel.element])) })[selector];
     workspace.querySelectorAll = selector => ({ '.desktop-secondary-column': panels.map(panel => panel.element), '[data-column-choice]': choices, '[data-column-drag]': handles, '[data-column-slot]': slots })[selector];
     const body = element();
@@ -66,6 +66,15 @@ function fixture({ desktop = true, saved = null, blockedStorage = false } = {}) 
     const visualOrder = () => slots.filter(slot => slot === primary || !slot.hidden).sort((a, b) => Number(a.style.order) - Number(b.style.order)).map(slot => slot.dataset.columnSlot);
     return { primary, panels, choices, handles, add, workspace, body, media, storage, pageWindow, feedGroup, count, limit, pointer, visualOrder, pickerHides: () => pickerHides, pickerUpdates: () => pickerUpdates };
 }
+
+test('column setup completes when the layout omits the optional limit message', () => {
+    const ui = fixture({ hasLimitMessage: false });
+    assert.equal(ui.workspace.dataset.columnCount, '1');
+    assert.equal(ui.add.attributes['aria-label'], 'Thêm cột');
+    ui.choices[0].dispatchEvent(new Event('click'));
+    assert.equal(ui.workspace.dataset.columnCount, '2');
+    assert.equal(ui.panels[0].frame.src, 'http://localhost/search');
+});
 
 test('submenu remains open until selection and selecting a tab opens its own column', () => {
     const ui = fixture();

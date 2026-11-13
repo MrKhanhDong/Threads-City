@@ -2,6 +2,23 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { collectionOrder, setupLiveUpdates, syncRegion } from '../../resources/js/live-updates.js';
 
+test('live refresh preserves loaded GIFs with unchanged IDs while refreshing post statistics', () => {
+    const image = { cloneNode: () => ({ src: 'https://media.giphy.com/a.gif' }) };
+    const loaded = { dataset: { giphyId: 'hello', giphyLoaded: '1' }, childNodes: [image] };
+    const placeholder = { dataset: { giphyId: 'hello' }, replaceChildren(...nodes) { this.nodes = nodes; } };
+    let replaced = false;
+    const current = {
+        outerHTML: 'Post with old likes', hasAttribute: () => false, querySelector: () => null,
+        querySelectorAll: selector => selector === '[data-giphy-id][data-giphy-loaded]' ? [loaded] : [],
+        replaceWith() { replaced = true; },
+    };
+    const incoming = { outerHTML: 'Post with new likes', querySelectorAll: selector => selector === '[data-giphy-id]' ? [placeholder] : [] };
+    syncRegion(current, incoming, []);
+    assert.equal(replaced, true);
+    assert.equal(placeholder.dataset.giphyLoaded, '1');
+    assert.equal(placeholder.nodes[0].src, 'https://media.giphy.com/a.gif');
+});
+
 test('new posts prepend without losing older manually loaded pages', () => {
     assert.deepEqual(collectionOrder(['thread-3', 'thread-2', 'thread-1'], ['thread-4', 'thread-3'], [], true), ['thread-4', 'thread-3', 'thread-2', 'thread-1']);
 });

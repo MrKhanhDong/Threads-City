@@ -1,5 +1,7 @@
 @import "bootstrap/dist/css/bootstrap.min.css";
 @import "./thread-media.css";
+@import "./gif-picker.css";
+@import "./music-picker.css";
 
 body.threads-body {
     --bs-body-color: var(--journal-text);

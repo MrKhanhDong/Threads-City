@@ -1,6 +1,9 @@
 <?php
 
 return [
+    'giphy' => [
+        'api_key' => env('GIPHY_API_KEY'),
+    ],
     'webpush' => [
         'public_key' => env('WEBPUSH_PUBLIC_KEY'),
         'private_key' => env('WEBPUSH_PRIVATE_KEY'),

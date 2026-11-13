@@ -38,6 +38,8 @@
             </div>
 
             <!-- Body Area -->
+            @include('threads.partials.gif_picker')
+            @include('threads.partials.music_picker')
             <div class="threads-modal-body" id="modalDropZone">
                 <form id="modalThreadForm" action="{{ route('threads.store') }}" method="post" enctype="multipart/form-data">
                     @csrf
@@ -145,6 +147,8 @@
                             <div id="modalQuotedThreadContainer" class="p-3 mb-2 rounded-3" style="display: none; background: #202020; border: 1px solid #333;"></div>
 
                             <!-- Media thumbnails preview grid -->
+                            <input type="hidden" id="modalMusicId" name="music_id" value="">
+                            <div data-selected-music hidden></div>
                             <div id="modalMediaPreview" class="modal-media-grid mb-2" style="display: none;"></div>
 
                             <!-- Drag & Drop Overlay indicator -->
@@ -251,12 +255,18 @@
                                     </svg>
                                 </button>
 
-                                <!-- 9. Audio note -->
-                                <button type="button" class="composer-tool-icon-btn tool-standard-only" id="modalAddAudioBtn" title="Đính kèm âm thanh">
+                                <!-- 9. Music -->
+                                <button type="button" class="composer-tool-icon-btn tool-standard-only" id="modalAddMusicBtn" title="Thêm nhạc" aria-label="Thêm nhạc">
                                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
                                         <path d="M9 18V5l12-2v13"></path>
                                         <circle cx="6" cy="18" r="3"></circle>
                                         <circle cx="18" cy="16" r="3"></circle>
+                                    </svg>
+                                </button>
+                                <button type="button" class="composer-tool-icon-btn tool-standard-only" id="modalAddAudioBtn" title="Ghi âm giọng nói" aria-label="Ghi âm giọng nói">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                                        <rect x="9" y="2" width="6" height="12" rx="3"></rect>
+                                        <path d="M5 10v2a7 7 0 0 0 14 0v-2M12 19v3M8 22h8"></path>
                                     </svg>
                                 </button>
                             </div>
@@ -1018,11 +1028,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Interactive GIF button
-    document.getElementById('modalAddGifBtn')?.addEventListener('click', function() {
-        if (modalFileInput) { modalFileInput.accept = 'image/gif'; modalFileInput.click(); }
-    });
-
     // Interactive Sticker button
     document.getElementById('modalAddStickerBtn')?.addEventListener('click', function() {
         toast('Bộ sưu tập nhãn dán đang chuẩn bị ra mắt!');
@@ -1079,7 +1084,8 @@ document.addEventListener('DOMContentLoaded', function() {
             modalCharCount.style.display = textLen > 1500 ? 'inline-block' : 'none';
         }
 
-        const canSubmit = ((textLen > 0 || mediaCount > 0 || pollValid || hasAttachedDoc || hasLocation || hasRepost)) && isUploadingCount === 0 && !modalEl.dataset.recording;
+        const hasMusic = !!document.getElementById('modalMusicId')?.value;
+        const canSubmit = ((textLen > 0 || mediaCount > 0 || pollValid || hasAttachedDoc || hasLocation || hasRepost || hasMusic)) && isUploadingCount === 0 && !modalEl.dataset.recording;
         if (modalSubmitBtn) {
             modalSubmitBtn.disabled = !canSubmit;
             if (canSubmit) {
@@ -1098,6 +1104,7 @@ document.addEventListener('DOMContentLoaded', function() {
     window.threadMediaComposer = {
         add: media => {
             if (uploadedMedia.length + isUploadingCount >= MAX_MEDIA) throw new Error(`Tối đa ${MAX_MEDIA} tệp đính kèm.`);
+            if (media.kind === 'giphy' && uploadedMedia.some(item => item.kind === 'giphy' && item.id === media.id)) throw new Error('GIF này đã có trong bài viết.');
             uploadedMedia.push(media);
             renderPreviews();
         },
@@ -1201,7 +1208,7 @@ document.addEventListener('DOMContentLoaded', function() {
         uploadedMedia.forEach((media, idx) => {
             const input = document.createElement('input');
             input.type = 'hidden';
-            input.name = 'media_ids[]';
+            input.name = media.kind === 'giphy' ? 'giphy_ids[]' : 'media_ids[]';
             input.value = media.id;
             modalMediaIdsContainer.appendChild(input);
 
@@ -1356,7 +1363,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const repostOfId = document.getElementById('modalRepostOfId')?.value || null;
         const postType = document.getElementById('modalPostType')?.value || 'post';
 
-        if (!content && uploadedMedia.length === 0 && pollOptions.length === 0 && !attachedDocHtml && !locationVal && !repostOfId) {
+        if (!content && uploadedMedia.length === 0 && pollOptions.length === 0 && !attachedDocHtml && !locationVal && !repostOfId && !document.getElementById('modalMusicId')?.value) {
             toast('Vui lòng nhập nội dung, đính kèm ảnh, cuộc thăm dò hoặc vị trí');
             return;
         }
@@ -1378,7 +1385,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 parent_id: parentId,
                 repost_of_id: repostOfId,
                 type: postType,
-                media_ids: uploadedMedia.map(m => m.id),
+                media_ids: uploadedMedia.filter(m => m.kind !== 'giphy').map(m => m.id),
+                giphy_ids: uploadedMedia.filter(m => m.kind === 'giphy').map(m => m.id),
+                music_id: document.getElementById('modalMusicId')?.value || null,
                 ...(isPollActive ? { poll_options: pollOptions, poll_duration_hours: Number(document.getElementById('pollDurationHours').value) } : {}),
                 attached_document_html: attachedDocHtml,
                 location: locationVal
@@ -1415,6 +1424,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     function resetModal() {
+        modalEl.dispatchEvent(new Event('composer:reset'));
         if (modalForm) { modalForm.reset(); modalForm.querySelectorAll('input[name="mention_ids[]"]').forEach(input => input.remove()); }
         clearMedia();
         if (modalMediaIdsContainer) modalMediaIdsContainer.innerHTML = '';

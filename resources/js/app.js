@@ -19,6 +19,9 @@ import { setupCommentMentions } from './mentions.js';
 import { setupPwa } from './pwa.js';
 import { setupLocationGps } from './location-picker.js';
 import { uploadThreadImage } from './image-upload.js';
+import { setupAvatarPreview } from './avatar-preview.js';
+import { setupGiphy } from './gif-picker.js';
+import { setupMusicPicker } from './music-picker.js';
 import { setupVietnameseValidation, requestErrorMessage } from './validation-messages';
 
 window.bootstrap = { ...window.bootstrap, Dropdown, Offcanvas, Modal };
@@ -204,6 +207,9 @@ function init() {
     setupCommentMentions();
     setupPwa();
     setupLocationGps();
+    setupAvatarPreview();
+    setupGiphy();
+    setupMusicPicker();
     if (document.querySelector('[data-stream-composer]')) setupThreadStream();
     setupVietnameseValidation();
     setupCommentThreads();

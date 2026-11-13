@@ -27,6 +27,16 @@ function replaceRegion(current, incoming) {
 }
 
 export function syncRegion(current, incoming, removed) {
+    const loadedGifs = new Map([...current.querySelectorAll('[data-giphy-id][data-giphy-loaded]')].map(node => [node.dataset.giphyId, node]));
+    if (loadedGifs.size) {
+        incoming.querySelectorAll('[data-giphy-id]').forEach(node => {
+            const loaded = loadedGifs.get(node.dataset.giphyId);
+            if (loaded) {
+                node.replaceChildren(...[...loaded.childNodes].map(child => child.cloneNode(true)));
+                node.dataset.giphyLoaded = loaded.dataset.giphyLoaded;
+            }
+        });
+    }
     if (!current.hasAttribute('data-live-list')) {
         if (current.outerHTML !== incoming.outerHTML && !hasActiveMedia(current)) replaceRegion(current, incoming);
         return;

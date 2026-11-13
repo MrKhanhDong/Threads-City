@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Notifications\ThreadInteractionNotification;
 use App\Services\ImageStorage;
 use App\Services\Mentions;
+use App\Services\MusicCatalog;
 use App\Services\ThreadText;
 use Illuminate\Contracts\Pagination\Paginator;
 use Illuminate\Contracts\View\View;
@@ -233,7 +234,7 @@ class ThreadController extends Controller
             'mention_ids.*' => 'integer|distinct|exists:users,id',
             'continuations' => 'nullable|array|max:9',
             'continuations.*' => 'required|string|max:2000',
-            'content' => 'required_without_all:media_ids,images,poll_options,attached_document_html,location,repost_of_id|nullable|string|max:2000',
+            'content' => 'required_without_all:media_ids,images,giphy_ids,music_id,poll_options,attached_document_html,location,repost_of_id|nullable|string|max:2000',
             'parent_id' => 'nullable|exists:posts,id',
             'repost_of_id' => 'nullable|exists:posts,id',
             'type' => 'nullable|in:post,reply,repost,quote',
@@ -241,6 +242,9 @@ class ThreadController extends Controller
             'media_ids.*' => ['integer', 'distinct', Rule::exists('media', 'id')->where('user_id', $request->user()?->id)],
             'images' => 'nullable|array|max:'.$mediaLimit,
             'images.*' => 'image|mimes:jpeg,png,jpg,webp,gif|max:5120',
+            'giphy_ids' => 'nullable|array|max:'.$mediaLimit,
+            'giphy_ids.*' => ['required', 'string', 'regex:/\A[a-zA-Z0-9]{1,100}\z/', 'distinct'],
+            'music_id' => ['nullable', 'string', 'regex:/\A[a-zA-Z0-9]{1,64}\z/'],
             'poll_options' => 'nullable|array|min:2|max:4',
             'poll_options.*' => 'required|string|max:100|distinct:ignore_case',
             'poll_duration_hours' => 'nullable|integer|in:1,6,24,72,168',
@@ -248,7 +252,7 @@ class ThreadController extends Controller
             'location' => 'nullable|string|max:150',
         ]);
 
-        if (count($data['media_ids'] ?? []) + count($request->file('images', [])) > $mediaLimit) {
+        if (count($data['media_ids'] ?? []) + count($request->file('images', [])) + count($data['giphy_ids'] ?? []) > $mediaLimit) {
             throw ValidationException::withMessages(['media_ids' => "Mỗi bài viết tối đa {$mediaLimit} tệp đính kèm."]);
         }
 
@@ -261,7 +265,8 @@ class ThreadController extends Controller
             $type = 'repost';
         }
 
-        $post = DB::transaction(function () use ($request, $data, $type): Post {
+        $music = ! empty($data['music_id']) ? app(MusicCatalog::class)->track($data['music_id']) : null;
+        $post = DB::transaction(function () use ($request, $data, $type, $music): Post {
             $content = trim($data['content'] ?? '');
             if (($data['content_format'] ?? 'plain') === 'html') {
                 $content = app(ThreadText::class)->clean($content);
@@ -318,6 +323,12 @@ class ThreadController extends Controller
             if ($location) {
                 $metaExcerpt['location'] = $location;
             }
+            if (! empty($data['giphy_ids'])) {
+                $metaExcerpt['giphy_ids'] = $data['giphy_ids'];
+            }
+            if ($music) {
+                $metaExcerpt['music'] = $music;
+            }
 
             $fallbackTitle = 'Bài viết Threads';
             if ($content) {
@@ -328,6 +339,8 @@ class ThreadController extends Controller
                 $fallbackTitle = strip_tags($attachedDoc);
             } elseif ($location) {
                 $fallbackTitle = '📍 '.$location;
+            } elseif ($music) {
+                $fallbackTitle = $music['title'];
             }
 
             $post = Post::create([
@@ -464,7 +477,7 @@ class ThreadController extends Controller
             $plain = $format === 'html' ? app(ThreadText::class)->plain($content) : trim($content);
             $hasMedia = array_key_exists('media_ids', $data) ? count($data['media_ids']) > 0 : $post->media()->exists();
             $metadata = json_decode($post->excerpt ?? '', true);
-            $hasAttachment = is_array($metadata) && (! empty($metadata['is_poll']) || ! empty($metadata['location']) || ! empty($metadata['attached_doc']));
+            $hasAttachment = is_array($metadata) && (! empty($metadata['is_poll']) || ! empty($metadata['location']) || ! empty($metadata['attached_doc']) || ! empty($metadata['giphy_ids']) || ! empty($metadata['music']));
             if (($plain === '' && ! $hasMedia && ! $hasAttachment) || mb_strlen($plain) > 2000) {
                 throw ValidationException::withMessages(['content' => 'Nhập nội dung hoặc đính kèm ảnh, bình chọn, vị trí hay tài liệu. Nội dung tối đa 2000 ký tự.']);
             }

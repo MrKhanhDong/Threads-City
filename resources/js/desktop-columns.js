@@ -56,7 +56,7 @@ export function setupDesktopColumns(pageDocument = document, pageWindow = window
         choices.forEach(choice => { choice.disabled = count >= maximumColumns; });
         workspace.querySelectorAll('[data-column-drag]').forEach(header => { header.tabIndex = desktop.matches && count > 1 ? 0 : -1; });
         countLabel.textContent = `${count}/${maximumColumns}`;
-        limitMessage.hidden = count < maximumColumns;
+        if (limitMessage) limitMessage.hidden = count < maximumColumns;
         addButton.setAttribute('aria-label', count >= maximumColumns ? 'Đa nhiệm: đã mở tối đa 3 cột' : 'Thêm cột');
         addButton.setAttribute('title', count >= maximumColumns ? 'Đã mở tối đa 3 cột' : 'Thêm cột');
     };

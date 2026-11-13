@@ -134,8 +134,11 @@ export function setupThreadMedia(doc = document, pageWindow = window) {
     const ratios = new Map();
     const voiceSources = new Map();
     let playbackVersion = 0;
-    const pauseOthers = current => players.forEach(media => { if (media !== current) media.pause(); });
-    const canAutoplay = () => !doc.hidden && !doc.fullscreenElement && !doc.querySelector('dialog[open], .modal.show') && !pageWindow.matchMedia('(prefers-reduced-motion: reduce)').matches && !pageWindow.navigator.connection?.saveData;
+    const pauseOthers = current => {
+        players.forEach(media => { if (media !== current) media.pause(); });
+        doc.querySelectorAll('[data-music-audio], [data-music-audition]').forEach(media => { if (media !== current) media.pause(); });
+    };
+    const canAutoplay = () => !doc.hidden && !doc.fullscreenElement && !doc.querySelector('dialog[open], .modal.show') && ![...doc.querySelectorAll('[data-music-audio]')].some(media => !media.paused && !media.ended) && !pageWindow.matchMedia('(prefers-reduced-motion: reduce)').matches && !pageWindow.navigator.connection?.saveData;
     const observer = pageWindow.IntersectionObserver ? new pageWindow.IntersectionObserver(entries => {
         entries.forEach(entry => ratios.set(entry.target, entry.intersectionRatio));
         const best = [...ratios].filter(([video, ratio]) => video.isConnected && ratio >= 0.6 && !video.dataset.userPaused).sort((a, b) => b[1] - a[1])[0]?.[0];
