@@ -62,6 +62,9 @@ class LivePageUpdates
             $visible = Post::published()->visibleTo($request->user(), true)->whereIn('id', $knownIds);
             if ($request->user() && $request->routeIs('home', 'threads.index')) {
                 $visible->whereNotIn('id', DB::table('hidden_posts')->where('user_id', $request->user()->id)->select('post_id'));
+                if ($request->query('tab') === 'following') {
+                    $visible->fromFollowedAuthors($request->user());
+                }
             }
             $existing = $visible->pluck('id')->map(fn ($id): string => (string) $id)->all();
             $removed = array_values(array_diff($knownIds, $existing));

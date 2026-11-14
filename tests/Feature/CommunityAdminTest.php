@@ -205,7 +205,11 @@ class CommunityAdminTest extends TestCase
         $this->assertSame(1, app(UserNotifications::class)->forUser($owner)->count());
         $this->actingAs($other)->post(route('notifications.open', $notification->id))->assertNotFound();
         $this->actingAs($owner)->get(route('notifications.index'))->assertOk()->assertSee('Bài của bạn bị ẩn');
-        $this->getJson(route('notifications.index', ['preview' => 1]))->assertOk()->assertJsonPath('unread', 1);
+        $preview = $this->getJson(route('notifications.index', ['preview' => 1]))->assertOk()->assertJsonPath('unread', 1);
+        $this->assertStringContainsString('moderation-notification', $preview->json('html'));
+        $this->assertStringContainsString('notification-preview-item', $preview->json('html'));
+        $this->assertStringContainsString('Bài của bạn bị ẩn', $preview->json('html'));
+        $this->assertStringContainsString('Spam', $preview->json('html'));
         $this->post(route('notifications.open', $notification->id))->assertRedirect(route('notifications.index'));
         $this->assertNotNull($notification->fresh()->read_at);
     }

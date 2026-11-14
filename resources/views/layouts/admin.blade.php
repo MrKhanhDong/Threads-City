@@ -35,7 +35,8 @@
             ['admin.history.index','Lịch sử xử lý','repost'],
             ['admin.settings.edit','Cài đặt website','settings'],
         ] as [$route,$label,$icon])
-        <a @class(['active'=>request()->routeIs($route)]) href="{{ route($route) }}" @if(request()->routeIs($route)) aria-current="page" @endif><x-journal-icon :name="$icon" :size="21"/><span>{{ $label }}</span></a>
+        @php($isActive = $route === 'admin.index' ? request()->routeIs($route) : request()->routeIs(\Illuminate\Support\Str::beforeLast($route, '.').'.*'))
+        <a @class(['active'=>$isActive]) href="{{ route($route) }}" @if($isActive) aria-current="page" @endif><x-journal-icon :name="$icon" :size="21"/><span>{{ $label }}</span></a>
         @endforeach
     </nav>
     <div class="sidebar-bottom">
@@ -48,6 +49,7 @@
     <header class="admin-topbar">
         <div class="admin-topbar-title"><span class="admin-breadcrumb">Threads City <span aria-hidden="true">/</span></span><strong>{{ $pageTitle ?? 'Quản trị' }}</strong></div>
         <div class="header-actions">
+            <a class="admin-public-link" href="{{ route('home') }}"><span>Xem website</span><x-journal-icon name="arrow" :size="17"/></a>
             <button type="button" class="admin-icon-button" data-theme-toggle aria-label="Đổi giao diện sáng tối" title="Đổi giao diện sáng tối"><x-journal-icon name="sun" :size="20"/></button>
             <x-notification-bell/>
             <a class="admin-account" href="{{ route('account.edit') }}"><x-avatar :user="auth()->user()"/><span>{{ auth()->user()->name }}</span></a>

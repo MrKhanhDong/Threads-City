@@ -98,7 +98,7 @@ export function setupReplyNotifications(doc = document, pageWindow = window) {
         if (busy || markingRead) { if (!summary) refreshAgain = true; return; }
         busy = true;
         const version = revision;
-        if (!summary) { status.textContent = 'Đang tải thông báo…'; retry.hidden = true; }
+        if (!summary) { status.textContent = items.childElementCount ? '' : 'Đang tải thông báo…'; retry.hidden = true; }
         try {
             const url = new URL(bell.dataset.url);
             if (summary) url.searchParams.set('summary', '1');

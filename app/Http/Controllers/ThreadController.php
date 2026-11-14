@@ -41,6 +41,9 @@ class ThreadController extends Controller
             return redirect()->route('search.index', $request->only(['q', 'type', 'period', 'scope', 'category', 'tag', 'page']));
         }
         $tab = $filters['tab'] ?? 'for-you';
+        if ($tab === 'following' && ! $request->user()) {
+            return redirect()->route('login');
+        }
         $query = Post::published()->visibleTo($request->user(), true)
             ->whereNull('parent_id')
             ->where(function ($q): void {
@@ -50,8 +53,7 @@ class ThreadController extends Controller
             ->latest('published_at');
 
         if ($tab === 'following' && $request->user()) {
-            $followingIds = $request->user()->following()->pluck('users.id')->push($request->user()->id);
-            $query->whereIn('user_id', $followingIds);
+            $query->fromFollowedAuthors($request->user());
         }
 
         if ($user = $request->user()) {
@@ -89,7 +91,7 @@ class ThreadController extends Controller
 
         if ($request->ajax() && $request->wantsJson()) {
             return response()->json([
-                'html' => view('threads.partials.thread_list', ['threads' => $threads, 'userInteractions' => $userInteractions])->render(),
+                'html' => view('threads.partials.thread_list', ['threads' => $threads, 'userInteractions' => $userInteractions, 'tab' => $tab])->render(),
                 'hasMore' => $threads->hasMorePages(),
                 'nextPageUrl' => $threads->nextPageUrl(),
             ]);

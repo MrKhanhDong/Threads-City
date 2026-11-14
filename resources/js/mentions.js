@@ -50,7 +50,7 @@ export function setupCommentMentions(doc = document) {
     if (!endpoint) return;
     let sequence = 0;
     doc.addEventListener('focusin', event => {
-        const input = event.target.closest('textarea[name="body"]');
+        const input = event.target.closest('textarea[name="body"], textarea[data-reply-input]');
         if (!input || !input.form || input.dataset.mentionsReady) return;
         input.dataset.mentionsReady = 'true';
         const list = doc.createElement('div'); list.className = 'mention-suggestions'; list.hidden = true;

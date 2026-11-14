@@ -1,0 +1,30 @@
+.journal-body [data-thread-url] { cursor: pointer; }
+.journal-body .main-thread-focus-area > [data-thread-url] { cursor: auto; }
+.journal-body .inline-reply-form { padding: 16px 0 0; margin: 14px 0 0; border-top: 1px solid var(--journal-line); color: var(--journal-text); }
+.inline-reply-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 12px; color: var(--journal-muted); }
+.inline-reply-heading strong { color: var(--journal-text); font-weight: 600; }
+.inline-reply-heading button, .inline-reply-tools button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 7px; min-width: 32px; min-height: 32px; border: 0; border-radius: 50%; background: transparent; color: var(--journal-muted); font: inherit; cursor: pointer; }
+.inline-reply-heading button:hover, .inline-reply-tools button:hover { background: var(--journal-hover); color: var(--journal-text); }
+.inline-reply-context { margin: 0 0 10px; padding: 2px 10px; border-left: 2px solid var(--journal-line); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: var(--journal-faint); font-size: 12px; }
+.inline-reply-editor { display: flex; align-items: flex-start; gap: 10px; }
+.journal-body .inline-reply-editor > .avatar { flex: 0 0 30px; width: 30px; height: 30px; font-size: 13px; }
+.inline-reply-input { flex: 1; min-width: 0; padding: 10px 12px 6px; border: 1px solid var(--journal-line); border-radius: 18px; background: var(--journal-raised); }
+.inline-reply-input:focus-within { border-color: var(--journal-border-hover); }
+.journal-body .inline-reply-input textarea { display: block; width: 100%; min-height: 30px; max-height: 180px; padding: 0; border: 0; border-radius: 0; background: transparent; color: var(--journal-text); font: inherit; font-size: 14px; line-height: 1.6; resize: none; outline: 0; box-shadow: none; }
+.inline-reply-input textarea::placeholder { color: var(--journal-faint); }
+.inline-reply-tools { display: flex; align-items: center; gap: 5px; padding-top: 4px; }
+.inline-reply-tools > span { margin-right: auto; color: var(--journal-faint); font-size: 10px; }
+.inline-reply-tools .inline-reply-submit { min-height: 32px; padding: 6px 10px; border-radius: 12px; background: var(--journal-button-bg); color: var(--journal-button-text); font-size: 12px; font-weight: 600; }
+.inline-reply-tools .inline-reply-submit:hover { background: var(--journal-button-hover); color: var(--journal-button-text); }
+.inline-reply-form button:disabled { opacity: .5; cursor: wait; }
+.inline-reply-media { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 0 40px; }
+.inline-reply-media > span { position: relative; }
+.inline-reply-media img { display: block; width: 72px; height: 72px; object-fit: cover; border-radius: 12px; }
+.inline-reply-media button { position: absolute; inset: 2px 2px auto auto; display: grid; place-items: center; width: 24px; height: 24px; border: 0; border-radius: 50%; background: #101010d9; color: #fff; font-size: 12px; }
+.inline-reply-status { margin: 6px 0 0 40px; color: var(--journal-muted); font-size: 12px; }
+.inline-reply-status:empty, .inline-reply-media:empty { display: none; }
+.inline-reply-status.is-error { color: var(--journal-danger); }
+.inline-reply-results:not(:empty) { margin-top: 16px; padding-left: 12px; border-left: 1px solid var(--journal-line); }
+.journal-body .inline-reply-results .thread-card-wrapper { padding: 14px 0; border-bottom: 0; }
+.journal-body .inline-reply-results .thread-main-row { gap: 10px; }
+@media (max-width: 600px) { .inline-reply-tools > span { font-size: 0; } .inline-reply-tools button { min-height: 38px; } .inline-reply-results:not(:empty) { padding-left: 6px; } .inline-reply-input { padding-inline: 10px; } }

@@ -36,7 +36,7 @@
 </script>
 @stack('threads-styles')
 </head>
-<body @class(['public-body', 'journal-body', 'threads-body', 'journal-messages-page' => request()->routeIs('chat.*'), 'journal-search-page' => request()->routeIs('search.index'), 'journal-insights-page' => request()->routeIs('insights.index')]) data-live-enabled="{{ request()->routeIs('home', 'threads.index', 'threads.show', 'profile.show', 'saved', 'notifications.index') ? '1' : '0' }}">
+<body @class(['public-body', 'journal-body', 'threads-body', 'thread-detail-page' => request()->routeIs('threads.show'), 'journal-messages-page' => request()->routeIs('chat.*'), 'journal-search-page' => request()->routeIs('search.index'), 'journal-insights-page' => request()->routeIs('insights.index')]) data-live-enabled="{{ request()->routeIs('home', 'threads.index', 'threads.show', 'profile.show', 'saved', 'notifications.index') ? '1' : '0' }}">
 <script>window.THREAD_AUTH_USER_ID = @json(auth()->id());</script>
 <a href="#main" class="skip-link">Đến nội dung chính</a>
 <div class="journal-shell">
@@ -73,7 +73,7 @@
         <header class="journal-topbar" data-column-drag="primary" tabindex="-1" aria-describedby="desktop-column-drag-help">
             <button class="journal-menu-button journal-sidebar-toggle" type="button" data-bs-toggle="offcanvas" data-bs-target="#journal-sidebar-drawer" aria-controls="journal-sidebar-drawer" aria-expanded="false" aria-label="Mở thanh bên"><x-journal-icon name="menu" :size="24"/></button>
             <a class="journal-mobile-brand" href="{{ route('home') }}" aria-label="Threads">@</a>
-            @hasSection('search-bar')@yield('search-bar')@else<span>{{ $pageTitle ?? 'Dành cho bạn' }}</span>@endif
+            @hasSection('page-heading')@yield('page-heading')@else @hasSection('search-bar')@yield('search-bar')@else<span>{{ $pageTitle ?? 'Dành cho bạn' }}</span>@endif @endif
             <div class="journal-topbar-actions">
                 <x-notification-bell/>
                 @auth
@@ -95,6 +95,7 @@
     <!-- Modal Create Thread -->
     @auth
     @include('threads.partials.composer_modal')
+    <x-inline-reply/>
     @include('threads.partials.quote_picker_modal')
     @include('threads.partials.text_document_modal')
     @include('threads.partials.location_picker_modal')

@@ -6,6 +6,8 @@ import { setupSidebarFeeds } from './sidebar-feeds';
 import { setupSidebarDrawer } from './sidebar-drawer';
 import { setupPhuongComposerBridge } from './phuong-interface';
 import { setupLiveUpdates } from './live-updates';
+import { setupInlineReplies } from './inline-replies.js';
+import { setupThreadNavigation } from './thread-navigation.js';
 import { setupThreadMedia } from './thread-media';
 import { setupVoiceRecorder } from './voice-recorder';
 import { setupPolls } from './polls';
@@ -198,6 +200,7 @@ function init() {
     setupSidebarDrawer(Offcanvas);
     setupPhuongComposerBridge(Modal);
     setupLiveUpdates();
+    setupThreadNavigation();
     setupThreadMedia();
     setupVoiceRecorder();
     setupPolls();
@@ -206,6 +209,7 @@ function init() {
     setupFeedPagination();
     setupInsights();
     setupCommentMentions();
+    setupInlineReplies();
     setupPwa();
     setupLocationGps();
     setupAvatarPreview();

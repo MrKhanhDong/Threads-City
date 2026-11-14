@@ -160,6 +160,12 @@ class Post extends Model
         return $q->whereNull('archived_at')->whereIn('status', ['published', 'scheduled'])->whereNotNull('published_at')->where('published_at', '<=', now());
     }
 
+    public function scopeFromFollowedAuthors(Builder $query, User $viewer): Builder
+    {
+        return $query->whereIn('posts.user_id', $viewer->following()->select('users.id'))
+            ->where('posts.user_id', '!=', $viewer->id);
+    }
+
     public function scopeVisibleTo(Builder $query, ?User $viewer, bool $hideMuted = false): Builder
     {
         $authors = User::contentVisibleTo($viewer)->select('users.id');
