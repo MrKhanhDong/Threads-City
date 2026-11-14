@@ -9,6 +9,7 @@ use App\Models\Tag;
 use App\Models\TrendingTopic;
 use App\Models\User;
 use App\Services\Mentions;
+use App\Services\ModerationSchema;
 use App\Services\PushSubscriptions;
 use App\Services\SendWebPush;
 use GuzzleHttp\Client;
@@ -32,6 +33,7 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->scoped(Mentions::class);
+        $this->app->scoped(ModerationSchema::class);
         $this->app->bind(WebPush::class, fn (): WebPush => new WebPush([
             'VAPID' => ['subject' => config('services.webpush.subject'), 'publicKey' => config('services.webpush.public_key'), 'privateKey' => config('services.webpush.private_key')],
         ], ['TTL' => 300], new Client(['timeout' => 10, 'connect_timeout' => 5, 'allow_redirects' => false])));

@@ -11,13 +11,24 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('users', function (Blueprint $table): void {
-            $table->text('lock_reason')->nullable();
-            $table->timestamp('lock_expires_at')->nullable()->index();
-        });
-        Schema::table('posts', function (Blueprint $table): void {
-            $table->timestamp('moderation_hidden_at')->nullable();
-        });
+        if (! Schema::hasColumn('users', 'lock_reason')) {
+            Schema::table('users', function (Blueprint $table): void {
+                $table->text('lock_reason')->nullable();
+            });
+        }
+        if (! Schema::hasColumn('users', 'lock_expires_at')) {
+            Schema::table('users', function (Blueprint $table): void {
+                $table->timestamp('lock_expires_at')->nullable()->index();
+            });
+        }
+        if (! Schema::hasColumn('posts', 'moderation_hidden_at')) {
+            Schema::table('posts', function (Blueprint $table): void {
+                $table->timestamp('moderation_hidden_at')->nullable();
+            });
+        }
+        if (Schema::hasTable('moderation_logs')) {
+            return;
+        }
         Schema::create('moderation_logs', function (Blueprint $table): void {
             $table->id();
             $table->foreignId('admin_id')->nullable()->constrained('users')->nullOnDelete();

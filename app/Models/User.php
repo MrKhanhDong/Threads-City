@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\ModerationSchema;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -36,6 +37,10 @@ class User extends Authenticatable implements MustVerifyEmail
 
     public function scopeNotLocked(Builder $query): Builder
     {
+        if (! app(ModerationSchema::class)->hasLockExpiry()) {
+            return $query->where('is_locked', false);
+        }
+
         return $query->where(fn (Builder $users): Builder => $users->where('is_locked', false)->orWhere('lock_expires_at', '<=', now()));
     }
 
