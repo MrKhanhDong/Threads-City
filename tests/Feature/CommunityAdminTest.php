@@ -8,6 +8,7 @@ use App\Models\Post;
 use App\Models\User;
 use App\Notifications\ModerationDecision;
 use App\Notifications\ReportHandled;
+use App\Services\ModerationSchema;
 use App\Services\UserNotifications;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -20,6 +21,39 @@ class CommunityAdminTest extends TestCase
     {
         parent::setUp();
         $this->withoutVite();
+    }
+
+    public function test_public_feed_works_before_moderation_migration_and_locked_accounts_stay_excluded(): void
+    {
+        $schema = $this->mock(ModerationSchema::class);
+        $schema->shouldReceive('hasLockExpiry')->andReturn(false);
+        $active = User::factory()->create();
+        $locked = User::factory()->create(['is_locked' => true]);
+        Post::factory()->published()->create(['user_id' => $active->id]);
+        $this->assertStringNotContainsString('lock_expires_at', User::notLocked()->toSql());
+        $this->assertTrue(User::notLocked()->whereKey($active->id)->exists());
+        $this->assertFalse(User::notLocked()->whereKey($locked->id)->exists());
+        $this->get(route('home'))->assertOk();
+        $this->actingAs($active)->get(route('home'))->assertOk();
+    }
+
+    public function test_admin_shows_migration_instruction_before_schema_is_ready(): void
+    {
+        $schema = $this->mock(ModerationSchema::class);
+        $schema->shouldReceive('hasLockExpiry')->andReturn(false);
+        $schema->shouldReceive('isReady')->andReturn(false);
+        $admin = User::factory()->create(['role' => 'admin']);
+        $this->actingAs($admin)->get(route('admin.index'))->assertStatus(503)
+            ->assertSee('php artisan migrate --force --no-interaction');
+        $this->getJson(route('admin.users.index'))->assertStatus(503);
+        $this->get(route('home'))->assertOk();
+    }
+
+    public function test_migration_can_follow_a_manual_schema_update(): void
+    {
+        $migration = require database_path('migrations/2026_11_14_185011_add_community_moderation_audit.php');
+        $migration->up();
+        $this->assertTrue(app(ModerationSchema::class)->isReady());
     }
 
     public function test_guests_and_verified_readers_cannot_moderate_or_read_history(): void
