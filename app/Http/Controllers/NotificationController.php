@@ -32,7 +32,7 @@ class NotificationController extends Controller
         if ($request->expectsJson() && $request->boolean('summary')) {
             return response()->json(['unread' => $unread])->header('Cache-Control', 'private, no-store');
         }
-        $notifications = $query->paginate(20);
+        $notifications = $query->paginate($request->boolean('preview') ? 8 : 20);
         $comments = Comment::whereIn('id', $notifications->map(fn ($notification): int => (int) ($notification->data['comment_id'] ?? 0))->filter())
             ->with(['user', 'post', 'parent.user'])->get()->keyBy('id');
         $reportResults = ContentReport::where('reporter_id', $request->user()->id)
@@ -44,7 +44,9 @@ class NotificationController extends Controller
         $mentionedComments = Comment::whereIn('id', $mentionRecords->pluck('comment_id')->filter())->with('user')->get()->keyBy('id');
         $mentionContexts = $mentionRecords->mapWithKeys(fn (object $mention): array => [$mention->id => ['actor' => $mention->comment_id ? $mentionedComments->get($mention->comment_id)?->user : $mentionedPosts->get($mention->post_id)?->author, 'is_comment' => $mention->comment_id !== null]]);
         if ($request->expectsJson()) {
-            return response()->json(['unread' => $unread, 'html' => view('components.notification-items', compact('notifications', 'comments', 'reportResults', 'mentionContexts'))->render()])
+            $view = $request->boolean('preview') ? 'components.notification-preview' : 'components.notification-items';
+
+            return response()->json(['unread' => $unread, 'html' => view($view, compact('notifications', 'comments', 'reportResults', 'mentionContexts'))->render()])
                 ->header('Cache-Control', 'private, no-store');
         }
 

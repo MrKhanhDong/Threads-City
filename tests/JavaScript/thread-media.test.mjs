@@ -1,8 +1,25 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mediaTime, galleryIndex, inspectClip, loadVoiceBlob, mediaIcon, setupMediaDrag } from '../../resources/js/thread-media.js';
+import { mediaTime, galleryIndex, galleryHeight, inspectClip, loadVoiceBlob, mediaIcon, setupMediaDrag } from '../../resources/js/thread-media.js';
 import { waveformPeaks, recordingMime } from '../../resources/js/voice-recorder.js';
 import { pollPercent } from '../../resources/js/polls.js';
+
+test('mixed photo ratios share a height while showing two images and part of the third', () => {
+    const ratios = [0.75, 4 / 3, 0.75];
+    const height = galleryHeight(560, ratios);
+    assert.ok(Math.abs(height * (ratios[0] + ratios[1] + ratios[2] * 0.35) + 16 - 560) < 0.001);
+    assert.ok(height < 340);
+    const landscape = galleryHeight(560, [16 / 9, 16 / 9, 16 / 9]);
+    assert.ok(landscape < height);
+});
+
+test('two photos fit the row and extreme panoramas remain inside its width', () => {
+    const height = galleryHeight(560, [16 / 9, 1]);
+    assert.ok(Math.abs(height * (16 / 9 + 1) + 8 - 560) < 0.001);
+    assert.ok(galleryHeight(560, [8, 1, 1]) * 8 <= 560 * 0.95);
+    assert.ok(Number.isFinite(galleryHeight(560, [NaN, 0])));
+    assert.equal(galleryHeight(0, [1, 1]), 240);
+});
 
 test('gallery wraps in both directions and single photos remain at index zero', () => {
     assert.equal(galleryIndex(3, 1, 4), 0);

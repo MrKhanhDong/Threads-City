@@ -20,7 +20,7 @@ class ChatTest extends TestCase
 
     public function test_sidebar_places_chat_below_search_and_guests_cannot_read_chat(): void
     {
-        $this->get(route('home'))->assertOk()->assertSeeInOrder(['aria-label="Tìm kiếm"', 'aria-label="Chat"', 'aria-label="Hoạt động"'], false);
+        $this->get(route('home'))->assertOk()->assertSeeInOrder(['aria-label="Tìm kiếm"', 'aria-label="Tin nhắn"', 'aria-label="Hoạt động"'], false);
         $this->get(route('chat.index'))->assertRedirect(route('login'));
         $this->getJson(route('chat.unread'))->assertUnauthorized();
     }

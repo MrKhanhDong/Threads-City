@@ -36,7 +36,7 @@
 </script>
 @stack('threads-styles')
 </head>
-<body @class(['public-body', 'journal-body', 'threads-body', 'journal-search-page' => request()->routeIs('search.index'), 'journal-insights-page' => request()->routeIs('insights.index')]) data-live-enabled="{{ request()->routeIs('home', 'threads.index', 'threads.show', 'profile.show', 'saved', 'notifications.index') ? '1' : '0' }}">
+<body @class(['public-body', 'journal-body', 'threads-body', 'journal-messages-page' => request()->routeIs('chat.*'), 'journal-search-page' => request()->routeIs('search.index'), 'journal-insights-page' => request()->routeIs('insights.index')]) data-live-enabled="{{ request()->routeIs('home', 'threads.index', 'threads.show', 'profile.show', 'saved', 'notifications.index') ? '1' : '0' }}">
 <script>window.THREAD_AUTH_USER_ID = @json(auth()->id());</script>
 <a href="#main" class="skip-link">Đến nội dung chính</a>
 <div class="journal-shell">

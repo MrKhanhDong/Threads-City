@@ -9,23 +9,21 @@
 .lightbox-stage { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex: 1; min-height: 0; }
 .lightbox-stage img { display: block; flex: 1; width: 0; min-width: 0; height: 100%; object-fit: contain; touch-action: pan-y pinch-zoom; user-select: none; }
 .lightbox-caption { margin: 0; text-align: center; flex-shrink: 0; font: 13px/1.5 system-ui, sans-serif; color: #ccc; }
-.thread-media-strip { --media-visible-items: 2.6; --media-height: clamp(180px, calc((100cqw - 16px) / var(--media-visible-items) * 4 / 3), 340px); container-type: inline-size; display: flex; align-items: stretch; gap: 8px; width: 100%; min-width: 0; margin-bottom: 12px; overflow-x: auto; overflow-y: hidden; scroll-snap-type: none; scroll-behavior: auto; overscroll-behavior-x: contain; scrollbar-width: none; border-radius: 14px; cursor: grab; user-select: none; }
+.thread-media-strip { --media-height: 240px; container-type: inline-size; display: flex; align-items: flex-start; gap: 8px; width: 100%; min-width: 0; margin-bottom: 12px; overflow-x: auto; overflow-y: hidden; scroll-snap-type: none; scroll-behavior: auto; overscroll-behavior-x: contain; scrollbar-width: none; border-radius: 12px; cursor: grab; user-select: none; }
 .thread-media-strip::-webkit-scrollbar { display: none; }
 .thread-media-strip .gallery-media-link, .thread-media-strip img { cursor: inherit; }
 .thread-media-strip.is-dragging, .thread-media-strip.is-dragging * { cursor: grabbing; }
 .thread-media-strip .media-controls { cursor: auto; }
 .thread-media-strip .media-controls button { cursor: pointer; }
-.thread-media-tile { flex: 0 0 calc((100% - 16px) / var(--media-visible-items)); min-width: 0; height: var(--media-height); overflow: hidden; border: 1px solid var(--journal-line); border-radius: 14px; background: var(--journal-raised); }
+.thread-media-tile { flex: 0 0 auto; width: calc(var(--media-height) * var(--media-ratio, 1)); min-width: 0; height: var(--media-height); overflow: hidden; border-radius: 12px; background: transparent; }
 .thread-media-tile .gallery-media-link { display: block; width: 100%; height: 100%; }
 .thread-media-tile img { display: block; width: 100%; height: 100%; max-width: 100%; object-fit: contain; -webkit-user-drag: none; }
-.thread-media-tile:has(video) { flex-basis: min(420px, 88%); width: min(420px, 88%); }
-.thread-media-strip[data-media-count="2"] { --media-visible-items: 2; }
-.thread-media-strip[data-media-count="2"] .thread-media-tile:not(:has(video)) { flex-basis: calc((100% - 8px) / 2); }
 .thread-media-strip[data-media-count="1"] .thread-media-tile { flex: 0 1 auto; width: auto; height: auto; max-width: 100%; }
 .thread-media-strip[data-media-count="1"] .thread-media-tile:has(video) { flex: 1; width: 100%; }
-.thread-media-strip[data-media-count="1"] img { width: 100%; height: auto; object-fit: contain; }
+.thread-media-strip[data-media-count="1"] img { width: auto; height: auto; max-width: 100%; max-height: min(640px, 75dvh); object-fit: contain; border-radius: 12px; }
 .journal-body .clip-player { position: relative; width: 100%; height: 100%; min-width: 0; background: #080808; color: #fff; container-type: inline-size; }
 .journal-body .clip-player video { display: block; width: 100%; height: 100%; max-height: 560px; min-height: 200px; object-fit: contain; }
+.journal-body .thread-media-strip:not([data-media-count="1"]) .clip-player video { min-height: 0; max-height: none; }
 .media-controls { display: flex; align-items: center; gap: 8px; padding: 8px; min-width: 0; }
 .clip-player .media-controls { position: absolute; inset: auto 0 0; background: linear-gradient(transparent, #000c); padding-top: 28px; }
 .media-controls button { flex-shrink: 0; display: grid; place-items: center; min-width: 40px; min-height: 40px; padding: 6px; border: 0; border-radius: 50%; background: #ffffff1f; color: inherit; font-size: 12px; }
@@ -72,7 +70,6 @@
 }
 @media (max-width: 1100px) { .journal-body .clip-player video { max-height: 480px; } }
 @media (max-width: 600px) {
-    .thread-media-strip { --media-visible-items: 2.3; }
     .lightbox-stage { position: relative; gap: 0; }
     .lightbox-stage img { width: 100%; }
     .lightbox-stage button { position: absolute; bottom: 8px; z-index: 1; width: 44px; height: 44px; }

@@ -7,7 +7,7 @@
     </button>
     <section id="notification-popup" class="dropdown-menu dropdown-menu-end notification-menu" aria-label="Thông báo mới nhất">
         <div class="notification-menu-heading">
-            <strong>Thông báo</strong>
+            <div class="notification-menu-title"><strong>Thông báo</strong><span data-notification-total @if(!$unreadCount) hidden @endif>{{ $unreadCount > 99 ? '99+' : $unreadCount }}</span></div>
             <form method="post" action="{{ route('notifications.read-all') }}" data-notifications-read-all>@csrf<button type="submit" @disabled(!$unreadCount)>Đọc tất cả</button></form>
         </div>
         <p class="notification-status" data-notifications-status role="status" aria-live="polite">Đang tải thông báo…</p>
