@@ -269,7 +269,7 @@
 
                         <!-- Author / Admin: Xóa bài viết -->
                         @auth
-                            @if($currentUser->id === $thread->user_id || $currentUser->isAdmin())
+                            @if($currentUser->id === $thread->user_id)
                                 <div class="thread-option-divider"></div>
                                 <form action="{{ route('threads.destroy', $thread->id) }}" data-live-submit method="post" onsubmit="return confirm('Bạn có chắc chắn muốn xóa bài viết này không?');">
                                     @csrf

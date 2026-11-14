@@ -16,7 +16,7 @@ class SafetyController extends Controller
         $user = $request->user();
         $blockedUsers = $user->blockedUsers()->orderBy('name')->paginate(15, ['users.*'], 'blocked_page');
         $mutedUsers = $user->mutedUsers()->orderBy('name')->paginate(15, ['users.*'], 'muted_page');
-        $followRequests = User::discoverableTo($user)->where('is_locked', false)
+        $followRequests = User::discoverableTo($user)->notLocked()
             ->whereIn('id', DB::table('follow_requests')->where('target_id', $user->id)->select('requester_id'))
             ->orderBy('name')->paginate(15, ['users.*'], 'requests_page');
 
@@ -32,7 +32,7 @@ class SafetyController extends Controller
             $owner->save();
 
             if (! $owner->is_private) {
-                $requesters = User::discoverableTo($owner)->where('is_locked', false)
+                $requesters = User::discoverableTo($owner)->notLocked()
                     ->whereIn('id', DB::table('follow_requests')->where('target_id', $owner->id)->select('requester_id'))->pluck('id');
                 foreach ($requesters as $requesterId) {
                     DB::table('follows')->insertOrIgnore(['follower_id' => $requesterId, 'following_id' => $owner->id, 'created_at' => now()]);

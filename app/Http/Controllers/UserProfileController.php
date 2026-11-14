@@ -16,7 +16,7 @@ class UserProfileController extends Controller
     {
         abort_unless(in_array($kind, ['followers', 'following'], true), 404);
         abort_unless(! $user->is_locked && User::discoverableTo($request->user())->whereKey($user->id)->exists() && $user->canViewPosts($request->user()), 404);
-        $people = $user->{$kind}()->discoverableTo($request->user())->where('is_locked', false)
+        $people = $user->{$kind}()->discoverableTo($request->user())->notLocked()
             ->withExists([
                 'followers as viewer_following' => fn (Builder $followers): Builder => $followers->whereKey($request->user()?->id ?? 0),
             ])->orderBy('users.name')->orderBy('users.id')->paginate(20);
@@ -92,7 +92,7 @@ class UserProfileController extends Controller
     {
         $targetUser = User::discoverableTo($request->user())->where(fn ($users) => $users->where('username', $username)->orWhere('id', ctype_digit($username) ? (int) $username : 0))->firstOrFail();
         abort_unless(! $targetUser->is_locked && $targetUser->canViewPosts($request->user()), 404);
-        $people = $targetUser->{$kind}()->discoverableTo($request->user())->where('is_locked', false)->latest('follows.created_at')->orderBy('users.id')->paginate(20);
+        $people = $targetUser->{$kind}()->discoverableTo($request->user())->notLocked()->latest('follows.created_at')->orderBy('users.id')->paginate(20);
         $users = $people->map(fn (User $user): array => ['id' => $user->id, 'name' => $user->name, 'username' => $user->username, 'handle' => $user->handle(), 'bio' => $user->bio, 'avatar_url' => $user->avatar_path ? route('avatar.show', $user) : null, 'profile_url' => route('profile.show', $user->username ?: $user->id), 'is_following' => $request->user()?->isFollowing($user) ?? false, 'requested' => $request->user()?->hasRequestedToFollow($user) ?? false, 'is_me' => $request->user()?->id === $user->id]);
 
         return response()->json(['count' => $people->total(), 'users' => $users, 'nextPageUrl' => $people->nextPageUrl()])->header('Cache-Control', 'private, no-store');

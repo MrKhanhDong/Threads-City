@@ -26,7 +26,17 @@ class User extends Authenticatable implements MustVerifyEmail
 
     protected function casts(): array
     {
-        return ['email_verified_at' => 'datetime', 'password' => 'hashed', 'is_locked' => 'boolean', 'is_verified' => 'boolean', 'is_private' => 'boolean', 'google_profile_pending' => 'boolean', 'has_local_password' => 'boolean'];
+        return ['email_verified_at' => 'datetime', 'password' => 'hashed', 'is_locked' => 'boolean', 'lock_expires_at' => 'datetime', 'is_verified' => 'boolean', 'is_private' => 'boolean', 'google_profile_pending' => 'boolean', 'has_local_password' => 'boolean'];
+    }
+
+    public function getIsLockedAttribute(mixed $value): bool
+    {
+        return (bool) $value && (! $this->lock_expires_at || $this->lock_expires_at->isFuture());
+    }
+
+    public function scopeNotLocked(Builder $query): Builder
+    {
+        return $query->where(fn (Builder $users): Builder => $users->where('is_locked', false)->orWhere('lock_expires_at', '<=', now()));
     }
 
     public function isAdmin(): bool
@@ -112,7 +122,7 @@ class User extends Authenticatable implements MustVerifyEmail
 
     public function scopeContentVisibleTo(Builder $query, ?User $viewer): Builder
     {
-        return $query->discoverableTo($viewer)->where(function (Builder $authors) use ($viewer): void {
+        return $query->notLocked()->discoverableTo($viewer)->where(function (Builder $authors) use ($viewer): void {
             $authors->where('is_private', false);
             if ($viewer) {
                 $authors->orWhereKey($viewer->id)->orWhereHas('followers', fn (Builder $followers): Builder => $followers->whereKey($viewer->id));

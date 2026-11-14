@@ -28,6 +28,13 @@ class DashboardController extends Controller
             $chart[] = ['date' => $date->format('d/m'), 'views' => (int) ($daily[$date->toDateString()] ?? 0)];
         }
         $counts = [
+            'users' => User::count(),
+            'new_users' => User::where('created_at', '>=', $start)->count(),
+            'locked_users' => User::where('is_locked', true)->where(fn (Builder $users): Builder => $users->whereNull('lock_expires_at')->orWhere('lock_expires_at', '>', now()))->count(),
+            'threads' => Post::whereNull('parent_id')->where('type', '!=', 'repost')->count(),
+            'replies' => Post::whereNotNull('parent_id')->count(),
+            'hidden' => Post::onlyTrashed()->whereNotNull('moderation_hidden_at')->count(),
+            'content_reports' => ContentReport::where('status', 'pending')->count(),
             'total' => Post::count(),
             'published' => Post::published()->count(),
             'drafts' => Post::where('status', 'draft')->count(),

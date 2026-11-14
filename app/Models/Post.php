@@ -26,6 +26,7 @@ class Post extends Model
     {
         return [
             'published_at' => 'datetime',
+            'moderation_hidden_at' => 'datetime',
             'archived_at' => 'datetime',
             'archive_root_id' => 'integer',
             'is_featured' => 'boolean',

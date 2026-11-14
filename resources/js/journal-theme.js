@@ -1,5 +1,5 @@
 export function setupJournalTheme(pageDocument = document, pageWindow = window) {
-    if (!pageDocument.body?.classList.contains('journal-body')) return;
+    if (!pageDocument.body?.classList.contains('journal-body') && !pageDocument.body?.classList.contains('admin-body')) return;
 
     const root = pageDocument.documentElement;
     const choices = pageDocument.querySelectorAll('[data-theme-choice]');

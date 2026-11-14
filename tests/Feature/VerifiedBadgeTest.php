@@ -17,14 +17,14 @@ class VerifiedBadgeTest extends TestCase
         $reader = User::factory()->create();
 
         $this->actingAs($admin)->from(route('admin.users.index'))
-            ->patch(route('admin.users.verification', $reader), ['is_verified' => 1, 'role' => 'admin', 'is_locked' => 1])
+            ->patch(route('admin.users.verification', $reader), ['reason' => 'Xác minh danh tính', 'is_verified' => 1, 'role' => 'admin', 'is_locked' => 1])
             ->assertRedirect(route('admin.users.index'))->assertSessionHasNoErrors();
 
         $this->assertTrue($reader->fresh()->is_verified);
         $this->assertSame('reader', $reader->fresh()->role);
         $this->assertFalse($reader->fresh()->is_locked);
 
-        $this->patch(route('admin.users.verification', $reader), ['is_verified' => 0])
+        $this->patch(route('admin.users.verification', $reader), ['reason' => 'Xác minh danh tính', 'is_verified' => 0])
             ->assertRedirect()->assertSessionHasNoErrors();
         $this->assertFalse($reader->fresh()->is_verified);
     }
@@ -33,11 +33,11 @@ class VerifiedBadgeTest extends TestCase
     {
         $admin = User::factory()->create(['role' => 'admin']);
 
-        $this->actingAs($admin)->patch(route('admin.users.verification', $admin), ['is_verified' => true])
+        $this->actingAs($admin)->patch(route('admin.users.verification', $admin), ['reason' => 'Xác minh danh tính', 'is_verified' => true])
             ->assertRedirect()->assertSessionHasNoErrors();
         $this->assertTrue($admin->fresh()->is_verified);
 
-        $this->patch(route('admin.users.verification', $admin), ['is_verified' => false])
+        $this->patch(route('admin.users.verification', $admin), ['reason' => 'Xác minh danh tính', 'is_verified' => false])
             ->assertRedirect()->assertSessionHasNoErrors();
         $this->assertFalse($admin->fresh()->is_verified);
         $this->assertTrue($admin->fresh()->isAdmin());
@@ -48,12 +48,12 @@ class VerifiedBadgeTest extends TestCase
         $reader = User::factory()->create(['is_verified' => true]);
         $target = User::factory()->create();
 
-        $this->patch(route('admin.users.verification', $target), ['is_verified' => true])
+        $this->patch(route('admin.users.verification', $target), ['reason' => 'Xác minh danh tính', 'is_verified' => true])
             ->assertRedirect(route('login'));
 
-        $this->actingAs($reader)->patch(route('admin.users.verification', $target), ['is_verified' => true])
+        $this->actingAs($reader)->patch(route('admin.users.verification', $target), ['reason' => 'Xác minh danh tính', 'is_verified' => true])
             ->assertForbidden();
-        $this->patch(route('admin.users.verification', $reader), ['is_verified' => false])
+        $this->patch(route('admin.users.verification', $reader), ['reason' => 'Xác minh danh tính', 'is_verified' => false])
             ->assertForbidden();
         $this->get(route('admin.users.index'))->assertForbidden();
 
@@ -135,14 +135,14 @@ class VerifiedBadgeTest extends TestCase
             route('search.index', ['q' => $author->username, 'type' => 'people']),
         ];
 
-        $this->actingAs($admin)->patch(route('admin.users.verification', $author), ['is_verified' => true])
+        $this->actingAs($admin)->patch(route('admin.users.verification', $author), ['reason' => 'Xác minh danh tính', 'is_verified' => true])
             ->assertSessionHasNoErrors();
 
         foreach ($urls as $url) {
             $this->get($url)->assertOk()->assertSee('aria-label="Tài khoản đã xác minh"', false);
         }
 
-        $this->patch(route('admin.users.verification', $author), ['is_verified' => false])
+        $this->patch(route('admin.users.verification', $author), ['reason' => 'Xác minh danh tính', 'is_verified' => false])
             ->assertSessionHasNoErrors();
 
         foreach ($urls as $url) {

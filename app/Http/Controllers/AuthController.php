@@ -49,8 +49,10 @@ class AuthController extends Controller
         }
 
         if (Auth::user()->is_locked) {
+            $lockedUser = Auth::user();
+            $message = 'Tài khoản đang bị khóa. '.($lockedUser->lock_reason ?? '').($lockedUser->lock_expires_at ? ' Khóa đến '.$lockedUser->lock_expires_at->format('d/m/Y H:i').' ('.config('app.timezone').').' : '');
             Auth::logout();
-            throw ValidationException::withMessages(['login' => 'Tài khoản đang bị khóa.']);
+            throw ValidationException::withMessages(['login' => $message]);
         }
 
         $request->session()->regenerate();

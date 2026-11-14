@@ -16,7 +16,7 @@ class ReportNotificationsTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_every_admin_decision_notifies_only_the_reporter_with_public_feedback(): void
+    public function test_admin_decisions_keep_report_feedback_private_and_notify_affected_authors(): void
     {
         $reporter = User::factory()->create();
         $admin = User::factory()->create(['role' => 'admin']);
@@ -25,7 +25,7 @@ class ReportNotificationsTest extends TestCase
         foreach (['resolve', 'dismiss', 'hide_thread', 'lock_user'] as $action) {
             $report = $this->reportThread($reporter);
             $message = 'Phản hồi dành cho người gửi: '.$action;
-            $this->actingAs($admin)->patch(route('admin.moderation.update', $report), [
+            $this->actingAs($admin)->patch(route('admin.moderation.update', $report), ['action_reason' => 'Vi phạm nội quy',
                 'action' => $action, 'reporter_message' => $message, 'admin_note' => 'Internal staff only',
             ])->assertRedirect()->assertSessionHasNoErrors();
 
@@ -34,7 +34,10 @@ class ReportNotificationsTest extends TestCase
             $this->assertSame(['report_id' => $report->id], $notification->data);
             $this->assertNull($notification->read_at);
             $this->assertSame(0, $admin->notifications()->count());
-            $this->assertSame(0, $report->post->author->notifications()->count());
+            $this->assertSame(in_array($action, ['hide_thread', 'lock_user'], true) ? 1 : 0, $report->post->author->notifications()->count());
+            foreach ($report->post->author->notifications as $ownerNotification) {
+                $this->assertStringNotContainsString('Internal staff only', json_encode($ownerNotification->data));
+            }
 
             $data = $this->actingAs($reporter)->getJson(route('notifications.index'))->assertOk()
                 ->assertJsonPath('unread', ++$unread)->json();
@@ -52,7 +55,7 @@ class ReportNotificationsTest extends TestCase
         $admin = User::factory()->create(['role' => 'admin']);
         $report = $this->reportThread($reporter);
 
-        $this->actingAs($admin)->patch(route('admin.moderation.update', $report), [
+        $this->actingAs($admin)->patch(route('admin.moderation.update', $report), ['admin_note' => 'Đã xem xét', 'action_reason' => 'Vi phạm nội quy',
             'action' => 'hide_thread', 'reporter_message' => 'Cảm ơn bạn đã góp phần bảo vệ cộng đồng.',
         ])->assertSessionHasNoErrors();
         $notification = $reporter->notifications()->sole();
@@ -72,7 +75,7 @@ class ReportNotificationsTest extends TestCase
         $other = User::factory()->create();
         $admin = User::factory()->create(['role' => 'admin']);
         $report = $this->reportThread($reporter);
-        $this->actingAs($admin)->patch(route('admin.moderation.update', $report), ['action' => 'resolve'])->assertRedirect();
+        $this->actingAs($admin)->patch(route('admin.moderation.update', $report), ['admin_note' => 'Đã xem xét', 'reporter_message' => 'Đã xử lý báo cáo', 'action_reason' => 'Vi phạm nội quy', 'action' => 'resolve'])->assertRedirect();
         $notification = $reporter->notifications()->sole();
         $other->notify(new ReportHandled($report->id));
         $forged = $other->notifications()->sole();
@@ -92,14 +95,14 @@ class ReportNotificationsTest extends TestCase
         $this->actingAs($reporter)->post(route('reports.user', $admin), ['reason' => 'spam'])->assertRedirect();
         $report = ContentReport::sole();
 
-        $this->actingAs($admin)->patch(route('admin.moderation.update', $report), ['action' => 'resolve', 'reporter_message' => str_repeat('x', 1001)])
+        $this->actingAs($admin)->patch(route('admin.moderation.update', $report), ['admin_note' => 'Đã xem xét', 'reporter_message' => 'Đã xử lý báo cáo', 'action_reason' => 'Vi phạm nội quy', 'action' => 'resolve', 'reporter_message' => str_repeat('x', 1001)])
             ->assertSessionHasErrors('reporter_message');
-        $this->patch(route('admin.moderation.update', $report), ['action' => 'lock_user'])->assertForbidden();
+        $this->patch(route('admin.moderation.update', $report), ['admin_note' => 'Đã xem xét', 'reporter_message' => 'Đã xử lý báo cáo', 'action_reason' => 'Vi phạm nội quy', 'action' => 'lock_user'])->assertForbidden();
         $this->assertSame('pending', $report->fresh()->status);
         $this->assertDatabaseCount('notifications', 0);
 
-        $this->patch(route('admin.moderation.update', $report), ['action' => 'dismiss'])->assertRedirect();
-        $this->patch(route('admin.moderation.update', $report), ['action' => 'resolve'])->assertUnprocessable();
+        $this->patch(route('admin.moderation.update', $report), ['admin_note' => 'Đã xem xét', 'reporter_message' => 'Đã xử lý báo cáo', 'action_reason' => 'Vi phạm nội quy', 'action' => 'dismiss'])->assertRedirect();
+        $this->patch(route('admin.moderation.update', $report), ['admin_note' => 'Đã xem xét', 'reporter_message' => 'Đã xử lý báo cáo', 'action_reason' => 'Vi phạm nội quy', 'action' => 'resolve'])->assertUnprocessable();
         $this->assertDatabaseCount('notifications', 1);
     }
 
@@ -113,7 +116,7 @@ class ReportNotificationsTest extends TestCase
         $reporter->notify(new CommentReplied($reply->id));
         $other->notify(new CommentReplied($reply->id));
         $report = $this->reportThread($reporter);
-        $this->actingAs($admin)->patch(route('admin.moderation.update', $report), ['action' => 'resolve'])->assertRedirect();
+        $this->actingAs($admin)->patch(route('admin.moderation.update', $report), ['admin_note' => 'Đã xem xét', 'reporter_message' => 'Đã xử lý báo cáo', 'action_reason' => 'Vi phạm nội quy', 'action' => 'resolve'])->assertRedirect();
 
         $this->actingAs($reporter)->getJson(route('notifications.index'))->assertOk()->assertJsonPath('unread', 2);
         $this->get(route('notifications.index'))->assertOk()->assertSee($reply->user->name)->assertSee('Báo cáo #'.$report->id);
@@ -140,7 +143,7 @@ class ReportNotificationsTest extends TestCase
         $admin = User::factory()->create(['role' => 'admin']);
         $report = $this->reportThread($reporter);
         $message = '<script>alert("unsafe")</script>';
-        $this->actingAs($admin)->patch(route('admin.moderation.update', $report), [
+        $this->actingAs($admin)->patch(route('admin.moderation.update', $report), ['action_reason' => 'Vi phạm nội quy',
             'action' => 'resolve', 'reporter_message' => $message, 'admin_note' => 'Secret review note',
         ])->assertRedirect();
 
@@ -158,7 +161,7 @@ class ReportNotificationsTest extends TestCase
         $report = $this->reportThread($reporter);
         $reporter->delete();
 
-        $this->actingAs($admin)->patch(route('admin.moderation.update', $report), ['action' => 'resolve'])->assertRedirect();
+        $this->actingAs($admin)->patch(route('admin.moderation.update', $report), ['admin_note' => 'Đã xem xét', 'reporter_message' => 'Đã xử lý báo cáo', 'action_reason' => 'Vi phạm nội quy', 'action' => 'resolve'])->assertRedirect();
         $this->assertSame('resolved', $report->fresh()->status);
         $this->assertDatabaseCount('notifications', 0);
     }

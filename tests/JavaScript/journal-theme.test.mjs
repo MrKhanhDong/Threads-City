@@ -15,7 +15,7 @@ function fixture(preference = 'dark', prefersDark = false, denyStorage = false, 
     const mainPanel = { hidden: false };
     const themePanel = { hidden: true, querySelector: selector => choices.find(button => selector.includes(`"${button.dataset.themeChoice}"`)) };
     const menu = Object.assign(new EventTarget(), { querySelector: selector => ({ '[data-menu-main]': mainPanel, '[data-menu-theme]': themePanel, '[data-menu-appearance]': appearance, '[data-menu-back]': back })[selector] });
-    const root = { dataset: bodyClass === 'journal-body' ? { theme: 'dark', themePreference: preference } : { bsTheme: 'light' } };
+    const root = { dataset: ['journal-body', 'admin-body'].includes(bodyClass) ? { theme: 'dark', themePreference: preference } : { bsTheme: 'light' } };
     const pageDocument = { body: { classList: { contains: name => name === bodyClass } }, documentElement: root, querySelectorAll: selector => ({ '[data-theme-choice]': choices, '[data-theme-toggle]': [toggle], '[data-site-menu]': [menu] })[selector] };
     const media = Object.assign(new EventTarget(), { matches: prefersDark });
     const saved = new Map();
@@ -29,16 +29,17 @@ function fixture(preference = 'dark', prefersDark = false, denyStorage = false, 
     return { root, media, pageWindow, choices, saved, toggle, appearance, back, mainPanel, themePanel, menu, click, choose };
 }
 
-test('admin pages stay light when the public theme or system preference changes', () => {
+test('admin shares the public theme and its toggle persists the selected mode', () => {
     const ui = fixture('dark', true, false, 'admin-body');
-    assert.deepEqual(ui.root.dataset, { bsTheme: 'light' });
+    assert.equal(ui.root.dataset.theme, 'dark');
+    ui.click(ui.toggle);
+    assert.equal(ui.root.dataset.theme, 'light');
+    assert.equal(ui.root.dataset.bsTheme, 'light');
+    assert.equal(ui.saved.get('journal-theme'), 'light');
 
     ui.pageWindow.dispatchEvent(Object.assign(new Event('storage'), { key: 'journal-theme', newValue: 'dark' }));
-    ui.pageWindow.dispatchEvent(Object.assign(new Event('storage'), { key: null, newValue: null }));
-    ui.media.dispatchEvent(new Event('change'));
-
-    assert.deepEqual(ui.root.dataset, { bsTheme: 'light' });
-    assert.equal(ui.saved.size, 0);
+    assert.equal(ui.root.dataset.theme, 'dark');
+    assert.equal(ui.root.dataset.bsTheme, 'dark');
 });
 
 test('explicit choices update both menus, Bootstrap theme and persistent preference', () => {

@@ -54,7 +54,8 @@ class ThreadsDemoSeeder extends Seeder
                 'email' => 'binhphat@threads.local',
                 'password' => 'Password@12345',
                 'bio' => "Some pieces of my life ...\n127K người theo dõi",
-                'role' => 'admin', // for blue checkmark
+                'role' => 'reader',
+                'is_verified' => true,
             ],
             [
                 'name' => 'Diệu Nhi',
@@ -62,7 +63,8 @@ class ThreadsDemoSeeder extends Seeder
                 'email' => 'dieunhi@threads.local',
                 'password' => 'Password@12345',
                 'bio' => "🎭 Actress in Vietnam 🎬\nfanpage: ...",
-                'role' => 'admin', // for blue checkmark
+                'role' => 'reader',
+                'is_verified' => true,
             ],
             [
                 'name' => 'Khánh Đông',
@@ -102,7 +104,7 @@ class ThreadsDemoSeeder extends Seeder
                     'email_verified_at' => now(),
                 ]
             );
-            $user->forceFill(['role' => $uData['role'], 'name' => $uData['name'], 'bio' => $uData['bio']])->save();
+            $user->forceFill(['role' => $uData['role'], 'is_verified' => $uData['is_verified'] ?? false, 'name' => $uData['name'], 'bio' => $uData['bio']])->save();
             $users[$uData['username']] = $user;
         }
 

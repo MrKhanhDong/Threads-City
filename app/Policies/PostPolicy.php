@@ -14,7 +14,7 @@ class PostPolicy
 
     public function update(User $user, Post $post): bool
     {
-        return $user->isAdmin() && ! $user->is_locked;
+        return $user->isAdmin() && ! $user->is_locked && $post->user_id === $user->id && ! $post->moderation_hidden_at;
     }
 
     public function delete(User $user, Post $post): bool

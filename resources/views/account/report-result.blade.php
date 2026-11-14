@@ -11,7 +11,7 @@
         <h2>Phản hồi từ quản trị viên</h2><blockquote class="safety-report-excerpt">{{ $report->reporter_message }}</blockquote>
         @endif
     </section>
-    <section class="safety-panel"><h2>Nội dung đã báo cáo</h2><p>Lý do: {{ \App\Models\ContentReport::REASONS[$report->reason] ?? $report->reason }}</p><blockquote class="safety-report-excerpt">{{ $report->snapshot }}</blockquote>@if($report->details)<p class="report-user-details">{{ $report->details }}</p>@endif</section>
+    <section class="safety-panel"><h2>Nội dung đã báo cáo</h2><p>Lý do: {{ \App\Models\ContentReport::reasons()[$report->reason] ?? $report->reason }}</p><blockquote class="safety-report-excerpt">{{ $report->snapshot }}</blockquote>@if($report->details)<p class="report-user-details">{{ $report->details }}</p>@endif</section>
     <a class="btn-threads-outline" href="{{ route('reports.index') }}">Xem các báo cáo của tôi</a>
 </div>
 @endsection

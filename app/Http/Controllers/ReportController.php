@@ -45,7 +45,7 @@ class ReportController extends Controller
 
     private function handle(Request $request, ?Post $thread, ?User $user): View|RedirectResponse
     {
-        $reasons = ContentReport::REASONS;
+        $reasons = ContentReport::reasons();
         $targetName = $thread ? $thread->author->name : $user->name;
         $excerpt = $thread ? Str::limit(strip_tags($thread->content), 600) : $user->handle();
 
