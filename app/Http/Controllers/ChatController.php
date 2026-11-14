@@ -48,7 +48,7 @@ class ChatController extends Controller
     {
         $data = $request->validate(['q' => 'nullable|string|max:80']);
         $term = addcslashes(trim($data['q'] ?? ''), '\\%_');
-        $people = User::discoverableTo($request->user())->where('is_locked', false)->whereKeyNot($request->user()->id)
+        $people = User::discoverableTo($request->user())->notLocked()->whereKeyNot($request->user()->id)
             ->whereIn('id', $request->user()->following()->select('users.id'))
             ->when($term !== '', fn (Builder $users): Builder => $users->where(fn (Builder $names): Builder => $names->where('name', 'like', '%'.$term.'%')->orWhere('username', 'like', '%'.$term.'%')))
             ->orderBy('name')->limit(15)->get();

@@ -499,7 +499,7 @@ class ThreadController extends Controller
 
     public function destroy(Request $request, Post $thread): RedirectResponse|JsonResponse
     {
-        if ($thread->user_id !== $request->user()->id && ! $request->user()->isAdmin()) {
+        if ($thread->user_id !== $request->user()->id) {
             abort(403, 'Bạn không có quyền xóa bài viết này.');
         }
 

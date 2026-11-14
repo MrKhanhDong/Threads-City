@@ -330,10 +330,10 @@ class CommunitySafetyTest extends TestCase
         $report = ContentReport::sole();
 
         $this->get(route('admin.moderation.index'))->assertForbidden();
-        $this->patch(route('admin.moderation.update', $report), ['action' => 'hide_thread'])->assertForbidden();
+        $this->patch(route('admin.moderation.update', $report), ['admin_note' => 'Đã xem xét', 'reporter_message' => 'Đã xử lý báo cáo', 'action_reason' => 'Vi phạm nội quy', 'action' => 'hide_thread'])->assertForbidden();
         $this->actingAs($admin)->get(route('admin.moderation.index'))->assertOk()
             ->assertSee('&lt;script&gt;unsafe()&lt;/script&gt;', false)->assertDontSee('<script>unsafe()</script>', false);
-        $this->patch(route('admin.moderation.update', $report), ['action' => 'hide_thread', 'admin_note' => 'Confirmed violation'])->assertRedirect();
+        $this->patch(route('admin.moderation.update', $report), ['admin_note' => 'Đã xem xét', 'reporter_message' => 'Đã xử lý báo cáo', 'action_reason' => 'Vi phạm nội quy', 'action' => 'hide_thread', 'admin_note' => 'Confirmed violation'])->assertRedirect();
         $this->assertSoftDeleted($post);
         $this->assertSame('resolved', $report->fresh()->status);
         $this->assertSame($admin->id, $report->fresh()->handled_by);
@@ -352,12 +352,12 @@ class CommunitySafetyTest extends TestCase
 
         $this->actingAs($reporter)->post(route('reports.user', $member), ['reason' => 'harassment'])->assertRedirect();
         $report = ContentReport::sole();
-        $this->actingAs($admin)->patch(route('admin.moderation.update', $report), ['action' => 'lock_user'])->assertRedirect();
+        $this->actingAs($admin)->patch(route('admin.moderation.update', $report), ['admin_note' => 'Đã xem xét', 'reporter_message' => 'Đã xử lý báo cáo', 'action_reason' => 'Vi phạm nội quy', 'action' => 'lock_user'])->assertRedirect();
         $this->assertTrue($member->fresh()->is_locked);
 
         $this->actingAs($reporter)->post(route('reports.user', $otherAdmin), ['reason' => 'spam'])->assertRedirect();
         $adminReport = ContentReport::where('reported_user_id', $otherAdmin->id)->sole();
-        $this->actingAs($admin)->patch(route('admin.moderation.update', $adminReport), ['action' => 'lock_user'])->assertForbidden();
+        $this->actingAs($admin)->patch(route('admin.moderation.update', $adminReport), ['admin_note' => 'Đã xem xét', 'reporter_message' => 'Đã xử lý báo cáo', 'action_reason' => 'Vi phạm nội quy', 'action' => 'lock_user'])->assertForbidden();
         $this->assertFalse($otherAdmin->fresh()->is_locked);
         $this->assertSame('pending', $adminReport->fresh()->status);
     }
@@ -371,10 +371,10 @@ class CommunitySafetyTest extends TestCase
 
         $this->actingAs($reporter)->post(route('reports.thread', $post), ['reason' => 'spam'])->assertRedirect();
         $report = ContentReport::sole();
-        $this->actingAs($admin)->patch(route('admin.moderation.update', $report), ['action' => 'dismiss'])->assertRedirect();
+        $this->actingAs($admin)->patch(route('admin.moderation.update', $report), ['admin_note' => 'Đã xem xét', 'reporter_message' => 'Đã xử lý báo cáo', 'action_reason' => 'Vi phạm nội quy', 'action' => 'dismiss'])->assertRedirect();
         $this->assertSame('dismissed', $report->fresh()->status);
         $this->assertFalse($post->fresh()->trashed());
-        $this->patch(route('admin.moderation.update', $report), ['action' => 'hide_thread'])->assertUnprocessable();
+        $this->patch(route('admin.moderation.update', $report), ['admin_note' => 'Đã xem xét', 'reporter_message' => 'Đã xử lý báo cáo', 'action_reason' => 'Vi phạm nội quy', 'action' => 'hide_thread'])->assertUnprocessable();
     }
 
     public function test_safety_actions_require_authentication_and_reject_self_targets(): void

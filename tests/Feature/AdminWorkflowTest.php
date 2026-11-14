@@ -23,15 +23,15 @@ class AdminWorkflowTest extends TestCase
     {
         $admin = User::factory()->create(['role' => 'admin']);
         $comment = Comment::factory()->create(['body' => 'Bình luận cần duyệt']);
-        $this->actingAs($admin)->patch(route('admin.comments.update', $comment), ['status' => 'approved'])->assertRedirect()->assertSessionHasNoErrors();
+        $this->actingAs($admin)->patch(route('admin.comments.update', $comment), ['reason' => 'Kiểm duyệt nội dung', 'status' => 'approved'])->assertRedirect()->assertSessionHasNoErrors();
         $this->get(route('posts.show', $comment->post->slug))->assertOk()->assertSee('Bình luận cần duyệt');
         $report = CommentReport::factory()->create(['comment_id' => $comment->id]);
         $this->get(route('admin.comments.index'))->assertOk()->assertSee($report->reason);
-        $this->post(route('admin.reports.resolve', $report))->assertRedirect();
+        $this->post(route('admin.reports.resolve', $report), ['reason' => 'Đã kiểm tra báo cáo'])->assertRedirect();
         $this->assertTrue($report->fresh()->resolved);
-        $this->patch(route('admin.comments.update', $comment), ['status' => 'hidden'])->assertRedirect();
+        $this->patch(route('admin.comments.update', $comment), ['reason' => 'Kiểm duyệt nội dung', 'status' => 'hidden'])->assertRedirect();
         $this->get(route('posts.show', $comment->post->slug))->assertOk()->assertDontSee('Bình luận cần duyệt');
-        $this->patch(route('admin.comments.update', $comment), ['status' => 'invalid'])->assertSessionHasErrors('status');
+        $this->patch(route('admin.comments.update', $comment), ['reason' => 'Kiểm duyệt nội dung', 'status' => 'invalid'])->assertSessionHasErrors('status');
     }
 
     public function test_dashboard_uses_actual_period_views_and_zero_fills_days(): void
@@ -339,10 +339,10 @@ class AdminWorkflowTest extends TestCase
     {
         $admin = User::factory()->create(['role' => 'admin']);
         $reader = User::factory()->create();
-        $this->actingAs($admin)->patch(route('admin.users.update', $reader), ['is_locked' => 1, 'role' => 'admin'])->assertRedirect();
+        $this->actingAs($admin)->patch(route('admin.users.update', $reader), ['reason' => 'Kiểm duyệt nội dung', 'is_locked' => 1, 'role' => 'admin'])->assertRedirect();
         $this->assertTrue($reader->fresh()->is_locked);
         $this->assertSame('reader', $reader->fresh()->role);
-        $this->patch(route('admin.users.update', $admin), ['is_locked' => 1])->assertForbidden();
+        $this->patch(route('admin.users.update', $admin), ['reason' => 'Kiểm duyệt nội dung', 'is_locked' => 1])->assertForbidden();
     }
 
     public function test_settings_are_persisted_and_render_escaped(): void

@@ -17,8 +17,8 @@ class DirectMessages
     {
         return ChatConversation::query()->where(fn (Builder $pairs): Builder => $pairs->where('first_user_id', $viewer->id)->orWhere('second_user_id', $viewer->id))
             ->whereRaw('EXISTS (SELECT 1 FROM follows WHERE (follower_id = chat_conversations.first_user_id AND following_id = chat_conversations.second_user_id) OR (follower_id = chat_conversations.second_user_id AND following_id = chat_conversations.first_user_id))')
-            ->whereHas('firstUser', fn (Builder $users): Builder => $users->discoverableTo($viewer)->where('is_locked', false))
-            ->whereHas('secondUser', fn (Builder $users): Builder => $users->discoverableTo($viewer)->where('is_locked', false));
+            ->whereHas('firstUser', fn (Builder $users): Builder => $users->discoverableTo($viewer)->notLocked())
+            ->whereHas('secondUser', fn (Builder $users): Builder => $users->discoverableTo($viewer)->notLocked());
     }
 
     public function inbox(User $viewer, string $folder = 'inbox'): Builder

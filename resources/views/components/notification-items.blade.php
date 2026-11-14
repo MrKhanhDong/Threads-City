@@ -1,4 +1,8 @@
 @forelse($notifications as $notification)
+    @if($notification->type === \App\Notifications\ModerationDecision::class)
+        <x-moderation-notification :notification="$notification"/>
+        @continue
+    @endif
     @php($reply = $comments->get((int) ($notification->data['comment_id'] ?? 0)))
     @php($report = ($reportResults ?? collect())->get((int) ($notification->data['report_id'] ?? 0)))
     @if($notification->type === \App\Notifications\ReportHandled::class && $report)

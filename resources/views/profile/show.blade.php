@@ -72,7 +72,7 @@
         <a href="{{ route('profile.show', ['username' => $user->username ?? $user->id, 'tab' => 'reposts']) }}" class="flex-grow-1 text-center py-3 fw-semibold {{ $tab === 'reposts' ? 'text-white border-bottom border-2 border-white' : 'text-secondary' }}">
             Đã đăng lại
         </a>
-        @if(auth()->check() && (auth()->id() === $user->id || auth()->user()->isAdmin()))
+        @if(auth()->check() && auth()->id() === $user->id)
             <a href="{{ route('profile.show', ['username' => $user->username ?? $user->id, 'tab' => 'likes']) }}" class="flex-grow-1 text-center py-3 fw-semibold {{ $tab === 'likes' ? 'text-white border-bottom border-2 border-white' : 'text-secondary' }}">
                 Đã thích
             </a>

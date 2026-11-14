@@ -2,6 +2,7 @@
 @php($pageTitle = 'Quyền riêng tư và an toàn')
 @section('content')
 <div class="safety-page">
+    <p><a href="{{ route('community.rules') }}">Nội quy cộng đồng ↗</a></p>
     <header class="safety-heading"><h1>Quyền riêng tư và an toàn</h1><p>Chọn người có thể xem bài viết và quản lý trải nghiệm của bạn.</p></header>
     <section class="safety-panel" aria-labelledby="app-experience-title">
         <h2 id="app-experience-title">Threads trên điện thoại</h2>

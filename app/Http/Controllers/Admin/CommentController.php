@@ -5,10 +5,13 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Comment;
 use App\Models\CommentReport;
+use App\Notifications\ModerationDecision;
+use App\Services\ModerationAudit;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class CommentController extends Controller
 {
@@ -22,21 +25,33 @@ class CommentController extends Controller
 
     public function update(Request $request, Comment $comment): RedirectResponse
     {
-        $comment->update($request->validate(['status' => 'required|in:approved,hidden,spam']));
+        $data = $request->validate(['status' => 'required|in:approved,hidden,spam', 'reason' => 'required|string|max:1000']);
+        DB::transaction(function () use ($request, $comment, $data): void {
+            $target = Comment::lockForUpdate()->findOrFail($comment->id);
+            $before = ['status' => $target->status];
+            $target->update(['status' => $data['status']]);
+            app(ModerationAudit::class)->record($request->user(), 'comment', $target->id, 'moderate_comment', $data['reason'], $before, ['status' => $target->status]);
+            $target->user?->notify(new ModerationDecision('Bình luận #'.$target->id.' của bạn đã được cập nhật trạng thái: '.$target->status.'.', $data['reason']));
+        });
 
         return back()->with('success', 'Đã cập nhật trạng thái bình luận.');
     }
 
-    public function destroy(Comment $comment): RedirectResponse
+    public function destroy(Request $request, Comment $comment): RedirectResponse
     {
-        $comment->delete();
-
-        return back()->with('success', 'Đã xóa bình luận. Các trả lời còn lại được giữ lại.');
+        abort(403, 'Hãy ẩn bình luận để giữ nội dung phục vụ xem xét và khôi phục.');
     }
 
-    public function resolve(CommentReport $report): RedirectResponse
+    public function resolve(Request $request, CommentReport $report): RedirectResponse
     {
-        $report->update(['resolved' => true]);
+        $data = $request->validate(['reason' => 'required|string|max:1000']);
+        DB::transaction(function () use ($request, $report, $data): void {
+            $target = CommentReport::lockForUpdate()->findOrFail($report->id);
+            abort_if($target->resolved, 422, 'Báo cáo đã được xử lý.');
+            $target->update(['resolved' => true]);
+            app(ModerationAudit::class)->record($request->user(), 'comment_report', $target->id, 'resolve_comment_report', $data['reason'], ['resolved' => false], ['resolved' => true]);
+            $target->user?->notify(new ModerationDecision('Báo cáo bình luận #'.$target->comment_id.' của bạn đã được xem xét.', $data['reason']));
+        });
 
         return back()->with('success', 'Đã đánh dấu báo cáo được xử lý.');
     }

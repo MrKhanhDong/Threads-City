@@ -9,6 +9,14 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 #[Fillable(['reporter_id', 'post_id', 'reported_user_id', 'reason', 'details', 'snapshot'])]
 class ContentReport extends Model
 {
+    /** @return array<string, string> */
+    public static function reasons(): array
+    {
+        $custom = Setting::where('key', 'report_reason_labels')->value('value');
+
+        return array_replace(self::REASONS, array_intersect_key(json_decode($custom ?? '{}', true) ?: [], self::REASONS));
+    }
+
     public const REASONS = [
         'spam' => 'Spam hoặc lừa đảo',
         'harassment' => 'Quấy rối hoặc bắt nạt',

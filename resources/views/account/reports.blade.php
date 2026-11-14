@@ -6,7 +6,7 @@
     @forelse($reports as $report)
     <article class="safety-panel">
         <h2>Báo cáo #{{ $report->id }} · {{ ['pending' => 'Chờ xử lý', 'resolved' => 'Đã xử lý', 'dismissed' => 'Đã bác bỏ'][$report->status] }}</h2>
-        <p>{{ \App\Models\ContentReport::REASONS[$report->reason] ?? $report->reason }} · {{ $report->created_at->format('d/m/Y H:i') }}</p>
+        <p>{{ \App\Models\ContentReport::reasons()[$report->reason] ?? $report->reason }} · {{ $report->created_at->format('d/m/Y H:i') }}</p>
         <p>{{ $report->outcomeMessage() }}</p>
         <a class="btn-threads-outline" href="{{ route('reports.show', $report) }}">Xem chi tiết và phản hồi</a>
     </article>

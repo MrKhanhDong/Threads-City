@@ -84,7 +84,7 @@ class AppServiceProvider extends ServiceProvider
             $currentUserId = auth()->id();
 
             $suggestedUsers = Cache::remember('threads_suggested_users_v5', 300, function (): array {
-                return User::query()->where('is_locked', false)
+                return User::query()->notLocked()
                     ->whereIn('username', ['binhphatlien', 'dieu_nhiii', 'mrkhanhdong', 'minhphuong'])
                     ->orderByRaw("FIELD(username, 'binhphatlien', 'dieu_nhiii', 'mrkhanhdong', 'minhphuong')")
                     ->take(4)
@@ -102,7 +102,7 @@ class AppServiceProvider extends ServiceProvider
 
             // If logged in, filter out the current user from suggested list in-memory without extra DB query
             if ($currentUserId) {
-                $discoverableIds = User::discoverableTo(request()->user())->where('is_locked', false)->whereKey(array_column($suggestedUsers, 'id'))->pluck('id')->all();
+                $discoverableIds = User::discoverableTo(request()->user())->notLocked()->whereKey(array_column($suggestedUsers, 'id'))->pluck('id')->all();
                 $suggestedUsers = array_values(array_filter($suggestedUsers, fn ($u): bool => (int) data_get($u, 'id') !== (int) $currentUserId && in_array((int) data_get($u, 'id'), $discoverableIds, true)));
             }
 

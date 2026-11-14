@@ -6,6 +6,7 @@ use App\Models\Comment;
 use App\Models\ContentReport;
 use App\Models\Post;
 use App\Notifications\Mentioned;
+use App\Notifications\ModerationDecision;
 use App\Notifications\ReportHandled;
 use App\Notifications\ThreadInteractionNotification;
 use App\Services\CommentThreads;
@@ -56,6 +57,11 @@ class NotificationController extends Controller
     public function open(Request $request, string $id, CommentThreads $threads, UserNotifications $inbox): RedirectResponse
     {
         $notification = $inbox->forUser($request->user())->whereKey($id)->firstOrFail();
+        if ($notification->type === ModerationDecision::class) {
+            $notification->markAsRead();
+
+            return redirect()->route('notifications.index');
+        }
         if ($notification->type === ThreadInteractionNotification::class) {
             $notification->markAsRead();
 

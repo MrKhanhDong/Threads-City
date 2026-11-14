@@ -1,4 +1,8 @@
 @forelse($notifications as $notification)
+    @if($notification->type === \App\Notifications\ModerationDecision::class)
+        <x-moderation-notification :notification="$notification"/>
+        @continue
+    @endif
     @php
         $data = $notification->data ?? [];
         $reply = $comments->get((int) ($data['comment_id'] ?? 0));

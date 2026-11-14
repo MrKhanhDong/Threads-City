@@ -19,6 +19,7 @@ use App\Http\Controllers\SearchController;
 use App\Http\Controllers\ThreadActionController;
 use App\Http\Controllers\ThreadController;
 use App\Http\Controllers\UserProfileController;
+use App\Models\Setting;
 use Illuminate\Contracts\View\View;
 use Illuminate\Foundation\Auth\EmailVerificationRequest;
 use Illuminate\Http\RedirectResponse;
@@ -44,6 +45,7 @@ Route::middleware(['auth', 'throttle:360,1,chat'])->prefix('chat')->name('chat.'
 Route::get('/users/{user}/connections/{kind}', [UserProfileController::class, 'connections'])->whereNumber('user')->whereIn('kind', ['followers', 'following'])->middleware('throttle:120,1')->name('profile.connections');
 Route::get('/search', [SearchController::class, 'index'])->name('search.index');
 Route::get('/', [ThreadController::class, 'index'])->name('home');
+Route::get('/noi-quy-cong-dong', fn (): View => view('community-rules', ['rules' => Setting::where('key', 'community_rules')->value('value')]))->name('community.rules');
 Route::get('/threads', [ThreadController::class, 'index'])->name('threads.index');
 Route::get('/t/{thread}', [ThreadController::class, 'show'])->whereNumber('thread')->name('threads.show');
 Route::get('/threads/{thread}/embed', [ThreadActionController::class, 'embed'])->whereNumber('thread')->name('threads.embed');
@@ -166,6 +168,9 @@ Route::middleware('auth')->group(function (): void {
 
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(function (): void {
     Route::get('/', [Admin\DashboardController::class, 'index'])->name('index');
+    Route::get('/community', [Admin\CommunityController::class, 'index'])->name('community.index');
+    Route::patch('/community/{id}', [Admin\CommunityController::class, 'update'])->whereNumber('id')->name('community.update');
+    Route::get('/history', [Admin\CommunityController::class, 'history'])->name('history.index');
     Route::resource('posts', Admin\PostController::class)->except('show')->whereNumber('post');
     Route::post('/posts/seo-checks', [Admin\PostController::class, 'seoChecks'])->middleware('throttle:120,1')->name('posts.seo-checks');
     Route::get('/posts/{post}/preview', [BlogController::class, 'preview'])->whereNumber('post')->name('posts.preview');

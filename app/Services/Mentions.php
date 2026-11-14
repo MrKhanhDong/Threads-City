@@ -37,7 +37,7 @@ class Mentions
     {
         $this->resetContext();
         if (! array_key_exists($id, $this->visibleUsers)) {
-            $this->visibleUsers[$id] = User::discoverableTo(auth()->user())->where('is_locked', false)->find($id);
+            $this->visibleUsers[$id] = User::discoverableTo(auth()->user())->notLocked()->find($id);
         }
 
         return $this->visibleUsers[$id];
@@ -64,7 +64,7 @@ class Mentions
             $this->postLabels[$id] = [];
         }
         $records = DB::table('content_mentions')->whereIn('post_id', $ids)->where('active', true)->get(['post_id', 'user_id', 'label']);
-        $users = User::discoverableTo(auth()->user())->where('is_locked', false)->whereKey($records->pluck('user_id')->unique())->get()->keyBy('id');
+        $users = User::discoverableTo(auth()->user())->notLocked()->whereKey($records->pluck('user_id')->unique())->get()->keyBy('id');
         foreach ($records as $record) {
             $this->postLabels[$record->post_id][$record->user_id] = $record->label;
             $this->visibleUsers[$record->user_id] = $users->get($record->user_id);
@@ -73,7 +73,7 @@ class Mentions
 
     public function candidates(User $actor): Builder
     {
-        return User::discoverableTo($actor)->where('is_locked', false)->whereNotNull('username')
+        return User::discoverableTo($actor)->notLocked()->whereNotNull('username')
             ->where(function (Builder $users) use ($actor): void {
                 $users->whereKey($actor->id)->orWhere('mention_policy', 'everyone')
                     ->orWhere(function (Builder $following) use ($actor): void {
@@ -200,8 +200,8 @@ class Mentions
     {
         return DB::table('content_mentions')->where('user_id', $viewer->id)->where('active', true)
             ->where(function (QueryBuilder $mentions) use ($viewer): void {
-                $mentions->whereIn('post_id', Post::published()->visibleTo($viewer)->whereHas('author', fn (Builder $author): Builder => $author->where('is_locked', false))->select('posts.id'))
-                    ->orWhereIn('comment_id', app(CommentThreads::class)->visible($viewer->id)->whereIn('id', Comment::whereHas('user', fn (Builder $users): Builder => $users->where('is_locked', false))->select('id'))->select('id'));
+                $mentions->whereIn('post_id', Post::published()->visibleTo($viewer)->whereHas('author', fn (Builder $author): Builder => $author->notLocked())->select('posts.id'))
+                    ->orWhereIn('comment_id', app(CommentThreads::class)->visible($viewer->id)->whereIn('id', Comment::whereHas('user', fn (Builder $users): Builder => $users->notLocked())->select('id'))->select('id'));
             });
     }
 
