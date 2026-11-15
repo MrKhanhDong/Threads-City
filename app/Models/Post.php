@@ -155,6 +155,21 @@ class Post extends Model
         return $this->hasMany(PostRedirect::class);
     }
 
+    public function isReply(): bool
+    {
+        return $this->parent_id !== null || $this->type === 'reply';
+    }
+
+    public function scopeWithoutReplies(Builder $query): Builder
+    {
+        return $query->whereNull('parent_id')->where(fn (Builder $posts): Builder => $posts->whereNull('type')->orWhere('type', '!=', 'reply'));
+    }
+
+    public function scopeOnlyReplies(Builder $query): Builder
+    {
+        return $query->where(fn (Builder $posts): Builder => $posts->whereNotNull('parent_id')->orWhere('type', 'reply'));
+    }
+
     public function scopePublished(Builder $q): Builder
     {
         return $q->whereNull('archived_at')->whereIn('status', ['published', 'scheduled'])->whereNotNull('published_at')->where('published_at', '<=', now());

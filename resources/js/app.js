@@ -4,6 +4,7 @@ import { setupChat } from './chat.js';
 import { setupDesktopColumns } from './desktop-columns';
 import { setupSidebarFeeds } from './sidebar-feeds';
 import { setupSidebarDrawer } from './sidebar-drawer';
+import { setupAdminNavigation } from './admin-navigation.js';
 import { setupPhuongComposerBridge } from './phuong-interface';
 import { setupLiveUpdates } from './live-updates';
 import { setupInlineReplies } from './inline-replies.js';
@@ -198,6 +199,7 @@ function init() {
     setupDesktopColumns(document, window, Dropdown);
     setupSidebarFeeds();
     setupSidebarDrawer(Offcanvas);
+    setupAdminNavigation(Offcanvas);
     setupPhuongComposerBridge(Modal);
     setupLiveUpdates();
     setupThreadNavigation();

@@ -3,6 +3,13 @@
 @import "./gif-picker.css";
 @import "./music-picker.css";
 
+.verified-badge {
+    display: inline-block;
+    flex-shrink: 0;
+    margin-inline-start: 4px;
+    vertical-align: -0.125em;
+}
+
 body.threads-body {
     --bs-body-color: var(--journal-text);
     --bs-body-bg: var(--journal-bg);
