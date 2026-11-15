@@ -14,28 +14,42 @@ use Illuminate\Support\Facades\DB;
 
 class CommunityController extends Controller
 {
-    public function index(Request $request): View
+    public function index(Request $request): View|RedirectResponse
+    {
+        $data = $request->validate(['kind' => 'nullable|in:post,reply', 'id' => 'nullable|integer']);
+        if (($data['kind'] ?? '') === 'reply' || (! empty($data['id']) && Post::withTrashed()->onlyReplies()->whereKey($data['id'])->exists())) {
+            return redirect()->route('admin.replies.index', $request->except('kind'));
+        }
+
+        return $this->listing($request, 'post');
+    }
+
+    public function replies(Request $request): View
+    {
+        return $this->listing($request, 'reply');
+    }
+
+    private function listing(Request $request, string $kind): View
     {
         $data = $request->validate([
             'q' => 'nullable|string|max:150', 'author' => 'nullable|integer', 'id' => 'nullable|integer',
-            'status' => 'nullable|in:active,hidden,deleted,all', 'kind' => 'nullable|in:post,reply',
+            'status' => 'nullable|in:active,hidden,deleted,all',
             'from' => 'nullable|date', 'to' => 'nullable|date|after_or_equal:from',
         ]);
         $status = $data['status'] ?? 'active';
-        $posts = Post::withTrashed()->with(['author', 'media', 'cover', 'parent' => fn ($query) => $query->withTrashed(), 'repostOf' => fn ($query) => $query->withTrashed()])
+        $posts = Post::withTrashed()->with(['author', 'media', 'cover', 'parent' => fn ($query) => $query->withTrashed()->with('author'), 'repostOf' => fn ($query) => $query->withTrashed()->with('author')])
+            ->when($kind === 'reply', fn (Builder $posts): Builder => $posts->onlyReplies(), fn (Builder $posts): Builder => $posts->withoutReplies())
             ->when($data['id'] ?? null, fn (Builder $posts, int $id): Builder => $posts->whereKey($id))
             ->when($status === 'active', fn (Builder $posts): Builder => $posts->whereNull('deleted_at'))
             ->when($status === 'hidden', fn (Builder $posts): Builder => $posts->whereNotNull('deleted_at')->whereNotNull('moderation_hidden_at'))
             ->when($status === 'deleted', fn (Builder $posts): Builder => $posts->whereNotNull('deleted_at')->whereNull('moderation_hidden_at'))
             ->when($data['q'] ?? null, fn (Builder $posts, string $search): Builder => $posts->where(fn (Builder $posts): Builder => $posts->where('content', 'like', '%'.$search.'%')->orWhere('title', 'like', '%'.$search.'%')->orWhereHas('author', fn (Builder $users): Builder => $users->where('username', 'like', '%'.$search.'%')->orWhere('name', 'like', '%'.$search.'%'))))
             ->when($data['author'] ?? null, fn (Builder $posts, int $id): Builder => $posts->where('user_id', $id))
-            ->when(($data['kind'] ?? '') === 'post', fn (Builder $posts): Builder => $posts->whereNull('parent_id'))
-            ->when(($data['kind'] ?? '') === 'reply', fn (Builder $posts): Builder => $posts->whereNotNull('parent_id'))
             ->when($data['from'] ?? null, fn (Builder $posts, string $date): Builder => $posts->whereDate('created_at', '>=', $date))
             ->when($data['to'] ?? null, fn (Builder $posts, string $date): Builder => $posts->whereDate('created_at', '<=', $date))
             ->latest()->paginate(20)->withQueryString();
 
-        return view('admin.community', compact('posts', 'status'));
+        return view('admin.community', compact('posts', 'status', 'kind'));
     }
 
     public function update(Request $request, int $id, CommunityModeration $moderation): RedirectResponse

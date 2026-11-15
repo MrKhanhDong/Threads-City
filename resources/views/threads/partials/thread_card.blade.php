@@ -41,7 +41,7 @@
     $cleanContent = preg_replace('/<br\s*\/?>/i', "\n", $displayThread->content ?? '');
 @endphp
 
-<article class="thread-card-wrapper {{ $hasReplies ? 'has-replies-line' : '' }} {{ $isReplyItem ? 'is-reply-item' : '' }}" id="thread-{{ $thread->id }}" data-live-key="thread-{{ $thread->id }}" data-thread-id="{{ $displayThread->id }}">
+<article class="thread-card-wrapper {{ $hasReplies ? 'has-replies-line' : '' }} {{ $isReplyItem ? 'is-reply-item' : '' }}" id="thread-{{ $thread->id }}" data-live-key="thread-{{ $thread->id }}" data-thread-id="{{ $displayThread->id }}" data-thread-parent="{{ $displayThread->parent_id }}" data-thread-url="{{ route('threads.show', $displayThread->id) }}">
     
     <!-- Repost Header Banner -->
     @if($isRepost && $repostedBy)
@@ -108,9 +108,9 @@
                         <span class="meta-tag-arrow">></span>
                         <span class="meta-tag-name">{{ $author->username === 'minhanna2025' ? 'du học sinh' : $displayThread->tags->skip(1)->first()->name }}</span>
                     @endif
-                    <time class="author-time-text" datetime="{{ $displayThread->published_at?->toISOString() }}">
+                    <a href="{{ route('threads.show', $displayThread->id) }}" title="Xem chi tiết bài viết"><time class="author-time-text" datetime="{{ $displayThread->published_at?->toISOString() }}">
                         {{ $displayThread->published_at ? $displayThread->published_at->diffForHumans(null, true) : 'vừa xong' }}
-                    </time>
+                    </time></a>
                     @php
                         $threadLocation = null;
                         if (!empty($displayThread->excerpt)) {
@@ -476,11 +476,11 @@
                 </button>
 
                 <!-- 2. Reply Button -->
-                <a href="{{ route('threads.show', $displayThread->id) }}#replyBox" class="action-btn" title="Trả lời" @guest onclick="event.preventDefault(); window.checkAuth('trả lời bài viết này');" @endguest>
+                <a href="{{ route('threads.show', $displayThread->id) }}#replyBox" class="action-btn" title="Xem bình luận và trả lời" aria-label="Xem bình luận và trả lời {{ $author->handle() }}" data-inline-reply="{{ $displayThread->id }}" data-reply-author="{{ $author->handle() }}">
                     <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
                         <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
                     </svg>
-                    <span class="action-count">
+                    <span class="action-count" data-reply-count="{{ $displayThread->replies_count }}">
                         {{ $displayThread->replies_count >= 1000 ? str_replace('.', ',', round($displayThread->replies_count / 1000, 1)) . 'K' : ($displayThread->replies_count > 0 ? $displayThread->replies_count : '') }}
                     </span>
                 </a>
@@ -520,6 +520,8 @@
                     </span>
                 </button>
             </div>
+            <div data-inline-reply-slot="{{ $displayThread->id }}"></div>
+            <div class="inline-reply-results" data-inline-reply-results="{{ $displayThread->id }}"></div>
         </div>
     </div>
 </article>

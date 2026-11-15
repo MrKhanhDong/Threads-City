@@ -1,6 +1,6 @@
 @forelse($notifications as $notification)
     @if($notification->type === \App\Notifications\ModerationDecision::class)
-        <x-moderation-notification :notification="$notification"/>
+        <x-moderation-notification :notification="$notification" :compact="true"/>
         @continue
     @endif
     @php

@@ -169,6 +169,7 @@ Route::middleware('auth')->group(function (): void {
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(function (): void {
     Route::get('/', [Admin\DashboardController::class, 'index'])->name('index');
     Route::get('/community', [Admin\CommunityController::class, 'index'])->name('community.index');
+    Route::get('/replies', [Admin\CommunityController::class, 'replies'])->name('replies.index');
     Route::patch('/community/{id}', [Admin\CommunityController::class, 'update'])->whereNumber('id')->name('community.update');
     Route::get('/history', [Admin\CommunityController::class, 'history'])->name('history.index');
     Route::resource('posts', Admin\PostController::class)->except('show')->whereNumber('post');

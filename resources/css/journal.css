@@ -2,6 +2,9 @@
 @import './chat.css';
 @import './thread-media.css';
 @import './chat-requests.css';
+@import './notification-cards.css';
+@import './inline-replies.css';
+@import './thread-detail.css';
 .journal-body .skip-link {
     position: fixed;
     inset-block-start: 12px;

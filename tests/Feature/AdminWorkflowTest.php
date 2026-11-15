@@ -78,9 +78,9 @@ class AdminWorkflowTest extends TestCase
         $trashedPost->delete();
 
         $response = $this->actingAs($admin)->get(route('admin.index'))
-            ->assertOk()->assertSee('Bình luận')->assertSee('1 bình luận cũ đang chờ duyệt')
+            ->assertOk()->assertSee('Trả lời')->assertSee('1 bình luận blog cũ đang chờ duyệt')
             ->assertSee(route('admin.comments.index', ['status' => 'pending']), false)
-            ->assertSee('không cần duyệt trước');
+            ->assertSee('Cần xem xét');
         $counts = $response->viewData('counts');
         $this->assertSame(5, $counts['comments']);
         $this->assertSame(1, $counts['pending_comments']);

@@ -1,0 +1,14 @@
+.moderation-notification { margin: 0; }
+.moderation-notification .notification-preview-item { appearance: none; display: flex; align-items: flex-start; gap: 12px; width: 100%; padding: 18px; border: 0; background: transparent; color: var(--journal-text, var(--admin-text)); text-align: left; font: inherit; font-size: 13px; line-height: 1.6; cursor: pointer; }
+.moderation-notification .notification-preview-item:hover { background: var(--journal-raised, var(--admin-raised)); }
+.moderation-notification .notification-preview-portrait { flex-shrink: 0; }
+.moderation-notification .moderation-notification-icon { display: grid; place-items: center; flex-shrink: 0; width: 40px; height: 40px; border: 1px solid var(--journal-line, var(--admin-line)); border-radius: 14px; background: var(--journal-raised, var(--admin-raised)); color: var(--journal-text, var(--admin-text)); }
+.moderation-notification .notification-preview-copy { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.moderation-notification-title { display: block; margin-bottom: 5px; font-size: 13px; font-weight: 650; color: var(--journal-text, var(--admin-text)); }
+.moderation-notification-message { display: block; white-space: pre-wrap; color: var(--journal-text, var(--admin-text)); }
+.moderation-notification-reason { display: block; margin-block: 9px; padding-left: 10px; border-left: 2px solid var(--journal-line, var(--admin-line)); color: var(--journal-muted, var(--admin-muted)); white-space: pre-wrap; }
+.moderation-notification-reason > span { font-weight: 550; }
+.moderation-notification .notification-preview-copy small { display: block; margin-top: 9px; color: var(--journal-faint, var(--admin-muted)); font-size: 11px; }
+.moderation-notification .notification-preview-unread { flex-shrink: 0; width: 7px; height: 7px; margin-top: 7px; border-radius: 50%; background: #ff3040; }
+.notification-menu .moderation-notification + .notification-preview-row { border-top: 1px solid var(--journal-line, var(--admin-line)); }
+@media (max-width: 600px) { .moderation-notification .notification-preview-item { padding: 14px; gap: 10px; } }

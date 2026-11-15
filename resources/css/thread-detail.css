@@ -1,0 +1,64 @@
+.journal-body.thread-detail-page .journal-topbar { min-height: 74px; }
+.thread-detail-nav { display: flex; align-items: center; flex: 1; min-width: 0; gap: 12px; }
+.thread-detail-back { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 38px; height: 38px; border-radius: 50%; color: var(--journal-text); }
+.thread-detail-back:hover { background: var(--journal-raised); }
+.journal-body .thread-detail-nav-copy h1 { margin: 0; font: 600 18px/1.35 Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; letter-spacing: -.3px; }
+.thread-detail-nav-copy > span { display: block; margin-top: 1px; color: var(--journal-faint); font-size: 11px; line-height: 1.4; }
+.journal-body .thread-detail-root > .thread-card-wrapper { padding: 24px 24px 18px; border-bottom: 0; }
+.journal-body .thread-detail-root > .thread-card-wrapper:hover { background: transparent; }
+.journal-body .thread-detail-root > .thread-card-wrapper > .thread-main-row { position: relative; display: block; }
+.journal-body .thread-detail-root > .thread-card-wrapper > .thread-main-row > .thread-avatar-col { position: absolute; top: 0; left: 0; width: 38px; min-height: 0; margin: 0; }
+.journal-body .thread-detail-root .thread-avatar-col .thread-connecting-line { display: none; }
+.journal-body .thread-detail-root .thread-body-col { width: 100%; }
+.journal-body .thread-detail-root .thread-header-line { min-height: 40px; margin-bottom: 14px; padding-left: 50px; align-items: flex-start; }
+.journal-body .thread-detail-root .author-meta-left { min-height: 38px; }
+.journal-body .thread-detail-root .thread-content-text { font-size: 15px; line-height: 1.7; margin-bottom: 14px; }
+.journal-body.thread-detail-page .thread-content-text { white-space: normal; }
+.journal-body.thread-detail-page .thread-content-text > :first-child { margin-top: 0; }
+.journal-body.thread-detail-page .thread-content-text > :last-child { margin-bottom: 0; }
+.journal-body .thread-detail-root .thread-actions-bar { gap: 20px; margin-top: 12px; }
+.thread-discussion-entry { border-block: 1px solid var(--journal-line); scroll-margin-top: 88px; }
+.thread-discussion-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 18px 24px 14px; }
+.journal-body .thread-discussion-toolbar h2 { display: flex; align-items: center; gap: 8px; margin: 0; font: 600 14px/1.5 Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; letter-spacing: 0; }
+.thread-discussion-toolbar h2 > span { display: grid; place-items: center; min-width: 22px; height: 22px; padding-inline: 6px; border-radius: 12px; background: var(--journal-raised); color: var(--journal-muted); font-size: 11px; font-weight: 500; }
+.thread-discussion-toolbar > span { color: var(--journal-faint); font-size: 12px; }
+.thread-discussion-compose { padding: 0 24px 18px; }
+.thread-detail-reply-prompt { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 48px; padding: 6px 12px 6px 6px; border: 1px solid var(--journal-line); border-radius: 26px; color: var(--journal-faint); background: var(--journal-raised); text-align: left; font: inherit; font-size: 14px; }
+.thread-detail-reply-prompt > span:not(.avatar) { flex: 1; min-width: 0; }
+.journal-body .thread-detail-reply-prompt > .avatar { width: 34px; height: 34px; flex: 0 0 34px; }
+.thread-detail-reply-prompt > svg { color: var(--journal-muted); }
+.thread-detail-reply-prompt:hover { border-color: var(--journal-border-hover); }
+.journal-body .inline-reply-form[data-detail-reply="1"] { padding: 0; margin: 0; border: 0; }
+.inline-reply-form[data-detail-reply="1"] .inline-reply-heading, .inline-reply-form[data-detail-reply="1"] .inline-reply-context { display: none; }
+.inline-reply-form[data-detail-reply="1"] .inline-reply-editor { align-items: flex-start; gap: 10px; min-height: 48px; padding: 6px 8px 6px 6px; border: 1px solid var(--journal-line); border-radius: 26px; background: var(--journal-raised); }
+.inline-reply-form[data-detail-reply="1"] .inline-reply-editor:focus-within { border-color: var(--journal-border-hover); }
+.journal-body .inline-reply-form[data-detail-reply="1"] .inline-reply-editor > .avatar { width: 34px; height: 34px; flex: 0 0 34px; }
+.inline-reply-form[data-detail-reply="1"] .inline-reply-input { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 6px; border: 0; border-radius: 0; background: transparent; padding: 2px 0 0; }
+.journal-body .inline-reply-form[data-detail-reply="1"] textarea { min-height: 30px; padding-top: 3px; font-size: 14px; }
+.inline-reply-form[data-detail-reply="1"] .inline-reply-tools { gap: 3px; padding: 0; }
+.inline-reply-form[data-detail-reply="1"] .inline-reply-tools > span { display: none; }
+.inline-reply-form[data-detail-reply="1"]:has(textarea:placeholder-shown):not(:has([data-reply-media] img)) .inline-reply-submit { display: none; }
+.inline-reply-form[data-detail-reply="1"] .inline-reply-media, .inline-reply-form[data-detail-reply="1"] .inline-reply-status { margin-left: 44px; }
+.thread-detail-signin { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; font-size: 13px; color: var(--journal-muted); }
+.journal-body .thread-discussion-list > .thread-card-wrapper { padding: 20px 24px; }
+.journal-body .thread-discussion-list > .thread-card-wrapper:last-child { border-bottom: 0; }
+.journal-body .thread-discussion-list .thread-content-text { font-size: 14px; line-height: 1.65; margin-bottom: 12px; }
+.journal-body .thread-discussion-list .author-name-text { font-size: 14px; font-weight: 650; }
+.journal-body .thread-discussion-list .author-time-text { font-size: 12px; }
+.journal-body .thread-discussion-list .thread-actions-bar { gap: 18px; }
+.thread-discussion-empty { display: flex; flex-direction: column; align-items: center; gap: 9px; padding: 36px 24px 42px; text-align: center; color: var(--journal-muted); }
+.thread-discussion-empty > span { display: grid; place-items: center; width: 54px; height: 54px; margin-bottom: 6px; border: 1px solid var(--journal-line); border-radius: 18px; }
+.thread-discussion-empty > strong { color: var(--journal-text); font-size: 14px; font-weight: 600; }
+.thread-discussion-empty p { margin: 0; font-size: 13px; }
+@media (max-width: 600px) {
+    .journal-body.thread-detail-page .journal-topbar { min-height: 68px; }
+    .thread-detail-nav-copy { display: none; }
+    .thread-detail-nav { gap: 0; }
+    .journal-body .thread-detail-root > .thread-card-wrapper { padding: 20px 18px 16px; }
+    .thread-discussion-toolbar { padding: 16px 18px 12px; }
+    .thread-discussion-compose { padding: 0 18px 16px; }
+    .journal-body .thread-discussion-list > .thread-card-wrapper { padding: 18px; }
+    .journal-body .inline-reply-form[data-detail-reply="1"] textarea { font-size: 16px; }
+    .inline-reply-form[data-detail-reply="1"] .inline-reply-submit { font-size: 0; gap: 0; width: 34px; padding: 6px; }
+    .thread-discussion-toolbar > span { font-size: 11px; }
+}

@@ -38,7 +38,7 @@ export function syncRegion(current, incoming, removed) {
         });
     }
     if (!current.hasAttribute('data-live-list')) {
-        if (current.outerHTML !== incoming.outerHTML && !hasActiveMedia(current)) replaceRegion(current, incoming);
+        if (current.outerHTML !== incoming.outerHTML && !hasActiveMedia(current) && !current.querySelector('[data-inline-reply-form]')) replaceRegion(current, incoming);
         return;
     }
 
@@ -74,7 +74,7 @@ export function syncRegion(current, incoming, removed) {
         if (!node) node = replacement;
         else if (replacement && node.outerHTML !== replacement.outerHTML) {
             const selection = window.getSelection();
-            if (!hasActiveMedia(node) && !node.contains(document.activeElement) && !(selection?.toString() && node.contains(selection.anchorNode))) {
+            if (!hasActiveMedia(node) && !node.querySelector('[data-inline-reply-form]') && !node.contains(document.activeElement) && !(selection?.toString() && node.contains(selection.anchorNode))) {
                 replaceRegion(node, replacement);
                 node = replacement;
             }

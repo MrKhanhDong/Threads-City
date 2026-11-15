@@ -62,6 +62,7 @@ class CommunityAdminTest extends TestCase
         $reader = User::factory()->create(['is_verified' => true]);
         $post = Post::factory()->published()->create();
         $this->actingAs($reader)->get(route('admin.community.index'))->assertForbidden();
+        $this->get(route('admin.replies.index'))->assertForbidden();
         $this->get(route('admin.history.index'))->assertForbidden();
         $this->patch(route('admin.community.update', $post->id), ['action' => 'hide', 'reason' => 'Spam'])->assertForbidden();
         $this->assertDatabaseCount('moderation_logs', 0);
@@ -185,15 +186,73 @@ class CommunityAdminTest extends TestCase
         $admin = User::factory()->create(['role' => 'admin']);
         $post = Post::factory()->published()->create(['content' => '<script>alert(1)</script> Nội dung kiểm duyệt']);
         $reply = Post::factory()->published()->create(['parent_id' => $post->id, 'type' => 'reply']);
-        $this->actingAs($admin)->get(route('admin.community.index', ['kind' => 'reply']))->assertOk()->assertViewHas('posts', fn ($posts) => $posts->total() === 1)->assertSee('Ngữ cảnh');
+        $this->actingAs($admin)->get(route('admin.community.index', ['kind' => 'reply']))->assertRedirect(route('admin.replies.index'));
+        $this->get(route('admin.replies.index'))->assertOk()->assertViewHas('posts', fn ($posts) => $posts->total() === 1)->assertSee('Ngữ cảnh');
         $this->get(route('admin.community.index'))->assertOk()->assertDontSee('<script>alert(1)</script>', false);
         $this->patch(route('admin.community.update', $post->id), ['action' => 'hide', 'reason' => '<script>unsafe()</script>'])->assertSessionHasNoErrors();
         $this->get(route('admin.community.index', ['status' => 'hidden']))->assertOk()->assertViewHas('posts', fn ($posts) => $posts->total() === 1);
         $this->get(route('admin.history.index', ['target_type' => 'post', 'target_id' => $post->id]))->assertOk()->assertSee('&lt;script&gt;unsafe()', false)->assertDontSee('<script>unsafe()</script>', false);
-        foreach (['admin.index', 'admin.users.index', 'admin.comments.index', 'admin.moderation.index', 'admin.settings.edit'] as $name) {
+        foreach (['admin.index', 'admin.replies.index', 'admin.users.index', 'admin.comments.index', 'admin.moderation.index', 'admin.settings.edit'] as $name) {
             $this->get(route($name))->assertOk();
         }
         $this->get(route('admin.index'))->assertSee('Báo cáo vi phạm')->assertDontSee('Viết bài mới');
+    }
+
+    public function test_posts_and_replies_have_separate_lists_including_orphaned_replies(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $post = Post::factory()->published()->create(['type' => 'post']);
+        $quote = Post::factory()->published()->create(['type' => 'quote', 'repost_of_id' => $post->id]);
+        $repost = Post::factory()->published()->create(['type' => 'repost', 'repost_of_id' => $post->id]);
+        $reply = Post::factory()->published()->create(['type' => 'reply', 'parent_id' => $post->id]);
+        $orphan = Post::factory()->published()->create(['type' => 'reply', 'parent_id' => null]);
+        $legacyReply = Post::factory()->published()->create(['type' => 'post', 'parent_id' => $post->id]);
+
+        $this->actingAs($admin)->get(route('admin.community.index'))->assertOk()
+            ->assertViewHas('kind', 'post')
+            ->assertViewHas('posts', fn ($posts): bool => $posts->total() === 3 && array_diff([$post->id, $quote->id, $repost->id], $posts->getCollection()->modelKeys()) === []);
+        $this->get(route('admin.replies.index', ['kind' => 'post']))->assertOk()
+            ->assertViewHas('kind', 'reply')
+            ->assertViewHas('posts', fn ($posts): bool => $posts->total() === 3 && array_diff([$reply->id, $orphan->id, $legacyReply->id], $posts->getCollection()->modelKeys()) === []);
+        $this->get(route('admin.index'))->assertOk()
+            ->assertViewHas('counts', fn (array $counts): bool => $counts['threads'] === 3 && $counts['replies'] === 3)
+            ->assertSee(route('admin.community.index'), false)->assertSee(route('admin.replies.index'), false)
+            ->assertDontSee('Bài đăng &amp; trả lời', false);
+    }
+
+    public function test_legacy_reply_links_redirect_to_the_reply_list_and_keep_filters(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $reply = Post::factory()->published()->create(['type' => 'reply']);
+
+        $this->actingAs($admin)->get(route('admin.community.index', ['kind' => 'reply', 'q' => 'tìm phản hồi', 'status' => 'all']))
+            ->assertRedirect(route('admin.replies.index', ['q' => 'tìm phản hồi', 'status' => 'all']));
+        $this->get(route('admin.community.index', ['id' => $reply->id, 'status' => 'all']))
+            ->assertRedirect(route('admin.replies.index', ['id' => $reply->id, 'status' => 'all']));
+        $this->get(route('admin.replies.index', ['id' => $reply->id, 'status' => 'all']))->assertOk()
+            ->assertViewHas('posts', fn ($posts): bool => $posts->total() === 1 && $posts->first()->id === $reply->id);
+    }
+
+    public function test_reply_filters_and_moderation_stay_in_the_reply_section(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $author = User::factory()->create();
+        $post = Post::factory()->published()->create(['content' => 'Cùng chủ đề kiểm thử', 'user_id' => $author->id]);
+        $reply = Post::factory()->published()->create(['type' => 'reply', 'parent_id' => $post->id, 'content' => 'Cùng chủ đề kiểm thử: phản hồi', 'user_id' => $author->id]);
+        Post::factory()->published()->create(['type' => 'reply', 'parent_id' => $post->id, 'content' => 'Cùng chủ đề kiểm thử: người khác']);
+
+        $filters = ['q' => 'Cùng chủ đề', 'author' => $author->id, 'from' => now()->toDateString(), 'to' => now()->toDateString()];
+        $this->actingAs($admin)->get(route('admin.replies.index', $filters))->assertOk()
+            ->assertViewHas('posts', fn ($posts): bool => $posts->total() === 1 && $posts->first()->id === $reply->id);
+        $this->patch(route('admin.community.update', $reply->id), ['action' => 'hide', 'reason' => 'Phản hồi vi phạm'])->assertSessionHasNoErrors();
+        $this->get(route('admin.replies.index', [...$filters, 'status' => 'hidden']))->assertOk()
+            ->assertViewHas('posts', fn ($posts): bool => $posts->total() === 1 && $posts->first()->id === $reply->id)->assertSee('Khôi phục');
+        $this->get(route('admin.community.index', ['status' => 'hidden']))->assertOk()
+            ->assertViewHas('posts', fn ($posts): bool => $posts->total() === 0);
+        $this->patch(route('admin.community.update', $reply->id), ['action' => 'restore', 'reason' => 'Kiểm tra lại'])->assertSessionHasNoErrors();
+        $this->assertFalse($reply->fresh()->trashed());
+        $this->assertSame('Cùng chủ đề kiểm thử: phản hồi', $reply->fresh()->content);
+        $this->assertFalse($post->fresh()->trashed());
     }
 
     public function test_moderation_notifications_are_private_visible_and_can_be_read(): void
@@ -205,7 +264,11 @@ class CommunityAdminTest extends TestCase
         $this->assertSame(1, app(UserNotifications::class)->forUser($owner)->count());
         $this->actingAs($other)->post(route('notifications.open', $notification->id))->assertNotFound();
         $this->actingAs($owner)->get(route('notifications.index'))->assertOk()->assertSee('Bài của bạn bị ẩn');
-        $this->getJson(route('notifications.index', ['preview' => 1]))->assertOk()->assertJsonPath('unread', 1);
+        $preview = $this->getJson(route('notifications.index', ['preview' => 1]))->assertOk()->assertJsonPath('unread', 1);
+        $this->assertStringContainsString('moderation-notification', $preview->json('html'));
+        $this->assertStringContainsString('notification-preview-item', $preview->json('html'));
+        $this->assertStringContainsString('Bài của bạn bị ẩn', $preview->json('html'));
+        $this->assertStringContainsString('Spam', $preview->json('html'));
         $this->post(route('notifications.open', $notification->id))->assertRedirect(route('notifications.index'));
         $this->assertNotNull($notification->fresh()->read_at);
     }
