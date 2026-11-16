@@ -144,7 +144,7 @@ Route::middleware('auth')->group(function (): void {
     Route::post('/threads/{thread}/repost', [ThreadActionController::class, 'repost'])->whereNumber('thread')->name('threads.repost');
     Route::post('/threads/{thread}/not-interested', [ThreadActionController::class, 'notInterested'])->whereNumber('thread')->name('threads.not-interested');
     Route::post('/threads/{thread}/mute', [ThreadActionController::class, 'toggleMute'])->whereNumber('thread')->name('threads.mute');
-    Route::post('/threads/{thread}/report', [ThreadActionController::class, 'report'])->whereNumber('thread')->name('threads.report');
+    Route::post('/threads/{thread}/report', [ReportController::class, 'thread'])->whereNumber('thread')->name('threads.report');
     Route::post('/users/{user}/block', [ThreadActionController::class, 'toggleBlock'])->whereNumber('user')->name('users.block');
     Route::post('/users/{user}/restrict', [ThreadActionController::class, 'toggleRestrict'])->whereNumber('user')->name('users.restrict');
     Route::post('/threads/{thread}/add-to-feed', [ThreadActionController::class, 'addToCustomFeed'])->whereNumber('thread')->name('threads.add-to-feed');

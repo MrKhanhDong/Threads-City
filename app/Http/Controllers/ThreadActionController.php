@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\CustomFeed;
 use App\Models\Post;
-use App\Models\PostReport;
 use App\Models\User;
 use App\Notifications\ThreadInteractionNotification;
 use Illuminate\Contracts\View\View;
@@ -255,30 +254,6 @@ class ThreadActionController extends Controller
             'success' => true,
             'muted' => $muted,
             'message' => $muted ? 'Đã tắt thông báo cho bài viết này.' : 'Đã bật lại thông báo cho bài viết.',
-        ]);
-    }
-
-    public function report(Request $request, Post $thread): JsonResponse
-    {
-        $validated = $request->validate([
-            'reason' => ['required', 'string', 'in:spam,hate_speech,false_info,sensitive,other'],
-            'notes' => ['nullable', 'string', 'max:1000'],
-        ]);
-
-        $user = $request->user();
-
-        PostReport::updateOrCreate(
-            ['post_id' => $thread->id, 'user_id' => $user->id],
-            [
-                'reason' => $validated['reason'],
-                'notes' => $validated['notes'] ?? null,
-                'resolved' => false,
-            ]
-        );
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Cảm ơn bạn đã báo cáo. Chúng tôi sẽ xem xét bài viết này để bảo vệ cộng đồng.',
         ]);
     }
 

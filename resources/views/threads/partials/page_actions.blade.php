@@ -626,41 +626,33 @@ document.addEventListener('DOMContentLoaded', function() {
     // Report modal submit
     const btnSubmitReport = document.getElementById('btnSubmitReport');
     if (btnSubmitReport) {
-        btnSubmitReport.addEventListener('click', function() {
+        btnSubmitReport.addEventListener('click', async function() {
+            if (this.disabled) return;
             const threadId = document.getElementById('reportModalThreadId')?.value;
             const selectedRadio = document.querySelector('input[name="reportReason"]:checked');
-            const reason = selectedRadio ? selectedRadio.value : 'spam';
-
             if (!threadId) return;
-
-            const modalEl = document.getElementById('reportThreadModal');
-            if (modalEl && window.bootstrap) {
-                bootstrap.Modal.getInstance(modalEl)?.hide();
-            }
-
-            fetch(`/threads/${threadId}/report`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': csrfToken,
-                    'Accept': 'application/json'
-                },
-                body: JSON.stringify({ reason: reason })
-            })
-            .then(res => {
-                if (res.status === 401) {
-                    window.location.href = '{{ route("login") }}';
-                    return;
+            const originalText = this.textContent;
+            this.disabled = true;
+            this.textContent = 'Đang gửi…';
+            try {
+                const response = await fetch(`/threads/${threadId}/report`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken, Accept: 'application/json' },
+                    body: JSON.stringify({ reason: selectedRadio?.value || 'spam' })
+                });
+                const data = await response.json().catch(() => null);
+                if (!response.ok || !data?.success) {
+                    throw new Error(Object.values(data?.errors || {}).flat()[0] || data?.message || (response.status === 419 ? 'Phiên đăng nhập đã hết hạn. Hãy tải lại trang.' : 'Không gửi được báo cáo. Vui lòng thử lại.'));
                 }
-                return res.json();
-            })
-            .then(data => {
-                showToast(data?.message || 'Cảm ơn bạn đã báo cáo. Chúng tôi đã tiếp nhận thông tin.');
-            })
-            .catch(err => {
-                console.error(err);
-                showToast('Lỗi gửi báo cáo');
-            });
+                const modalEl = document.getElementById('reportThreadModal');
+                if (modalEl && window.bootstrap) bootstrap.Modal.getInstance(modalEl)?.hide();
+                showToast(data.message);
+            } catch (error) {
+                showToast(error.message || 'Lỗi gửi báo cáo. Vui lòng thử lại.');
+            } finally {
+                this.disabled = false;
+                this.textContent = originalText;
+            }
         });
     }
 

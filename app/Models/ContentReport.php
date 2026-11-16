@@ -21,6 +21,8 @@ class ContentReport extends Model
         'spam' => 'Spam hoặc lừa đảo',
         'harassment' => 'Quấy rối hoặc bắt nạt',
         'hate' => 'Ngôn từ thù địch',
+        'false_info' => 'Thông tin sai lệch hoặc tin giả',
+        'sensitive' => 'Nội dung nhạy cảm, bạo lực',
         'other' => 'Vi phạm khác',
     ];
 
